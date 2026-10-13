@@ -1,0 +1,328 @@
+/* Workspace text stays readable at normal browser zoom. */
+.research-section {
+  padding-top: 5px;
+  padding-bottom: 75px;
+}
+.research-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 38px;
+}
+.research-stats article {
+  border-top: 1px solid #e2e6dc;
+  padding-top: 25px;
+}
+.research-stats strong {
+  font-family: "Manrope", sans-serif;
+  font-size: 55px;
+  font-weight: 500;
+  letter-spacing: -2.5px;
+  color: #b88a63;
+}
+.research-stats strong span {
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  margin-left: 3px;
+  color: #a29c88;
+}
+.research-stats h3 {
+  font-size: 16px;
+  margin: 16px 0 10px;
+}
+.research-stats p {
+  font-size: 12px;
+  color: #81907e;
+  max-width: 320px;
+}
+.research-stats a {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: #a59172;
+  margin-top: 18px;
+  line-height: 1.6;
+}
+.research-method {
+  font-size: 9px;
+  color: #9da596;
+  line-height: 1.8;
+  margin-top: 28px;
+  max-width: 850px;
+}
+@media (max-width: 700px) {
+  .research-stats {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .research-stats strong {
+    font-size: 47px;
+  }
+  .research-stats p {
+    max-width: 100%;
+  }
+  .research-section {
+    padding-top: 0;
+    padding-bottom: 45px;
+  }
+}
+.sidebar nav a,
+.settings-link {
+  font-size: 12px;
+  color: #647581;
+}
+.nav-label {
+  font-size: 9px;
+  color: #82919d;
+}
+.workspace-switch select,
+.user-menu strong {
+  font-size: 11px;
+}
+.workspace-switch small {
+  font-size: 8px;
+}
+.sidebar-tip strong,
+.sidebar-tip p,
+.sidebar-tip a,
+.add-workspace {
+  font-size: 11px;
+}
+.sidebar-tip p,
+.sidebar-tip a,
+.user-menu small {
+  color: #788995;
+}
+.page-heading p {
+  font-size: 12px;
+  color: #788995;
+}
+.page-eyebrow,
+.breadcrumb {
+  font-size: 11px;
+}
+.stat-card > div:first-child > span {
+  font-size: 12px;
+  color: #6c808f;
+}
+.stat-card p {
+  font-size: 10px;
+  color: #7c8d99;
+}
+.stat-pill {
+  font-size: 8px;
+}
+.stat-tags > span {
+  font-size: 9px;
+}
+.stat-link {
+  font-size: 10px;
+  color: #708592;
+}
+.green-text {
+  color: #578165;
+}
+.orange-text {
+  color: #b57a50;
+}
+.section-title h2 {
+  font-size: 16px;
+}
+.section-title p {
+  font-size: 11px;
+  color: #81929e;
+}
+.framework-row strong {
+  font-size: 12px;
+}
+.framework-row > div > span {
+  font-size: 10px;
+  color: #7f909d;
+}
+.framework-row .badge {
+  font-size: 9px;
+  min-width: 78px;
+}
+.frameworks-card > footer,
+.frameworks-card > footer .text-link {
+  font-size: 10px;
+  color: #7c909f;
+}
+.framework-progress {
+  width: 85px;
+}
+.agent-card-top .badge,
+.agent-card .eyebrow {
+  font-size: 9px;
+}
+.agent-card p {
+  font-size: 12px;
+  color: #a8bbc8;
+}
+.agent-stages > div {
+  font-size: 10px;
+  color: #bdcbd5;
+}
+.agent-card > button {
+  font-size: 11px;
+}
+.tabs button,
+.table-toolbar > span {
+  font-size: 10px;
+}
+.tabs button {
+  color: #788d9e;
+}
+.finding-title {
+  font-size: 11px;
+  color: #506879;
+}
+table {
+  font-size: 11px;
+}
+th {
+  font-size: 9px;
+  color: #8398a8;
+}
+td {
+  color: #7a8f9f;
+}
+.findings-card table .badge {
+  font-size: 9px;
+}
+.priority {
+  font-size: 10px;
+}
+.findings-card > footer {
+  font-size: 10px;
+  color: #8395a3;
+}
+.bottom-callout strong,
+.bottom-callout .text-link {
+  font-size: 11px;
+}
+.bottom-callout p {
+  font-size: 10px;
+  color: #9a8b78;
+}
+.app-footer {
+  font-size: 9px;
+  color: #8b9ca8;
+}
+.demo-banner > span {
+  font-size: 8px;
+}
+.demo-banner > p,
+.demo-banner > a {
+  font-size: 10px;
+  color: #8596a1;
+}
+.activity-timeline p,
+.evidence-card details p,
+.policy-card p,
+.integration-card > p,
+.source-card p {
+  font-size: 12px;
+  color: #7d929f;
+}
+.evidence-control,
+.history-list button span:not(.square-icon),
+.source-card footer small {
+  font-size: 10px;
+  color: #859aa7;
+}
+.source-card .eyebrow {
+  font-size: 9px;
+}
+.settings-facts > div {
+  font-size: 12px;
+}
+.code-block pre {
+  font-size: 11px;
+}
+.field small,
+.provider-note {
+  color: #7e8f9b;
+}
+.hero-copy > p,
+.marketing-heading > p,
+.feature-grid p,
+.step p,
+.security-section > div > p {
+  color: #758378;
+}
+@media (max-width: 1180px) and (min-width: 951px) {
+  .framework-progress {
+    width: 48px;
+  }
+  .framework-row .badge {
+    font-size: 8px;
+    min-width: 65px;
+  }
+}
+@media (max-width: 700px) {
+  .stat-card > div:first-child > span {
+    font-size: 10px;
+  }
+  .stat-card p {
+    font-size: 9px;
+  }
+  .stat-tags > span {
+    font-size: 8px;
+  }
+  .stat-link {
+    font-size: 9px;
+  }
+  .framework-row strong {
+    font-size: 10px;
+  }
+  .framework-row > div > span {
+    font-size: 9px;
+  }
+  .framework-row .badge {
+    font-size: 7px;
+    min-width: 58px;
+  }
+  .framework-progress {
+    width: 38px;
+  }
+  .frameworks-card > footer,
+  .frameworks-card > footer .text-link {
+    font-size: 8px;
+  }
+  .section-title h2 {
+    font-size: 14px;
+  }
+  .section-title p {
+    font-size: 10px;
+  }
+  .tabs button {
+    font-size: 9px;
+    padding: 6px 7px;
+  }
+  .table-toolbar > span {
+    font-size: 9px;
+  }
+  .page-heading p {
+    font-size: 11px;
+  }
+  .demo-banner > a {
+    font-size: 8px;
+  }
+  .findings-card > footer > span,
+  .findings-card > footer > a {
+    font-size: 8px;
+  }
+  .bottom-callout strong {
+    font-size: 10px;
+  }
+  .bottom-callout p {
+    font-size: 9px;
+  }
+  .bottom-callout .text-link {
+    font-size: 10px;
+  }
+  .app-footer {
+    font-size: 8px;
+  }
+}

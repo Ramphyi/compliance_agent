@@ -1,0 +1,32 @@
+# Isolated verification stack; these credentials must never be used in production.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: clearance
+      POSTGRES_PASSWORD: isolated-test-only
+      POSTGRES_DB: clearance_test
+    ports: ["127.0.0.1:15432:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clearance -d clearance_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  app:
+    build: .
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://clearance:isolated-test-only@db:5432/clearance_test
+      APP_URL: https://clearance.local
+      API_URL: https://clearance.local
+      ALLOW_EXTERNAL_AI: "false"
+      ALLOW_REGULATORY_FETCH: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports: ["127.0.0.1:14000:4000"]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]

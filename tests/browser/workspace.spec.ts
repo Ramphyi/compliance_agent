@@ -22,7 +22,7 @@ test("landing, sample assessment, evidence review, policy, MCP key and onboardin
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Confident launches",
+    "awkward",
   );
   await page.screenshot({
     path: "test-results/landing-desktop.png",

@@ -2,6 +2,51 @@ import type { DB } from "./db.js";
 import type { Config } from "./config.js";
 import { id } from "./security.js";
 import { runAssessment } from "./engine.js";
+import memosReport from "../docs/experiments/memos.json";
+export async function seedMemosDemo(db: DB, config: Config) {
+  const userId = id(),
+    projectId = id(),
+    ruleId = id();
+  await db.query(
+    "INSERT INTO users (id,email,name,verified) VALUES ($1,$2,$3,true)",
+    [userId, `demo+${userId}@clearance.local`, "Example reviewer"],
+  );
+  await db.query(
+    "INSERT INTO projects (id,owner_id,profile) VALUES ($1,$2,$3)",
+    [projectId, userId, JSON.stringify(memosReport.profile)],
+  );
+  await db.query(
+    "INSERT INTO rules (id,project_id,title,description,severity) VALUES ($1,$2,$3,$4,$5)",
+    [
+      ruleId,
+      projectId,
+      "Review repository inventory and deployment scope",
+      "An owner must review the pinned inventory and confirm which optional integrations are enabled before using it in the production release review.",
+      "high",
+    ],
+  );
+  await db.query(
+    "INSERT INTO evidence (id,project_id,control_id,title,content,status) VALUES ($1,$2,$3,$4,$5,$6)",
+    [
+      id(),
+      projectId,
+      ruleId,
+      "Pinned Memos repository metadata",
+      JSON.stringify(
+        {
+          source: memosReport.source,
+          inventory: memosReport.inventory,
+          limitations: memosReport.limitations,
+        },
+        null,
+        2,
+      ),
+      "submitted",
+    ],
+  );
+  await runAssessment(db, { ...config, externalAi: false }, userId, projectId);
+  return userId;
+}
 export async function seedDemo(db: DB, config: Config) {
   const userId = id(),
     projectId = id();

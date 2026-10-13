@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { Routes, Route, Link } from "react-router-dom";
-import Landing from "./Landing";
+import Landing, { marketingPaths } from "./Landing";
 import AuthPage from "./AuthPage";
 import Workspace from "./Workspace";
 class ErrorBoundary extends Component<
@@ -31,7 +31,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <Routes>
-        <Route path="/" element={<Landing />} />
+        {marketingPaths.map((path) => (
+          <Route key={path} path={path} element={<Landing />} />
+        ))}
         {["login", "signup", "forgot", "reset", "verify"].map((path) => (
           <Route key={path} path={`/${path}`} element={<AuthPage />} />
         ))}

@@ -16,17 +16,30 @@ Open **http://localhost:5173** and choose **Explore the workspace**. Each demo v
 
 ## What works
 
-- Landing page: features, workflow, security, illustrative pricing, linked research and an explicitly hypothetical time-savings calculator.
+- Marketing site: 13 distinct routes with product details, SaaS/AI/mobile/embedded workflows, MCP and CI documentation, security, illustrative pricing, field notes and linked research. Includes an interactive release example and hypothetical time-savings calculator.
 - Product onboarding: industry, SaaS/mobile/embedded/AI type, purpose, countries, audience, sensitive data and external-research consent.
 - Deterministic control mapping: selected GDPR, UK privacy, EU AI Act, ISO/IEC 42001 and 27001 readiness, EU consumer terms, accessibility, DORA, MDR, CRA, HIPAA, COPPA, CCPA, Apple and Google Play scope checks.
 - Assessments: timestamped discovery, mapping, evidence-review, research and release-review events; history and downloadable JSON reports.
 - Evidence vault: text/file import, control mapping, explicit owner approval/rejection; optional local repository inventory script.
+- Memos experiment: a reproducible assessment of a pinned open-source repository, using the real MCP SDK and CI command. Open `/field-notes/memos` and choose **Open the Memos example** to review the same scenario in an isolated workspace, with no pre-approved evidence.
 - Custom policies: create/delete product requirements and include them in the assessment and release gate.
 - Authentication: email/password with scrypt, Brevo confirmation and reset mail, Google OAuth with state/nonce/PKCE, optional Twilio Verify SMS/WhatsApp second factor.
 - MCP: actual stateless Streamable HTTP server, scoped bearer keys, five tools and two resources.
 - CI/CD: a fail-closed command-line gate; rejects missing, incomplete, changed-input or older-than-seven-days reports, and high-priority controls without owner-approved evidence.
 - Official-source monitor: explicit opt-in, fixed HTTPS source catalog, bounded fetches and page-change fingerprints. Page change is not a legal interpretation.
 - OpenAI Responses web research: opt-in at both deployment and project level, official domains, citations, failure visibility, `store: false`. Only the declared profile and candidate control titles/URLs are sent; evidence text is excluded.
+
+## Reproduce the open-source experiment
+
+```powershell
+git clone https://github.com/usememos/memos.git .local/memos
+git -C .local/memos checkout 8120a6cee03003ee7968b49b2109f816fa4d96a4
+npm run experiment:memos -- .local/memos
+```
+
+The script reads metadata from the pinned repository, starts an isolated Clearance API with `pg-mem`, connects using the MCP client SDK, submits evidence, checks the approval boundary, invokes the actual CI command and revokes its key. It never executes Memos code or sends data to external providers. The resulting `docs/experiments/memos.json` is an engineering workflow record, not a certification of Memos. A blocked release gate is expected because the evidence has not been approved.
+
+The local inventory now finds nested JavaScript manifests and Go modules/tests. It skips symlinks, secret directories and generated dependencies; limits traversal to five directory levels, 5,000 files and 10,000 entries; and reads at most 32 manifests under 500,000 bytes each. Truncation is explicit in its output.
 
 ## Connect real services
 

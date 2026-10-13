@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "check": "npm run build && npm test",
     "db:migrate": "tsx server/migrate.ts",
-    "compliance:gate": "node scripts/compliance-gate.mjs"
+    "compliance:gate": "node scripts/compliance-gate.mjs",
+    "experiment:memos": "tsx scripts/experiment-memos.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",

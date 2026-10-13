@@ -29,6 +29,13 @@ jobs:
           TEST_DATABASE_URL: postgresql://clearance:ci-only-password@localhost:5432/clearance_test
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - uses: actions/checkout@v4
+        with:
+          repository: usememos/memos
+          ref: 8120a6cee03003ee7968b49b2109f816fa4d96a4
+          path: .local/memos
+          persist-credentials: false
+      - run: npm run experiment:memos -- .local/memos
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

@@ -71,6 +71,29 @@ async function demo() {
   return { a, pid: projects.body[0].id };
 }
 describe("identity boundaries", () => {
+  it("creates an isolated Memos example with no pre-approved evidence", async () => {
+    const a = browser();
+    await a
+      .post("/api/demo")
+      .set("Origin", origin)
+      .send({ example: "memos" })
+      .expect(200);
+    const projects = await a.get("/api/projects").expect(200);
+    expect(projects.body).toHaveLength(1);
+    expect(projects.body[0].profile.name).toContain("Memos");
+    const data = await a
+      .get(`/api/projects/${projects.body[0].id}`)
+      .expect(200);
+    expect(data.body.evidence).toHaveLength(1);
+    expect(data.body.evidence[0].status).toBe("submitted");
+    expect(data.body.runs[0].score).toBe(0);
+    expect(data.body.runs[0].findings).toHaveLength(9);
+    const gate = await a
+      .get(`/api/projects/${projects.body[0].id}/gate`)
+      .expect(200);
+    expect(gate.body.passed).toBe(false);
+    expect(gate.body.blockers).toHaveLength(6);
+  });
   it("does not consume the login attempt budget for session reads", async () => {
     const { a } = await demo();
     for (let i = 0; i < 45; i++) await a.get("/api/auth/me").expect(200);

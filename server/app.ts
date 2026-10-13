@@ -17,7 +17,7 @@ import {
   releaseGate,
 } from "./engine.js";
 import { controls, sources } from "./catalog.js";
-import { seedDemo } from "./seed.js";
+import { seedDemo, seedMemosDemo } from "./seed.js";
 import { mcpHandler } from "./mcp.js";
 export function createApp(
   db: DB,
@@ -116,9 +116,14 @@ export function createApp(
       legacyHeaders: false,
       standardHeaders: "draft-8",
     }),
-    async (_req, res) => {
+    async (req, res) => {
       if (!config.demo) throw new HttpError(404, "Not found.");
-      const uid = await seedDemo(db, config);
+      const { example } = z
+        .object({ example: z.enum(["default", "memos"]).default("default") })
+        .parse(req.body ?? {});
+      const uid = await (example === "memos"
+        ? seedMemosDemo(db, config)
+        : seedDemo(db, config));
       await auth.issue(uid, res);
       res.json({ ok: true });
     },

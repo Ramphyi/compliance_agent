@@ -1,6 +1,6 @@
 {
   "experiment": "Memos repository to MCP to CI",
-  "verifiedAt": "2026-10-14T01:14:48.649Z",
+  "verifiedAt": "2026-10-14T09:50:36.506Z",
   "result": "passed",
   "source": {
     "repository": "https://github.com/usememos/memos",
@@ -95,10 +95,10 @@
         "embedded": []
       },
       "truncated": true,
-      "generatedAt": "2026-10-14T01:14:48.164Z",
+      "generatedAt": "2026-10-14T09:50:35.948Z",
       "revision": "8120a6cee03003ee7968b49b2109f816fa4d96a4"
     },
-    "importedAt": "2026-10-14T01:14:48.649Z",
+    "importedAt": "2026-10-14T09:50:36.506Z",
     "answers": {
       "purpose": "A hypothetical operator offers a self-hosted Memos-based notes service to adult business users in the EU. Notes and account records can contain personal data. Optional AI integrations in the pinned repository are included conservatively in scope; enabled deployment features still need owner confirmation.",
       "markets": "Hypothetical operator scenario: adult business users in the EU; not a claim about every Memos deployment.",

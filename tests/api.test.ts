@@ -635,7 +635,7 @@ describe("MCP and key scopes", () => {
     }).expect(200);
     expect(init.body.result.serverInfo.name).toBe("clearance");
     const listed = await call("tools/list").expect(200);
-    expect(listed.body.result.tools).toHaveLength(8);
+    expect(listed.body.result.tools).toHaveLength(9);
     const tool = await call("tools/call", {
       name: "get_assessment",
       arguments: { projectId: pid },
@@ -665,6 +665,7 @@ describe("MCP and key scopes", () => {
       .send({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} })
       .expect(200);
     expect(r.body.result.tools.map((t: any) => t.name)).toEqual([
+      "get_code_analysis",
       "get_project_questions",
       "list_projects",
       "get_assessment",

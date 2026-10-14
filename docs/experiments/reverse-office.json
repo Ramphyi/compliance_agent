@@ -1,0 +1,479 @@
+{
+  "testedAt": "2026-10-14T09:48:22.594Z",
+  "repository": "https://github.com/Ramphyi/reverse_office",
+  "revision": "abf25d95d38dfc516d7435b2fe35387e95df4645",
+  "checks": [
+    "Actual server-side shallow clone of the public default branch, bounded source read and temporary cleanup completed",
+    "Web and standalone Studio modules found; licensing, data, access and AI review leads include source references",
+    "Scan creates draft suggestions and code context without silently confirming deployment answers",
+    "Project assistant reads the actual report; catalog draft requires explicit application and duplicate application is safe",
+    "Real MCP SDK retrieves analysis; repeat assessments retain history; missing evidence keeps release gate blocked"
+  ],
+  "coverage": {
+    "filesRead": 141,
+    "totalFiles": 150,
+    "excludedFiles": 9,
+    "limitedFiles": 0,
+    "bytesRead": 1365161
+  },
+  "summary": "A self-hosted company workspace with a consistent modern UI: writing, spreadsheets, presentations, files, PDF signing, chat, meetings, projects, timesheets, leave, company knowledge, mail and an accessible AI sidebar.",
+  "modules": [
+    {
+      "name": "(root)",
+      "files": 15
+    },
+    {
+      "name": ".github",
+      "files": 2
+    },
+    {
+      "name": "deploy",
+      "files": 3
+    },
+    {
+      "name": "docs",
+      "files": 11
+    },
+    {
+      "name": "public",
+      "files": 10
+    },
+    {
+      "name": "scripts",
+      "files": 9
+    },
+    {
+      "name": "server",
+      "files": 21
+    },
+    {
+      "name": "src",
+      "files": 36
+    },
+    {
+      "name": "studio-server",
+      "files": 2
+    },
+    {
+      "name": "tests",
+      "files": 24
+    },
+    {
+      "name": "work",
+      "files": 8
+    }
+  ],
+  "signals": [
+    {
+      "kind": "data",
+      "description": "Personal-data fields appear in implementation files. This is not an exhaustive data-flow trace.",
+      "references": [
+        {
+          "path": "public/studio/app.js",
+          "line": 9,
+          "excerpt": "address,"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 736,
+          "excerpt": "'Click or drag a range. Shift+click extends it. Enter A1:D8 in the address box. Double-click, F2 or type to edit; Enter commits. Ctrl+C / V copies a rectangle. Fill down/right adjusts relative references; $A$1 stays fixe"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 881,
+          "excerpt": "'Select text first, then enter a web or email address.',"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 1202,
+          "excerpt": "change(() => (sheet().cells[selection[0]] = `=SUM(${address(0, c)}:${address(r - 1, c)})`));"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 1219,
+          "excerpt": "first = address(r1, c1);"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 1225,
+          "excerpt": "s.merges.push(first + ':' + address(r2, c2));"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 1296,
+          "excerpt": "value: sheet().cells[address(r, c1 + c)] || '',"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 1297,
+          "excerpt": "style: clone(sheet().styles[address(r, c1 + c)] || {}),"
+        }
+      ]
+    },
+    {
+      "kind": "storage",
+      "description": "Storage or persistence references found; deployment location and retention still need confirmation.",
+      "references": [
+        {
+          "path": "public/studio/app.js",
+          "line": 55,
+          "excerpt": "theme = localStorage.getItem('reverse-studio-theme') || 'light';"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 128,
+          "excerpt": "localStorage.setItem('reverse-studio-theme', theme);"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 70,
+          "excerpt": "const saved = JSON.parse(localStorage.getItem('reverse-studio-model'));"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 244,
+          "excerpt": "localStorage.setItem('reverse-studio-model', JSON.stringify(connection));"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 311,
+          "excerpt": "localStorage.removeItem('reverse-studio-model');"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 574,
+          "excerpt": "const value = JSON.parse(localStorage.getItem(key));"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 628,
+          "excerpt": "localStorage.setItem(key, JSON.stringify(preferences));"
+        },
+        {
+          "path": "public/studio/floating.js",
+          "line": 7,
+          "excerpt": "box = JSON.parse(localStorage.getItem(key));"
+        }
+      ]
+    },
+    {
+      "kind": "access",
+      "description": "Authorization and ownership checks are present. Their correctness and route coverage require tests.",
+      "references": [
+        {
+          "path": "server/app.js",
+          "line": 183,
+          "excerpt": "return res.status(403).json({ error: 'Invalid request token. Sign in again.' });"
+        },
+        {
+          "path": "server/app.js",
+          "line": 194,
+          "excerpt": "return res.status(403).json({ error: 'Origin is not permitted' });"
+        },
+        {
+          "path": "server/app.js",
+          "line": 197,
+          "excerpt": "return res.status(403).json({"
+        },
+        {
+          "path": "server/app.js",
+          "line": 222,
+          "excerpt": "return res.status(403).json({"
+        },
+        {
+          "path": "server/app.js",
+          "line": 245,
+          "excerpt": "store.db.prepare('DELETE FROM sessions WHERE user_id=?').run(req.user.id);"
+        },
+        {
+          "path": "server/app.js",
+          "line": 380,
+          "excerpt": "fail(400, 'Unknown or unauthorized attendee');"
+        },
+        {
+          "path": "server/app.js",
+          "line": 625,
+          "excerpt": "store.db.prepare('DELETE FROM sessions WHERE user_id=?').run(target.id);"
+        },
+        {
+          "path": "server/chat-spaces.js",
+          "line": 115,
+          "excerpt": "// No content in notifications; recipients reload their own authorized collections."
+        }
+      ]
+    },
+    {
+      "kind": "ai",
+      "description": "AI provider or inference code is present; confirm which features are enabled.",
+      "references": [
+        {
+          "path": "public/studio/assistant.js",
+          "line": 49,
+          "excerpt": "'Search runs locally. Choose OpenAI or a local model in AI settings for specialist agents and image analysis.',"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 85,
+          "excerpt": "'Choose the model used by all your agents. OpenAI receives requested document context and images when you send a message. Local models run on your computer.',"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 90,
+          "excerpt": "['local', 'Local model · Ollama / LM Studio'],"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 91,
+          "excerpt": "['openai', 'OpenAI'],"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 97,
+          "excerpt": "provider.value = connection?.provider === 'openai' ? 'openai' : 'local';"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 118,
+          "excerpt": "keyLabel = node('label', 'OpenAI API key');"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 122,
+          "excerpt": "key.setAttribute('aria-label', 'OpenAI API key');"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 156,
+          "excerpt": "const usesGateway = () => provider.value === 'openai' || secure.checked;"
+        }
+      ]
+    },
+    {
+      "kind": "license",
+      "description": "Licensing or release-policy text needs review against the actual distributed artifact.",
+      "references": [
+        {
+          "path": "README.md",
+          "line": 7,
+          "excerpt": "The full company application described below still has unresolved runtime/dependency licenses and a blocked release. The standalone Studio does not imply that accounts, meetings, signing, AI or SPV have been migrated to "
+        },
+        {
+          "path": "README.md",
+          "line": 9,
+          "excerpt": "**Full company application release: blocked by the requested MIT/Apache-2.0-only license policy.** The current ONLYOFFICE, Node runtime, Debian image and several application dependencies do not meet that policy. The inst"
+        },
+        {
+          "path": "README.md",
+          "line": 19,
+          "excerpt": "New documents open in the original MIT Studio editors. Existing native documents offer **Create editable Studio copy**, preserving the original bytes and history. The independent PDF workspace adds annotations, page rota"
+        },
+        {
+          "path": "README.md",
+          "line": 59,
+          "excerpt": "The full company artifact remains blocked by the strict license policy. These functional improvements do not certify the existing dependency/runtime distribution."
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "line": 28,
+          "excerpt": "license-policy:"
+        },
+        {
+          "path": "Dockerfile",
+          "line": 4,
+          "excerpt": "COPY license-policy.json ./"
+        },
+        {
+          "path": "docs/ASSISTANT.md",
+          "line": 18,
+          "excerpt": "The existing full-company distribution remains blocked by `license-policy.json`."
+        },
+        {
+          "path": "docs/COLLABORATION.md",
+          "line": 88,
+          "excerpt": "no npm dependencies; the full company image still fails the existing license policy."
+        }
+      ]
+    }
+  ],
+  "suggestions": {
+    "purpose": {
+      "answer": "Repository documentation describes: A self-hosted company workspace with a consistent modern UI: writing, spreadsheets, presentations, files, PDF signing, chat, meetings, projects, timesheets, leave, company knowledge, mail and an accessible AI sidebar. **This is an independent, functional foundation, not a complete reimplementation of Microsoft 365, Adobe Acrobat, Jira or SharePoint.** It uses public formats and original application code. No proprietary binaries were supplied or decompiled. See the exact capability boundaries below before adopting it for production. New documents open in the original MIT Studio editors. Existing native documents offer **Create editable Studio copy**, preserving the original bytes and history. The independent PDF workspace adds annotations, page rotation/removal and existing form-field filling. These are working features with explicit compatibility limits, not Office/Acrobat feature parity. The previous ONLYOFFICE guide and integration code are historical; they are not the…\nConfirm the intended customer and deployed features.",
+      "confidence": "inferred",
+      "references": [
+        {
+          "path": "README.md",
+          "line": 13,
+          "excerpt": "A self-hosted company workspace with a consistent modern UI: writing, spreadsheets, presentations, files, PDF signing, chat, meetings, projects, timesheets, leave, company knowledge, mail and an accessible AI sidebar."
+        },
+        {
+          "path": "README.md",
+          "line": 15,
+          "excerpt": "**This is an independent, functional foundation, not a complete reimplementation of Microsoft 365, Adobe Acrobat, Jira or SharePoint.** It uses public formats and original application code. No proprietary binaries were supplied or decompiled. See the exact capability boundaries below before adopting it for production."
+        },
+        {
+          "path": "README.md",
+          "line": 19,
+          "excerpt": "New documents open in the original MIT Studio editors. Existing native documents offer **Create editable Studio copy**, preserving the original bytes and history. The independent PDF workspace adds annotations, page rotation/removal and existing form-field filling. These are working features with explicit compatibility limits, not Office/Acrobat feature parity. The previous ONLYOFFICE guide and integration code are historical; they are not the…"
+        }
+      ]
+    },
+    "markets": {
+      "answer": "Target countries and intended customers cannot be reliably established from source code. Confirm the countries where this deployment will be offered and whether users are businesses, consumers or children.",
+      "confidence": "unknown",
+      "references": []
+    },
+    "data": {
+      "answer": "Personal-data references were found in public/studio/app.js. Storage references occur in public/studio/app.js, public/studio/assistant.js, public/studio/floating.js. Confirm the exact data categories, processors, hosting regions and retention periods.",
+      "confidence": "inferred",
+      "references": [
+        {
+          "path": "public/studio/app.js",
+          "line": 9,
+          "excerpt": "address,"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 736,
+          "excerpt": "'Click or drag a range. Shift+click extends it. Enter A1:D8 in the address box. Double-click, F2 or type to edit; Enter commits. Ctrl+C / V copies a rectangle. Fill down/right adjusts relative references; $A$1 stays fixe"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 881,
+          "excerpt": "'Select text first, then enter a web or email address.',"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 1202,
+          "excerpt": "change(() => (sheet().cells[selection[0]] = `=SUM(${address(0, c)}:${address(r - 1, c)})`));"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 55,
+          "excerpt": "theme = localStorage.getItem('reverse-studio-theme') || 'light';"
+        },
+        {
+          "path": "public/studio/app.js",
+          "line": 128,
+          "excerpt": "localStorage.setItem('reverse-studio-theme', theme);"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 70,
+          "excerpt": "const saved = JSON.parse(localStorage.getItem('reverse-studio-model'));"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 244,
+          "excerpt": "localStorage.setItem('reverse-studio-model', JSON.stringify(connection));"
+        }
+      ]
+    },
+    "access": {
+      "answer": "Authorization or ownership checks appear in server/app.js, server/chat-spaces.js. These are implementation signals, not proof that every route is protected. Verify cross-user and cross-tenant access tests before accepting this control.",
+      "confidence": "inferred",
+      "references": [
+        {
+          "path": "server/app.js",
+          "line": 183,
+          "excerpt": "return res.status(403).json({ error: 'Invalid request token. Sign in again.' });"
+        },
+        {
+          "path": "server/app.js",
+          "line": 194,
+          "excerpt": "return res.status(403).json({ error: 'Origin is not permitted' });"
+        },
+        {
+          "path": "server/app.js",
+          "line": 197,
+          "excerpt": "return res.status(403).json({"
+        },
+        {
+          "path": "server/app.js",
+          "line": 222,
+          "excerpt": "return res.status(403).json({"
+        },
+        {
+          "path": "server/app.js",
+          "line": 245,
+          "excerpt": "store.db.prepare('DELETE FROM sessions WHERE user_id=?').run(req.user.id);"
+        },
+        {
+          "path": "server/app.js",
+          "line": 380,
+          "excerpt": "fail(400, 'Unknown or unauthorized attendee');"
+        },
+        {
+          "path": "server/app.js",
+          "line": 625,
+          "excerpt": "store.db.prepare('DELETE FROM sessions WHERE user_id=?').run(target.id);"
+        },
+        {
+          "path": "server/chat-spaces.js",
+          "line": 115,
+          "excerpt": "// No content in notifications; recipients reload their own authorized collections."
+        }
+      ]
+    },
+    "ai": {
+      "answer": "AI-related code appears in public/studio/assistant.js. Confirm which providers and features run in production, what data they receive, and how outputs are reviewed.",
+      "confidence": "inferred",
+      "references": [
+        {
+          "path": "public/studio/assistant.js",
+          "line": 49,
+          "excerpt": "'Search runs locally. Choose OpenAI or a local model in AI settings for specialist agents and image analysis.',"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 85,
+          "excerpt": "'Choose the model used by all your agents. OpenAI receives requested document context and images when you send a message. Local models run on your computer.',"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 90,
+          "excerpt": "['local', 'Local model · Ollama / LM Studio'],"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 91,
+          "excerpt": "['openai', 'OpenAI'],"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 97,
+          "excerpt": "provider.value = connection?.provider === 'openai' ? 'openai' : 'local';"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 118,
+          "excerpt": "keyLabel = node('label', 'OpenAI API key');"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 122,
+          "excerpt": "key.setAttribute('aria-label', 'OpenAI API key');"
+        },
+        {
+          "path": "public/studio/assistant.js",
+          "line": 156,
+          "excerpt": "const usesGateway = () => provider.value === 'openai' || secure.checked;"
+        }
+      ]
+    }
+  },
+  "rulesDrafted": 13,
+  "assessment": {
+    "runs": 2,
+    "findings": 27,
+    "score": 0,
+    "releaseAllowed": false
+  },
+  "limitations": [
+    "Static source analysis identifies review leads; it does not execute code or prove control correctness.",
+    "Business audience, deployment countries and data retention need owner confirmation.",
+    "AI synthesis was not used. Drafts are produced by the local source analyzer.",
+    "No target project code, package scripts or target tests were executed.",
+    "No live OpenAI call or private-provider token was used in this public repository experiment.",
+    "Declared EU/business scope is a test assumption, not a fact inferred about the repository."
+  ]
+}

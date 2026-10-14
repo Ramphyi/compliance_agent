@@ -15,7 +15,8 @@
     "check": "npm run build && npm test",
     "db:migrate": "tsx server/migrate.ts",
     "compliance:gate": "node scripts/compliance-gate.mjs",
-    "experiment:memos": "tsx scripts/experiment-memos.ts"
+    "experiment:memos": "tsx scripts/experiment-memos.ts",
+    "experiment:reverse-office": "tsx scripts/experiment-reverse-office.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",

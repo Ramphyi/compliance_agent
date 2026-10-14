@@ -19,6 +19,9 @@ import {
 import { controls, sources } from "./catalog.js";
 import { seedDemo, seedMemosDemo, seedEmptyDemo } from "./seed.js";
 import { mcpHandler } from "./mcp.js";
+import { latestScan, startScan } from "./scans.js";
+import { draftRuleSet, applyRuleSet } from "./rule-sets.js";
+import { chat, chatHistory } from "./assistant.js";
 import {
   getDiscovery,
   connectProject,
@@ -51,7 +54,17 @@ export function createApp(
       strictTransportSecurity: config.production ? undefined : false,
     }),
   );
-  app.use(express.json({ limit: "512kb" }), cookieParser());
+  app.use(
+    (req, res, next) =>
+      express.json({
+        limit:
+          req.method === "POST" &&
+          /^\/api\/projects\/[^/]+\/source-analysis$/.test(req.path)
+            ? "8mb"
+            : "512kb",
+      })(req, res, next),
+    cookieParser(),
+  );
   const origins = new Set([
     new URL(config.appUrl).origin,
     new URL(config.apiUrl).origin,
@@ -85,7 +98,7 @@ export function createApp(
     "/api",
     rateLimit({
       windowMs: 60000,
-      limit: 180,
+      limit: 600,
       standardHeaders: "draft-8",
       legacyHeaders: false,
       message: { error: "Rate limit reached. Try again shortly." },
@@ -111,6 +124,7 @@ export function createApp(
         !!process.env.TWILIO_AUTH_TOKEN,
       externalAi: config.externalAi && !!process.env.OPENAI_API_KEY,
       regulatoryFetch: config.regulatoryFetch,
+      repositoryFetch: config.repositoryFetch !== false,
     }),
   );
   app.use("/api/auth", authRouter(db, config, provider, auth));
@@ -140,6 +154,16 @@ export function createApp(
   );
   const api = express.Router();
   api.use(auth.requireAuth);
+  api.use(
+    rateLimit({
+      windowMs: 60000,
+      limit: 180,
+      keyGenerator: (req) => req.userId!,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: { error: "Workspace request limit reached. Try again shortly." },
+    }),
+  );
   api.get("/projects", auth.scope("read"), async (req, res) =>
     res.json(
       (
@@ -162,6 +186,97 @@ export function createApp(
   });
   api.get("/projects/:id/discovery", auth.scope("read"), async (req, res) =>
     res.json(await getDiscovery(db, req.userId!, String(req.params.id))),
+  );
+  api.get("/projects/:id/analysis", auth.scope("read"), async (req, res) =>
+    res.json(await latestScan(db, req.userId!, String(req.params.id))),
+  );
+  api.post(
+    "/projects/:id/repository-scan",
+    auth.browserOnly,
+    rateLimit({ windowMs: 60000, limit: 5 }),
+    async (req, res) =>
+      res
+        .status(202)
+        .json(
+          await startScan(
+            db,
+            config,
+            req.userId!,
+            String(req.params.id),
+            req.body,
+          ),
+        ),
+  );
+  api.post(
+    "/projects/:id/source-analysis",
+    auth.browserOnly,
+    rateLimit({ windowMs: 60000, limit: 5 }),
+    async (req, res) =>
+      res
+        .status(202)
+        .json(
+          await startScan(
+            db,
+            config,
+            req.userId!,
+            String(req.params.id),
+            req.body,
+            true,
+          ),
+        ),
+  );
+  api.get("/projects/:id/rule-sets", auth.scope("read"), async (req, res) => {
+    await ownedProject(db, req.userId!, String(req.params.id));
+    res.json(
+      (
+        await db.query(
+          "SELECT * FROM rule_drafts WHERE project_id=$1 ORDER BY created_at DESC LIMIT 20",
+          [req.params.id],
+        )
+      ).rows,
+    );
+  });
+  api.post(
+    "/projects/:id/rule-sets",
+    auth.browserOnly,
+    rateLimit({ windowMs: 60000, limit: 5 }),
+    async (req, res) =>
+      res
+        .status(201)
+        .json(
+          await draftRuleSet(
+            db,
+            config,
+            req.userId!,
+            String(req.params.id),
+            req.body,
+          ),
+        ),
+  );
+  api.post(
+    "/projects/:id/rule-sets/:draft/apply",
+    auth.browserOnly,
+    async (req, res) =>
+      res.json(
+        await applyRuleSet(
+          db,
+          req.userId!,
+          String(req.params.id),
+          String(req.params.draft),
+        ),
+      ),
+  );
+  api.get("/projects/:id/assistant", auth.browserOnly, async (req, res) =>
+    res.json(await chatHistory(db, req.userId!, String(req.params.id))),
+  );
+  api.post(
+    "/projects/:id/assistant",
+    auth.browserOnly,
+    rateLimit({ windowMs: 60000, limit: 10 }),
+    async (req, res) =>
+      res.json(
+        await chat(db, config, req.userId!, String(req.params.id), req.body),
+      ),
   );
   api.put("/projects/:id/connection", auth.browserOnly, async (req, res) =>
     res.json(

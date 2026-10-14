@@ -119,7 +119,7 @@ try {
     }),
   );
   const tools = await client.listTools();
-  assert.equal(tools.tools.length, 8);
+  assert.equal(tools.tools.length, 9);
   const skill = await client.readResource({
     uri: "clearance://skills/assessment",
   });

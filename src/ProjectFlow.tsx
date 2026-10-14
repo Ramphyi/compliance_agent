@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -22,10 +22,11 @@ import { api, post, date } from "./api";
 import { Button, Field, Modal } from "./ui";
 import { folderSnapshot } from "./folderSnapshot";
 import "./project-flow.css";
+import SourceScan, { type ScanRecord } from "./SourceScan";
 
 const methods = [
-  ["github", "GitHub", "Use a repository checkout", Github],
-  ["bitbucket", "Bitbucket", "Use a repository checkout", FolderGit2],
+  ["github", "GitHub", "Public or private repository", Github],
+  ["bitbucket", "Bitbucket", "Public or private repository", FolderGit2],
   ["local", "Local folder", "Select code on this computer", FolderOpen],
   ["agent", "MCP / IDE agent", "Continue with your coding agent", Terminal],
 ] as const;
@@ -136,11 +137,22 @@ export function NewProject({
             />
           </Field>
           <h3>Where is the code?</h3>
+          <button
+            type="button"
+            className="text-link"
+            onClick={() => {
+              setName("Reverse Office");
+              setProvider("github");
+              setRepository("https://github.com/Ramphyi/reverse_office");
+            }}
+          >
+            Try the Reverse Office repository <ArrowRight size={15} />
+          </button>
           <MethodPicker value={provider} onChange={setProvider} />
           {(provider === "github" || provider === "bitbucket") && (
             <Field
               label="Repository URL"
-              hint="We save this reference. Import a local checkout next; no account access is granted by pasting a URL."
+              hint="Next, scan the default branch. For private code, supply a read-only access token on the connection page."
             >
               <input
                 type="url"
@@ -152,8 +164,8 @@ export function NewProject({
             </Field>
           )}
           <p className="flow-muted">
-            Next: import code metadata, then confirm the product’s audience,
-            markets and data. You can answer in the app or through MCP.
+            Next: scan the source, review the proposed answers, then confirm
+            your product’s audience, markets and deployment.
           </p>
           {error && (
             <p className="alert error" role="alert">
@@ -349,9 +361,9 @@ export function ConnectCode({
       <section className="card flow-panel">
         <h2>Connect your project’s code</h2>
         <p>
-          Choose how to bring code context into this project. A snapshot
-          contains selected filenames and technology hints; your source code
-          stays on your computer.
+          Start with the source. Clearance reads supported files across the
+          repository and proposes answers with references. Review coverage and
+          confirm the business facts before running your assessment.
         </p>
         <MethodPicker
           value={provider}
@@ -372,87 +384,98 @@ export function ConnectCode({
               />
             </Field>
             <div className="flow-note">
-              <strong>Import from your checkout</strong>
+              <strong>Public and private repositories</strong>
               <p>
-                Clone this repository using your existing Git credentials, then
-                choose its folder below. Saving the URL alone does not read
-                code. Automatic account linking and background sync are not
-                available yet.
+                Paste the repository URL and add a read-only token below if it
+                is private. Each scan reads the current default branch. Run it
+                again after changes to refresh this project’s analysis.
               </p>
             </div>
           </>
         )}
         {provider !== "agent" ? (
           <>
-            <div className="folder-picker">
-              <FolderOpen size={28} />
-              <h3>
-                {snapshot
-                  ? "Refresh the code snapshot"
-                  : "Choose your project folder"}
-              </h3>
-              <p>
-                Select a folder, review its metadata, then import. No files are
-                sent until you confirm.
-              </p>
-              <input
-                aria-label="Choose project folder"
-                type="file"
-                {...({ webkitdirectory: "", directory: "" } as any)}
-                onChange={async (e) => {
-                  if (!e.target.files?.length) return;
-                  setBusy(true);
-                  setError("");
-                  try {
-                    setPreview(await folderSnapshot(e.target.files));
-                  } catch (error) {
-                    setError((error as Error).message);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              />
-            </div>
+            <SourceScan
+              key={`${project.id}-${provider}`}
+              projectId={project.id}
+              provider={provider}
+              repository={repository}
+              onSaved={onSaved}
+            />
             <details className="flow-details">
-              <summary>Or import a CLI inventory JSON</summary>
-              <p>
-                Run from the Clearance checkout. Replace the path with your
-                application folder. You can also add <code>--send</code> after
-                setting CLEARANCE_URL, CLEARANCE_PROJECT_ID and
-                CLEARANCE_API_KEY (evidence scope).
-              </p>
-              <CopyCode
-                title="Collect code metadata"
-                text={
-                  'node scripts/connect-project.mjs "PATH_TO_YOUR_PROJECT" > snapshot.json'
-                }
-              />
-              <input
-                aria-label="Import code snapshot JSON"
-                type="file"
-                accept=".json,application/json"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setError("");
-                  try {
-                    if (file.size > 150000)
-                      throw new Error("Use an inventory JSON under 150 KB.");
-                    const raw = JSON.parse(await file.text());
-                    if (
-                      !raw.artifacts ||
-                      !Array.isArray(raw.technologyHints) ||
-                      !Number.isInteger(raw.filesInspected)
-                    )
-                      throw new Error(
-                        "Use JSON generated by connect-project.mjs.",
-                      );
-                    setPreview(raw);
-                  } catch (error) {
-                    setError((error as Error).message);
+              <summary>
+                Advanced: import filenames only, without source analysis
+              </summary>
+              <div className="folder-picker">
+                <FolderOpen size={28} />
+                <h3>
+                  {snapshot
+                    ? "Refresh the code snapshot"
+                    : "Choose your project folder"}
+                </h3>
+                <p>
+                  Select a folder, review its metadata, then import. No files
+                  are sent until you confirm.
+                </p>
+                <input
+                  aria-label="Choose project folder"
+                  type="file"
+                  {...({ webkitdirectory: "", directory: "" } as any)}
+                  onChange={async (e) => {
+                    if (!e.target.files?.length) return;
+                    setBusy(true);
+                    setError("");
+                    try {
+                      setPreview(await folderSnapshot(e.target.files));
+                    } catch (error) {
+                      setError((error as Error).message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                />
+              </div>
+              <details className="flow-details">
+                <summary>Or import a CLI inventory JSON</summary>
+                <p>
+                  Run from the Clearance checkout. Replace the path with your
+                  application folder. You can also add <code>--send</code> after
+                  setting CLEARANCE_URL, CLEARANCE_PROJECT_ID and
+                  CLEARANCE_API_KEY (evidence scope).
+                </p>
+                <CopyCode
+                  title="Collect code metadata"
+                  text={
+                    'node scripts/connect-project.mjs "PATH_TO_YOUR_PROJECT" > snapshot.json'
                   }
-                }}
-              />
+                />
+                <input
+                  aria-label="Import code snapshot JSON"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setError("");
+                    try {
+                      if (file.size > 150000)
+                        throw new Error("Use an inventory JSON under 150 KB.");
+                      const raw = JSON.parse(await file.text());
+                      if (
+                        !raw.artifacts ||
+                        !Array.isArray(raw.technologyHints) ||
+                        !Number.isInteger(raw.filesInspected)
+                      )
+                        throw new Error(
+                          "Use JSON generated by connect-project.mjs.",
+                        );
+                      setPreview(raw);
+                    } catch (error) {
+                      setError((error as Error).message);
+                    }
+                  }}
+                />
+              </details>
             </details>
           </>
         ) : (
@@ -606,6 +629,38 @@ export function ProjectQuestions({
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
   const [countries, setCountries] = useState(profile.countries.join(", "));
+  const [analysis, setAnalysis] = useState<ScanRecord | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void api<ScanRecord | null>(`/projects/${project.id}/analysis`)
+      .then((scan) => {
+        if (cancelled) return;
+        setAnalysis(scan);
+        if (scan?.status !== "completed" || !scan.report || scan.stale) return;
+        const report = scan.report;
+        setAnswers((previous) => ({
+          ...Object.fromEntries(
+            Object.entries(report.suggestions)
+              .filter(([, suggestion]) => suggestion.confidence !== "unknown")
+              .map(([key, suggestion]) => [key, suggestion.answer]),
+          ),
+          ...Object.fromEntries(
+            Object.entries(previous).filter(([, value]) => value.trim()),
+          ),
+        }));
+        setProfile((previous) =>
+          previous.description.startsWith("Project setup in progress.")
+            ? { ...previous, description: report.summary }
+            : previous,
+        );
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.id]);
   const questions = projectQuestions(profile);
   const answered = questions.filter((q) => answers[q.id]?.trim()).length;
   if (!profile.discovery)
@@ -672,10 +727,33 @@ export function ProjectQuestions({
       >
         <h2>Confirm what the code cannot tell us</h2>
         <p>
-          These questions adapt to your profile and imported metadata. Answer
-          them yourself, or let your agent propose answers with file references.
-          Use “unknown” when something still needs investigation.
+          Source-based suggestions are drafts. Review their file references,
+          correct anything missing and confirm the actual users and markets.
+          Saving these answers does not approve evidence or pass a control.
         </p>
+        {analysis?.report && !analysis.stale ? (
+          <div className="flow-note">
+            <strong>
+              Prefilled from {analysis.report.filesRead} scanned files
+            </strong>
+            <p>
+              {analysis.report.mode === "ai" ? "AI-assisted" : "Static"}{" "}
+              analysis. Previously saved answers are preserved. Unknown business
+              facts are left for you to answer.
+            </p>
+          </div>
+        ) : (
+          <div className="flow-note">
+            <strong>Scan your source first to prefill these answers.</strong>
+            <p>You can also enter answers manually or use your IDE agent.</p>
+            <Link
+              className="text-link"
+              to={`/app/connect?project=${project.id}`}
+            >
+              Scan project source <ArrowRight size={15} />
+            </Link>
+          </div>
+        )}
         <div className="flow-note">
           {profile.discovery.snapshot
             ? `Detected: ${profile.discovery.snapshot.technologyHints.join(", ") || "no recognized technology hints"}.`
@@ -810,6 +888,25 @@ export function ProjectQuestions({
                     setAnswers({ ...answers, [q.id]: e.target.value })
                   }
                 />
+                {!analysis?.stale && analysis?.report?.suggestions[q.id] && (
+                  <details className="answer-provenance">
+                    <summary>
+                      Source draft ·{" "}
+                      {analysis.report.suggestions[q.id].confidence}
+                    </summary>
+                    <p>{analysis.report.suggestions[q.id].answer}</p>
+                    {analysis.report.suggestions[q.id].references.map(
+                      (ref, index) => (
+                        <div className="source-reference" key={index}>
+                          <code>
+                            {ref.path}:{ref.line}
+                          </code>
+                          <pre>{ref.excerpt}</pre>
+                        </div>
+                      ),
+                    )}
+                  </details>
+                )}
               </Field>
             </div>
           ))}

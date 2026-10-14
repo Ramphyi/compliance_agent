@@ -16,9 +16,9 @@ Open **http://127.0.0.1:5173** and choose **Connect your project**, then **New p
 
 ## Project workflow
 
-1. **Create a project.** Choose GitHub, Bitbucket, a local folder or MCP / IDE agent. GitHub and Bitbucket use your local authenticated checkout; saving a repository URL does not grant account access or automatically fetch code.
-2. **Connect code.** Select a project folder in the browser. Review the bounded metadata and confirm import. Source contents are not uploaded. Alternatively, use the CLI below or have your agent call `submit_code_snapshot`.
-3. **Answer project questions.** Confirm markets, audience, intended use and data. Questions adapt to the profile and signals such as AI dependencies, mobile configuration and missing privacy/test filenames. The user or MCP agent can save answers; they do not approve evidence. Unknowns should remain explicit.
+1. **Create a project.** Choose GitHub, Bitbucket, a local folder or MCP / IDE agent. For private GitHub/Bitbucket code, enter a read-only token on the next page. Public repositories need no token.
+2. **Connect code.** Scan the repository default branch or select a local folder and review the redacted source before sending it to this server. Source analysis shows file coverage, modules and referenced draft answers. AI synthesis is a separate opt-in. The advanced metadata-only importer and `submit_code_snapshot` remain available.
+3. **Answer project questions.** Review the prefilled purpose, data and access drafts with file/line references. Unknown business facts remain blank. Confirm markets, audience, intended use and data. Questions adapt to the profile and signals such as AI dependencies, mobile configuration and missing privacy/test filenames. The user or MCP agent can save answers; they do not approve evidence. Unknowns should remain explicit.
 4. **Review problems.** Run an assessment. Each finding has a reason and next action. Missing evidence means unverified, not a proven implementation defect. A coding agent can investigate code, help fix it and submit evidence for human review.
 5. **Return and recheck.** Open All projects, choose the same project, refresh its code snapshot and run another assessment. Earlier runs remain available. Changed snapshots, answers, profile or evidence invalidate the old gate.
 
@@ -40,14 +40,18 @@ For Claude Code or an IDE agent with MCP tool support, open **Connect code → M
 - Assessments: timestamped discovery, mapping, evidence-review, research and release-review events; history and downloadable JSON reports.
 - Evidence vault: text/file import, control mapping, explicit owner approval/rejection; optional local repository inventory script.
 - Memos experiment: a reproducible assessment of a pinned open-source repository, using the real MCP SDK and CI command. Open `/field-notes/memos` and choose **Open the Memos example** to review the same scenario in an isolated workspace, with no pre-approved evidence.
-- Custom policies: create/delete product requirements and include them in the assessment and release gate.
+- Custom policies: create/delete requirements, or describe a software type and prepare a catalog/live-research rule set. Review and apply the draft explicitly; repeated application does not duplicate rules.
+- Source understanding: ephemeral bare clones, local source uploads, bounded file inspection, module map and referenced answer drafts.
+- Floating project assistant: drag anywhere, move with arrow keys on the header, ask about recorded context, run assessments and prepare rule sets. Real AI tool use requires server configuration and per-chat consent. Local tools remain available without a model.
 - Authentication: email/password with scrypt, Brevo confirmation and reset mail, Google OAuth with state/nonce/PKCE, optional Twilio Verify SMS/WhatsApp second factor.
-- MCP: actual stateless Streamable HTTP server, scoped bearer keys, eight tools and two resources.
+- MCP: actual stateless Streamable HTTP server, scoped bearer keys, nine tools and two resources.
 - CI/CD: a fail-closed command-line gate; rejects missing, incomplete, changed-input or older-than-seven-days reports, and high-priority controls without owner-approved evidence.
 - Official-source monitor: explicit opt-in, fixed HTTPS source catalog, bounded fetches and page-change fingerprints. Page change is not a legal interpretation.
 - OpenAI Responses web research: opt-in at both deployment and project level, official domains, citations, failure visibility, `store: false`. Only the declared profile and candidate control titles/URLs are sent; evidence text is excluded.
 
 ## Reproduce the open-source experiment
+
+For the source-analysis flow, run `npm run experiment:reverse-office`. It clones the public Reverse Office default branch, records its exact revision, reads source, exercises the assistant and rule-set review, and verifies MCP access and a blocked evidence gate. No target application code is executed. See [source analysis and assistant guide](docs/SOURCE-ASSISTANT.md) and `docs/experiments/reverse-office.json`. In the UI use **New project → Try the Reverse Office repository**.
 
 ```powershell
 git clone https://github.com/usememos/memos.git .local/memos
@@ -70,6 +74,7 @@ Copy `.env.example` to `.env` and fill in values locally. Never commit credentia
 | Google         | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`; register `${API_URL}/api/auth/google/callback` exactly                |
 | SMS / WhatsApp | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`; enable the requested channels with Twilio |
 | OpenAI         | A replacement `OPENAI_API_KEY`, a web-search-capable `OPENAI_MODEL`, `ALLOW_EXTERNAL_AI=true`, and project opt-in |
+| Repository scans | `ALLOW_REPOSITORY_FETCH=true`; Git must be installed (included in Docker image). Enabled by default only in development. |
 | Source checks  | `ALLOW_REGULATORY_FETCH=true`                                                                                     |
 
 For persistent local development, set `APP_URL=http://localhost:5173`, `API_URL=http://localhost:4000`, `DEMO_MODE=false`, `DB_DRIVER=postgres` and your database URL. Run `npm run dev:postgres` and `npm run dev:web` in separate terminals. The API applies the initial idempotent schema on startup; `npm run db:migrate` also applies it.
@@ -88,7 +93,7 @@ Use a strong URL-safe `POSTGRES_PASSWORD` (e.g. random hex). Keep `APP_URL` and 
 
 The production image runs as a non-root user, drops capabilities, uses a read-only root filesystem and serves the compiled React assets. PostgreSQL is on an internal network with a named volume and no host port. Production refuses demo/memory mode and non-HTTPS public URLs. Fonts and assets do not require third-party browser requests. No telemetry is included.
 
-For offline/on-prem operation leave both egress flags false. The Compose app still has an egress network to support configured identity/mail/model providers; enforce actual offline policy with your host firewall/network policy or remove that network. Google, Brevo, Twilio and OpenAI inherently need their respective external services. Local password login and local assessments can operate without model access once accounts are provisioned and confirmed. There is no automatic outbound research or source polling.
+For offline/on-prem operation set ALLOW_EXTERNAL_AI, ALLOW_REGULATORY_FETCH and ALLOW_REPOSITORY_FETCH to false. The Compose app still has an egress network to support configured identity/mail/model providers; enforce actual offline policy with your host firewall/network policy or remove that network. Google, Brevo, Twilio and OpenAI inherently need their respective external services. Local password login and local assessments can operate without model access once accounts are provisioned and confirmed. There is no automatic outbound research or source polling.
 
 Back up the `pgdata` volume/database with your operational tooling and test restoration. Storage encryption, TLS certificates, backup retention, audit-log retention and secrets management are infrastructure responsibilities. The current release targets a **single API instance**: rate limits and assessment exclusion are process-local. Add shared limits, durable workers and database-backed job locks before horizontal scaling. Audit records are owner-scoped and not advertised as tamper-proof.
 
@@ -113,6 +118,7 @@ Some clients use different config field names or require OAuth discovery; static
 | Tool                 | Scope      | Behavior                                 |
 | -------------------- | ---------- | ---------------------------------------- |
 | `list_projects`      | `read`     | Owned products only                      |
+| `get_code_analysis` | `read` | Latest source scan, coverage, module map and referenced drafts |
 | `get_project_questions` | `read` | Profile, code snapshot, questions and saved answers |
 | `submit_code_snapshot` | `evidence` | Import bounded code metadata; invalidates prior gate |
 | `answer_project_questions` | `evidence` | Save question answers; never approves controls |
@@ -139,7 +145,7 @@ Generate a **local, read-only metadata inventory**:
 node scripts/inspect-repository.mjs D:\path\to\your\product
 ```
 
-This lists known technology hints and discovered policy/test/pipeline files, skips symlinks and sensitive/generated directories, never executes code, and does not upload anything. Review the output and import it as evidence if relevant. It is not a static security scanner and does not prove that tests pass. There is no repository hosting integration or automatic arbitrary-code execution.
+This lists known technology hints and discovered policy/test/pipeline files, skips symlinks and sensitive/generated directories, never executes code, and does not upload anything. Review the output and import it as evidence if relevant. It is not a static security scanner and does not prove that tests pass. This metadata-only CLI is separate from the source scanner. Neither executes target code.
 
 ## Validation
 

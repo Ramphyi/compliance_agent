@@ -45,6 +45,11 @@ test("new project connects a folder, adapts questions, saves answers and can be 
   await expect(page).toHaveURL(/\/app\/connect\?project=/);
   const pid = new URL(page.url()).searchParams.get("project")!;
   await page
+    .getByText("Advanced: import filenames only, without source analysis", {
+      exact: true,
+    })
+    .click();
+  await page
     .getByLabel("Choose project folder", { exact: true })
     .setInputFiles(folder);
   await expect(
@@ -150,7 +155,7 @@ test("new project connects a folder, adapts questions, saves answers and can be 
     .click();
   await page.getByLabel("Project name", { exact: true }).fill("Second project");
   await page
-    .getByRole("button", { name: "Bitbucket Use a repository checkout" })
+    .getByRole("button", { name: "Bitbucket Public or private repository" })
     .click();
   await page
     .getByLabel("Repository URL", { exact: true })

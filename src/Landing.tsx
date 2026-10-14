@@ -379,7 +379,7 @@ function Home() {
               [
                 "01",
                 "Connect code & answer questions",
-                "Create a project. Import a local checkout from GitHub or Bitbucket, select a folder, or send metadata through MCP. Confirm the questions about your app’s users, markets and data.",
+                "Create a project. Scan a public or private GitHub/Bitbucket repository, upload a source folder or connect through MCP. Review source-based answers, then confirm users, markets and deployment.",
               ],
               [
                 "02",
@@ -525,12 +525,12 @@ function Platform() {
         {[
           [
             "Connect your code",
-            "Import metadata from your GitHub or Bitbucket checkout, choose a local folder, or connect your coding agent over MCP. Source files stay on your computer. Repository URLs are references, not automatic account connections.",
+            "Scan the default branch of a public or private GitHub or Bitbucket repository, or upload supported source files from a folder. Private tokens are used for one scan and never saved. A metadata-only path remains available for IDE agents.",
             "Refresh the snapshot when your code changes.",
           ],
           [
             "Answer project questions",
-            "Questions adapt to your product profile and recognized repository signals. Answer in the website or let your agent propose answers with file references. Confirm the markets, audience and intended use yourself.",
+            "Source analysis prefills editable answers about purpose, data and access controls with file references. Optional AI interprets bounded excerpts. Confirm the markets, audience and intended use yourself; code cannot reliably decide them.",
             "A dependency can suggest a question; it cannot prove a legal obligation.",
           ],
           [
@@ -993,11 +993,11 @@ function Security() {
         {[
           [
             "Your infrastructure",
-            "Product profiles, evidence text, assessment history, review decisions and audit records live in your PostgreSQL database.",
+            "Product profiles, evidence, source-analysis reports with excerpts, assistant history, rule drafts and review records live in your PostgreSQL database.",
           ],
           [
             "Optional model research",
-            "When both server and project opt in, the declared profile and candidate source links can go to OpenAI. Evidence text is excluded from that research request.",
+            "Assessment research sends declared context when both server and project opt in. Separately enabled AI scans send redacted source excerpts; AI chat sends messages and project context. Live rule research sends the topic and declared profile.",
           ],
           [
             "Identity and messages",
@@ -1005,7 +1005,7 @@ function Security() {
           ],
           [
             "Official source checks",
-            "An operator-enabled fetcher checks a fixed source catalog for page changes. A changed page is a signal to review, not a legal interpretation.",
+            "Source checks use a fixed official catalog. Repository scans contact GitHub or Bitbucket, read a temporary bare clone and delete it. Read-only access tokens are used for that scan only. A changed legal page still needs review.",
           ],
         ].map(([t, p], i) => (
           <article key={t}>

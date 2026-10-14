@@ -61,6 +61,8 @@ import type {
   User,
 } from "../shared/types";
 import Onboarding from "./Onboarding";
+import AssistantChat from "./AssistantChat";
+import RuleSets from "./RuleSets";
 import {
   NewProject,
   ProjectList,
@@ -955,6 +957,11 @@ export default function Workspace() {
               )}
               {section === "policies" && (
                 <>
+                  <RuleSets
+                    key={selected}
+                    projectId={selected}
+                    onApplied={() => void refresh()}
+                  />
                   <SectionTitle
                     title="Your custom policies"
                     description="Internal requirements are included in every new assessment."
@@ -1065,6 +1072,13 @@ export default function Workspace() {
           </footer>
         </main>
       </div>
+      {selected && data?.project.id === selected && (
+        <AssistantChat
+          projectId={selected}
+          projectName={data.project.profile.name}
+          onChanged={refresh}
+        />
+      )}
       {onboard && (
         <Onboarding
           project={edit ? data?.project : undefined}

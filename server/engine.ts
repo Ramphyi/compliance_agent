@@ -131,7 +131,7 @@ export async function runAssessment(
     await add(
       "Discovery",
       "Product context mapped",
-      `${project.profile.softwareType} · ${project.profile.industry} · ${project.profile.countries.join(", ")}. ${project.profile.discovery?.snapshot ? `Repository metadata imported: ${project.profile.discovery.snapshot.filesInspected} files, ${project.profile.discovery.snapshot.technologyHints.join(", ")}. ${unansweredQuestions(project.profile).length} project questions unanswered. No source execution or semantic code audit was performed.` : "Scope comes from your declared profile; no code snapshot imported."}`,
+      `${project.profile.softwareType} · ${project.profile.industry} · ${project.profile.countries.join(", ")}. ${project.profile.discovery?.snapshot ? `Code context: ${project.profile.discovery.snapshot.filesInspected} files, ${project.profile.discovery.snapshot.technologyHints.join(", ")}. ${unansweredQuestions(project.profile).length} project questions unanswered. Review Connect code for the source-analysis coverage. This assessment maps requirements and evidence; it does not execute the application.` : "Scope comes from your declared profile; no code snapshot imported."}`,
     );
     const evidence = (
       await db.query("SELECT * FROM evidence WHERE project_id=$1", [projectId])

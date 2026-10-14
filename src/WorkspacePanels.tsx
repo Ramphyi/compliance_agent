@@ -102,6 +102,7 @@ export function Integrations({
             {[
               "list_projects",
               "get_project_questions",
+              "get_code_analysis",
               "submit_code_snapshot",
               "answer_project_questions",
               "get_assessment",

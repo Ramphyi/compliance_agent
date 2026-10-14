@@ -9,6 +9,7 @@ import type { Config } from "./config.js";
 import { ownedProject, runAssessment, releaseGate } from "./engine.js";
 import { evidenceSchema, snapshotSchema, answersSchema } from "./validation.js";
 import { getDiscovery, submitSnapshot, saveAnswers } from "./discovery.js";
+import { latestScan } from "./scans.js";
 import { id, audit } from "./security.js";
 import { sources } from "./catalog.js";
 export function mcpHandler(db: DB, config: Config) {
@@ -23,6 +24,15 @@ export function mcpHandler(db: DB, config: Config) {
     const allowed = (scope: string) =>
       !req.scopes || req.scopes.includes(scope);
     if (allowed("read")) {
+      server.registerTool(
+        "get_code_analysis",
+        {
+          description:
+            "Read the latest source scan, exact coverage, module map and suggested answers with file/line references. No source code execution or automatic approvals.",
+          inputSchema: { projectId: z.string() },
+        },
+        async ({ projectId }) => result(await latestScan(db, uid, projectId)),
+      );
       server.registerTool(
         "get_project_questions",
         {

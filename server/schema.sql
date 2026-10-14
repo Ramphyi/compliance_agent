@@ -49,3 +49,18 @@ CREATE INDEX IF NOT EXISTS evidence_project_idx ON evidence(project_id);
 CREATE INDEX IF NOT EXISTS runs_project_idx ON runs(project_id);
 CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS audit_user_idx ON audit_log(user_id);
+CREATE TABLE IF NOT EXISTS code_scans (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+ status TEXT NOT NULL, events JSONB NOT NULL DEFAULT '[]', report JSONB, error TEXT,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS rule_drafts (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+ payload JSONB NOT NULL, applied BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS assistant_messages (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+ role TEXT NOT NULL, content TEXT NOT NULL, meta JSONB NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS scans_project_idx ON code_scans(project_id);
+CREATE INDEX IF NOT EXISTS messages_project_idx ON assistant_messages(project_id);

@@ -9,6 +9,7 @@ export type Config = {
   databaseUrl?: string;
   externalAi: boolean;
   regulatoryFetch: boolean;
+  repositoryFetch?: boolean;
 };
 export function getConfig(): Config {
   const production = process.env.NODE_ENV === "production";
@@ -22,6 +23,9 @@ export function getConfig(): Config {
     databaseUrl: process.env.DATABASE_URL,
     externalAi: process.env.ALLOW_EXTERNAL_AI === "true",
     regulatoryFetch: process.env.ALLOW_REGULATORY_FETCH === "true",
+    repositoryFetch:
+      process.env.ALLOW_REPOSITORY_FETCH === "true" ||
+      (!production && process.env.ALLOW_REPOSITORY_FETCH !== "false"),
   };
   if (production && (config.demo || config.memory))
     throw new Error("Demo and memory database are forbidden in production");

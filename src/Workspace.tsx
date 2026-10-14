@@ -437,8 +437,9 @@ export default function Workspace() {
                 <span className="status-dot" /> INTERACTIVE PREVIEW
               </span>
               <p>
-                Local preview · data resets on server restart · use PostgreSQL
-                for lasting project storage
+                {config.persistent
+                  ? "Local workspace · sessions and projects saved between restarts"
+                  : "Temporary preview · data resets on server restart"}
               </p>
               <Link to="/signup">
                 Create an account <ArrowUpRight size={12} />
@@ -457,7 +458,18 @@ export default function Workspace() {
               </button>
             </div>
           )}
-          {section === "projects" ? (
+          {section === "settings" && user ? (
+            <SettingsPanel
+              user={user}
+              config={config}
+              project={data?.project}
+              onEdit={() => {
+                setEdit(true);
+                setOnboard(true);
+              }}
+              onUserUpdate={async () => setUser((await api("/auth/me")).user)}
+            />
+          ) : section === "projects" ? (
             <ProjectList
               projects={projects}
               onOpen={openProject}
@@ -1045,20 +1057,6 @@ export default function Workspace() {
               )}
               {section === "integrations" && (
                 <Integrations projectId={selected} notify={setToast} />
-              )}
-              {section === "settings" && user && (
-                <SettingsPanel
-                  user={user}
-                  config={config}
-                  project={data.project}
-                  onEdit={() => {
-                    setEdit(true);
-                    setOnboard(true);
-                  }}
-                  onUserUpdate={async () =>
-                    setUser((await api("/auth/me")).user)
-                  }
-                />
               )}
             </>
           )}

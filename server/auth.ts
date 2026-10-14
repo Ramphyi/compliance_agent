@@ -90,7 +90,7 @@ export function authServices(db: DB, config: Config) {
   }
   const requireAuth = async (
     req: Request,
-    _res: Response,
+    res: Response,
     next: NextFunction,
   ) => {
     try {
@@ -117,6 +117,23 @@ export function authServices(db: DB, config: Config) {
         if (!session) throw new HttpError(401, "Your session has expired.");
         req.userId = session.user_id;
         req.sessionCreated = new Date(session.created_at);
+        // Renew active sessions without resetting the recent-login timestamp.
+        // Password reset/logout still revoke the same server-side session.
+        const absoluteExpiry = +req.sessionCreated + 30 * 86400000;
+        const expires = Math.min(Date.now() + 7 * 86400000, absoluteExpiry);
+        if (
+          +new Date(session.expires_at) < Date.now() + 6 * 86400000 &&
+          expires > +new Date(session.expires_at)
+        ) {
+          await db.query(
+            "UPDATE sessions SET expires_at=$1 WHERE token_hash=$2",
+            [new Date(expires), hash(raw)],
+          );
+          res.cookie("clearance_session", raw, {
+            ...cookieOptions,
+            maxAge: expires - Date.now(),
+          });
+        }
       }
       next();
     } catch (error) {

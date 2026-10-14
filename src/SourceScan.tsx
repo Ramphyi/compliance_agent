@@ -14,6 +14,8 @@ import {
   type CodeAnalysis,
 } from "../shared/code-analysis";
 import "./assistant.css";
+import SourceVisuals, { ScanTimeline } from "./SourceVisuals";
+import type { ConnectionStatus } from "./AccountConnections";
 export type ScanRecord = {
   stale?: boolean;
   id: string;
@@ -76,7 +78,8 @@ export default function SourceScan({
   onSaved: () => Promise<void>;
 }) {
   const [scan, setScan] = useState<ScanRecord | null>(null),
-    [token, setToken] = useState(""),
+    [privateAccess, setPrivateAccess] = useState(false),
+    [connections, setConnections] = useState<ConnectionStatus[]>([]),
     [useAi, setUseAi] = useState(false),
     [ai, setAi] = useState(false),
     [busy, setBusy] = useState(false),
@@ -107,6 +110,9 @@ export default function SourceScan({
   useEffect(() => {
     mounted.current = true;
     void load().catch((e) => setError(e.message));
+    void api<ConnectionStatus[]>("/account/connections")
+      .then(setConnections)
+      .catch((e) => setError(e.message));
     void api("/config")
       .then((c) => setAi(c.externalAi))
       .catch(() => {});
@@ -129,7 +135,7 @@ export default function SourceScan({
     try {
       const path = remote ? "repository-scan" : "source-analysis";
       const body = remote
-        ? { repository, accessToken: token, useAi }
+        ? { repository, useSavedConnection: privateAccess, useAi }
         : { ...source, useAi };
       const result = await post(`/projects/${projectId}/${path}`, body);
       setScan({
@@ -148,7 +154,6 @@ export default function SourceScan({
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setToken("");
       setBusy(false);
     }
   }
@@ -166,32 +171,45 @@ export default function SourceScan({
       </div>
       {remote ? (
         <>
-          <Field
-            label={
-              provider === "github"
-                ? "GitHub access token (private repositories)"
-                : "Bitbucket repository access token"
-            }
-            hint={
-              provider === "github"
-                ? "Optional for public repositories. Use a fine-grained token with read-only Contents access to this repository. Used for this scan only; never saved."
-                : "Use a repository access token with read permission. Used for this scan only; never saved."
-            }
+          <div
+            className="source-access-options"
+            role="group"
+            aria-label="Repository access"
           >
-            <input
-              type="password"
-              autoComplete="off"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              maxLength={512}
-              placeholder="Paste a read-only token if the repository is private"
-            />
-          </Field>
-          <p className="scan-boundary">
-            <LockKeyhole size={14} /> The server clones the default branch into
-            temporary storage, reads eligible source files, then deletes the
-            clone. No project scripts run.
-          </p>
+            <button
+              type="button"
+              aria-pressed={!privateAccess}
+              onClick={() => setPrivateAccess(false)}
+            >
+              <FileCode2 size={20} />
+              <strong>Public repository</strong>
+              <small>No token needed · anonymous access</small>
+            </button>
+            <button
+              type="button"
+              aria-pressed={privateAccess}
+              onClick={() => setPrivateAccess(true)}
+            >
+              <LockKeyhole size={20} />
+              <strong>Private repository</strong>
+              <small>Use the connection saved in your profile</small>
+            </button>
+          </div>
+          {privateAccess ? (
+            <p className="scan-boundary">
+              {connections.find((c) => c.provider === provider)?.connected
+                ? "Your saved account connection will be used for this scan."
+                : "Connect your account before scanning private code."}{" "}
+              <Link className="text-link" to="/app/settings">
+                Manage in profile →
+              </Link>
+            </p>
+          ) : (
+            <p className="scan-boundary">
+              <FileCode2 size={14} /> Public access never uses a saved token.
+              GitHub and Bitbucket URLs with or without .git are supported.
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -253,7 +271,13 @@ export default function SourceScan({
       <Button
         variant="orange"
         busy={busy || scan?.status === "running"}
-        disabled={remote ? !repository : !source}
+        disabled={
+          remote
+            ? !repository ||
+              (privateAccess &&
+                !connections.find((c) => c.provider === provider)?.connected)
+            : !source
+        }
         onClick={start}
       >
         <ScanLine size={16} />
@@ -268,6 +292,7 @@ export default function SourceScan({
           {error}
         </p>
       )}
+      {scan && <ScanTimeline scan={scan} />}
       {scan && (
         <div className="scan-progress" aria-live="polite">
           <strong>
@@ -279,7 +304,7 @@ export default function SourceScan({
           </strong>
           {scan.events.slice(-4).map((e, i) => (
             <p key={i}>
-              <span>✓</span> {e.detail}
+              <span>·</span> {e.detail}
             </p>
           ))}
           {scan.error && <p className="alert error">{scan.error}</p>}
@@ -306,49 +331,12 @@ export function ScanReport({
 }) {
   return (
     <div className="scan-report">
-      <div className="scan-counters">
-        <div>
-          <strong>{report.filesRead}</strong>
-          <span>files read</span>
-        </div>
-        <div>
-          <strong>{report.excludedFiles}</strong>
-          <span>excluded</span>
-        </div>
-        <div>
-          <strong>{report.limitedFiles}</strong>
-          <span>beyond limits</span>
-        </div>
-      </div>
+      <SourceVisuals report={report} />
       <p>{report.summary}</p>
       <p className="small-note">
-        {report.mode === "ai"
-          ? "AI-assisted analysis"
-          : "Static source analysis"}{" "}
-        · {date(report.scannedAt)}
-        {report.revision && ` · ${report.revision.slice(0, 12)}`}
+        Scanned {date(report.scannedAt)}. Select components and review signals
+        above to inspect source references.
       </p>
-      <div className="module-map">
-        {report.modules.map((m) => (
-          <span key={m.name}>
-            <FileCode2 size={14} />
-            {m.name} <b>{m.files}</b>
-          </span>
-        ))}
-      </div>
-      {report.signals.map((signal) => (
-        <details key={signal.kind}>
-          <summary>{signal.description}</summary>
-          {signal.references.map((ref, i) => (
-            <div className="source-reference" key={i}>
-              <code>
-                {ref.path}:{ref.line}
-              </code>
-              <pre>{ref.excerpt}</pre>
-            </div>
-          ))}
-        </details>
-      ))}
       <details>
         <summary>Coverage and limits</summary>
         {report.warnings.map((w, i) => (

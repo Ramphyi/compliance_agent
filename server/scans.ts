@@ -16,10 +16,12 @@ import {
 } from "../shared/code-analysis.js";
 import { enrichAnalysis, aiReady } from "./ai.js";
 import type { Discovery } from "../shared/discovery.js";
+import { connectionToken } from "./connections.js";
 
 export const remoteScanSchema = z.object({
   repository: z.string().url().max(300),
   accessToken: z.string().max(512).default(""),
+  useSavedConnection: z.boolean().default(false),
   useAi: z.boolean().default(false),
 });
 export const localScanSchema = z.object({
@@ -82,6 +84,18 @@ export async function startScan(
   const data = local
     ? localScanSchema.parse(input)
     : remoteScanSchema.parse(input);
+  if (!local) {
+    const remote = data as z.infer<typeof remoteScanSchema>;
+    const validated = repositoryRequest(remote.repository);
+    remote.repository = validated.repository;
+    if (remote.useSavedConnection)
+      remote.accessToken = await connectionToken(
+        db,
+        config,
+        uid,
+        validated.provider,
+      );
+  }
   if (!local && config.repositoryFetch === false)
     throw new HttpError(
       503,

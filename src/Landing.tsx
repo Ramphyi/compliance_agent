@@ -148,8 +148,8 @@ function Demo({
           setBusy(true);
           setError("");
           try {
-            await post("/demo", { example });
-            navigate("/app");
+            const result = await post("/demo", { example });
+            navigate(result.reusedSession ? "/app/projects" : "/app");
           } catch (e) {
             setError((e as Error).message);
           } finally {
@@ -320,8 +320,7 @@ function Home() {
             <Go to="/platform">See how it works</Go>
           </div>
           <p className="m-caption">
-            Local preview: start without an account. Project data resets on
-            server restart.
+            Local preview: start without an account. Projects and sessions are saved locally.
           </p>
         </div>
         <ReleaseBrief />
@@ -481,7 +480,7 @@ function Home() {
             ],
             [
               "What can I try today?",
-              "The isolated sample workspace supports onboarding, assessments, evidence review, custom policies and integration keys. Sample data resets when the preview server restarts.",
+              "The isolated sample workspace supports onboarding, assessments, evidence review, custom policies and integration keys. The local preview preserves projects and sessions between API restarts.",
             ],
           ]}
         />
@@ -525,7 +524,7 @@ function Platform() {
         {[
           [
             "Connect your code",
-            "Scan the default branch of a public or private GitHub or Bitbucket repository, or upload supported source files from a folder. Private tokens are used for one scan and never saved. A metadata-only path remains available for IDE agents.",
+            "Scan the default branch of a public or private GitHub or Bitbucket repository, or upload supported source files from a folder. Private tokens are encrypted in your account profile and reused only when you choose private access. Public scans need no token. A metadata-only path remains available for IDE agents.",
             "Refresh the snapshot when your code changes.",
           ],
           [
@@ -1005,7 +1004,7 @@ function Security() {
           ],
           [
             "Official source checks",
-            "Source checks use a fixed official catalog. Repository scans contact GitHub or Bitbucket, read a temporary bare clone and delete it. Read-only access tokens are used for that scan only. A changed legal page still needs review.",
+            "Source checks use a fixed official catalog. Repository scans contact GitHub or Bitbucket, read a temporary bare clone and delete it. Private access uses the encrypted connection saved in your profile; public scans never use it. A changed legal page still needs review.",
           ],
         ].map(([t, p], i) => (
           <article key={t}>
@@ -1124,7 +1123,7 @@ function Pricing() {
               "Isolated sample workspace",
               "Assessments and evidence review",
               "Custom policy experiments",
-              "Sample data resets on restart",
+              "Local projects saved between restarts",
             ],
             link: "/",
             cta: "Open the demo",

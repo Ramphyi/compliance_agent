@@ -209,6 +209,18 @@ export function ProjectList({
           <Plus size={16} /> New project
         </Button>
       </div>
+      <div className="account-setup-strip">
+        <div>
+          <strong>Set up your account connections</strong>
+          <p>
+            Save private repository access in your profile. Public code needs no
+            token.
+          </p>
+        </div>
+        <Link className="button outline" to="/app/settings">
+          Account setup <ArrowRight size={16} />
+        </Link>
+      </div>
       <div className="project-list">
         {projects.map((project) => (
           <button
@@ -386,9 +398,10 @@ export function ConnectCode({
             <div className="flow-note">
               <strong>Public and private repositories</strong>
               <p>
-                Paste the repository URL and add a read-only token below if it
-                is private. Each scan reads the current default branch. Run it
-                again after changes to refresh this project’s analysis.
+                Public code needs no token. Private access uses the connection
+                saved in your account profile. Each scan reads the current
+                default branch. Run it again after changes to refresh the
+                analysis.
               </p>
             </div>
           </>

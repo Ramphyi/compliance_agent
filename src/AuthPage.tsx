@@ -23,6 +23,10 @@ export default function AuthPage() {
     setMessage("");
   }, [mode]);
   const token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
+  async function enterWorkspace() {
+    const projects = await api<any[]>("/projects");
+    nav(projects.length ? "/app/projects" : "/app/settings");
+  }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -32,7 +36,7 @@ export default function AuthPage() {
     try {
       if (challenge) {
         await post("/auth/mfa/verify", { challenge, code: data.code });
-        nav("/app");
+        await enterWorkspace();
         return;
       }
       const result = await post(
@@ -42,7 +46,7 @@ export default function AuthPage() {
       if (result.needsMfa) {
         setChallenge(result.challenge);
         setMessage("Choose a channel and send your verification code.");
-      } else if (mode === "login") nav("/app");
+      } else if (mode === "login") await enterWorkspace();
       else setMessage(result.message);
     } catch (e) {
       setError((e as Error).message);

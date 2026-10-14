@@ -12,11 +12,11 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173** and choose **Connect your project**, then **New project**. This opens an empty local workspace, or reuses your signed-in workspace. **Explore the workspace** remains available as a separate sample. The preview uses `pg-mem`; everything resets when the API restarts. Use the PostgreSQL setup below for lasting project storage. No API credentials are needed to select a folder and try the browser workflow.
+Open **http://127.0.0.1:5173** and choose **Connect your project**, then **New project**. This opens an empty local workspace, or reuses your signed-in workspace. **Explore the workspace** remains available as a separate sample. The local preview uses `pg-mem` with atomic snapshots in ignored `.local/workspace.json`; accounts, hashed sessions and projects survive API restarts. Production still uses PostgreSQL. Keep `.local` private and backed up; this single-process local store is for development, not production. No API credentials are needed to select a folder and try the browser workflow.
 
 ## Project workflow
 
-1. **Create a project.** Choose GitHub, Bitbucket, a local folder or MCP / IDE agent. For private GitHub/Bitbucket code, enter a read-only token on the next page. Public repositories need no token.
+1. **Create a project.** Choose GitHub, Bitbucket, a local folder or MCP / IDE agent. For private GitHub/Bitbucket code, save a read-only connection under **Settings → Your connected accounts** during account setup. Tokens are encrypted server-side and reused only when you choose Private repository. Public repositories need no token.
 2. **Connect code.** Scan the repository default branch or select a local folder and review the redacted source before sending it to this server. Source analysis shows file coverage, modules and referenced draft answers. AI synthesis is a separate opt-in. The advanced metadata-only importer and `submit_code_snapshot` remain available.
 3. **Answer project questions.** Review the prefilled purpose, data and access drafts with file/line references. Unknown business facts remain blank. Confirm markets, audience, intended use and data. Questions adapt to the profile and signals such as AI dependencies, mobile configuration and missing privacy/test filenames. The user or MCP agent can save answers; they do not approve evidence. Unknowns should remain explicit.
 4. **Review problems.** Run an assessment. Each finding has a reason and next action. Missing evidence means unverified, not a proven implementation defect. A coding agent can investigate code, help fix it and submit evidence for human review.
@@ -74,6 +74,7 @@ Copy `.env.example` to `.env` and fill in values locally. Never commit credentia
 | Google         | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`; register `${API_URL}/api/auth/google/callback` exactly                |
 | SMS / WhatsApp | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`; enable the requested channels with Twilio |
 | OpenAI         | A replacement `OPENAI_API_KEY`, a web-search-capable `OPENAI_MODEL`, `ALLOW_EXTERNAL_AI=true`, and project opt-in |
+| Saved repository access | `INTEGRATION_ENCRYPTION_KEY`: 32 random bytes encoded as base64, required in production. Development generates `.local/integration.key`. Back up this key separately; losing it requires reconnecting accounts. |
 | Repository scans | `ALLOW_REPOSITORY_FETCH=true`; Git must be installed (included in Docker image). Enabled by default only in development. |
 | Source checks  | `ALLOW_REGULATORY_FETCH=true`                                                                                     |
 

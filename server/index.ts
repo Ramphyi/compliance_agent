@@ -11,7 +11,7 @@ const server = app.listen(
   config.production ? "0.0.0.0" : "127.0.0.1",
   () =>
     console.log(
-      `Clearance API: http://localhost:${config.port} (${config.memory ? "ephemeral demo" : "PostgreSQL"})`,
+      `Clearance API: http://localhost:${config.port} (${config.memory ? (config.localDataFile ? "persistent local workspace" : "ephemeral demo") : "PostgreSQL"})`,
     ),
 );
 server.requestTimeout = 120000;

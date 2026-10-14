@@ -60,6 +60,21 @@ test("source scan prefills questions; draggable assistant explains real context 
   await expect(
     page.getByText("Source analysis ready", { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "75% of enumerated files read" }),
+  ).toBeVisible();
+  await page
+    .locator(".module-cards")
+    .getByRole("button", { name: /server/ })
+    .click();
+  await expect(page.locator(".module-file-panel")).toContainText(
+    "server/app.ts",
+  );
+  await page
+    .locator(".signal-cards")
+    .getByRole("button", { name: /Access control/ })
+    .click();
+  await expect(page.locator(".signal-detail")).toContainText("server/app.ts:3");
   await page.screenshot({
     path: "test-results/source-analysis-desktop.png",
     fullPage: true,

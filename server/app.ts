@@ -23,6 +23,11 @@ import { latestScan, startScan } from "./scans.js";
 import { draftRuleSet, applyRuleSet } from "./rule-sets.js";
 import { chat, chatHistory } from "./assistant.js";
 import {
+  connectionStatus,
+  saveConnectionToken,
+  providerSchema,
+} from "./connections.js";
+import {
   getDiscovery,
   connectProject,
   submitSnapshot,
@@ -125,6 +130,7 @@ export function createApp(
       externalAi: config.externalAi && !!process.env.OPENAI_API_KEY,
       regulatoryFetch: config.regulatoryFetch,
       repositoryFetch: config.repositoryFetch !== false,
+      persistent: !config.memory || !!config.localDataFile,
     }),
   );
   app.use("/api/auth", authRouter(db, config, provider, auth));
@@ -138,6 +144,16 @@ export function createApp(
     }),
     async (req, res) => {
       if (!config.demo) throw new HttpError(404, "Not found.");
+      // Landing-page entry points must never replace an authenticated account.
+      if (req.cookies.clearance_session) {
+        const existing = (
+          await db.query(
+            "SELECT user_id FROM sessions WHERE token_hash=$1 AND expires_at > $2",
+            [hash(req.cookies.clearance_session), new Date()],
+          )
+        ).rows[0];
+        if (existing) return res.json({ ok: true, reusedSession: true });
+      }
       const { example } = z
         .object({
           example: z.enum(["default", "memos", "empty"]).default("default"),
@@ -173,6 +189,37 @@ export function createApp(
         )
       ).rows,
     ),
+  );
+  api.get("/account/connections", auth.browserOnly, async (req, res) =>
+    res.json(await connectionStatus(db, req.userId!)),
+  );
+  api.put(
+    "/account/connections/:provider",
+    auth.browserOnly,
+    rateLimit({ windowMs: 60000, limit: 10 }),
+    async (req, res) =>
+      res.json(
+        await saveConnectionToken(
+          db,
+          config,
+          req.userId!,
+          req.params.provider,
+          req.body,
+        ),
+      ),
+  );
+  api.delete(
+    "/account/connections/:provider",
+    auth.browserOnly,
+    async (req, res) => {
+      const provider = providerSchema.parse(req.params.provider);
+      await db.query(
+        "DELETE FROM repository_connections WHERE user_id=$1 AND provider=$2",
+        [req.userId, provider],
+      );
+      await audit(db, req.userId!, "repository.connection_removed", provider);
+      res.json({ ok: true });
+    },
   );
   api.post("/projects", auth.browserOnly, async (req, res) => {
     const profile = profileSchema.parse(req.body);

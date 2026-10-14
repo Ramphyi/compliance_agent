@@ -64,3 +64,9 @@ CREATE TABLE IF NOT EXISTS assistant_messages (
 );
 CREATE INDEX IF NOT EXISTS scans_project_idx ON code_scans(project_id);
 CREATE INDEX IF NOT EXISTS messages_project_idx ON assistant_messages(project_id);
+CREATE TABLE IF NOT EXISTS repository_connections (
+ user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ provider TEXT NOT NULL, ciphertext TEXT NOT NULL,
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ PRIMARY KEY (user_id, provider)
+);

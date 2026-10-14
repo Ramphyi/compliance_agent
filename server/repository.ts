@@ -13,6 +13,47 @@ import {
   type SourceFile,
 } from "../shared/code-analysis.js";
 
+export function gitFailure(stderr: string, reason = "exit") {
+  if (reason === "missing")
+    return new HttpError(
+      503,
+      "Git is not installed or is not available to the server. Install Git and restart the API.",
+    );
+  if (reason === "limit")
+    return new HttpError(
+      413,
+      "The repository exceeds the download or source limits. Select a smaller repository or upload a local source folder.",
+    );
+  if (
+    reason === "timeout" ||
+    /could not resolve|failed to connect|timed out|connection (reset|closed)|RPC failed|remote end hung up|SSL_ERROR_SYSCALL|HTTP.*(429|502|503|504)/i.test(
+      stderr,
+    )
+  )
+    return new HttpError(
+      502,
+      "The repository host could not be reached reliably. Retry the scan or upload a local checkout. Public repositories do not need a token.",
+    );
+  if (/certificate|SSL certificate|schannel/i.test(stderr))
+    return new HttpError(
+      502,
+      "The server could not verify the repository host certificate. Check its network/proxy CA configuration; TLS verification remains enabled.",
+    );
+  if (
+    /authentication|not found|403|401|could not read Username|access denied/i.test(
+      stderr,
+    )
+  )
+    return new HttpError(
+      422,
+      "Repository access was denied. Check the URL. For public code choose Public repository; for private code reconnect a read-only token in Account settings.",
+    );
+  return new HttpError(
+    502,
+    "Git could not read the repository. Retry the scan or use a local source folder. No project files were executed.",
+  );
+}
+
 export function repositoryRequest(repository: string, accessToken = "") {
   const host = new URL(repository).hostname;
   const provider = host === "github.com" ? "github" : "bitbucket";
@@ -47,7 +88,15 @@ export function repositoryRequest(repository: string, accessToken = "") {
     env[`GIT_CONFIG_KEY_${i}`] = key;
     env[`GIT_CONFIG_VALUE_${i}`] = val;
   });
-  return { repository: value.repository.replace(/\/$/, ""), provider, env };
+  return {
+    repository:
+      new URL(value.repository).origin +
+      new URL(value.repository).pathname
+        .replace(/\/$/, "")
+        .replace(/\.git$/i, ""),
+    provider,
+    env,
+  };
 }
 async function git(
   args: string[],
@@ -60,25 +109,21 @@ async function git(
     const child = spawn("git", args, {
       env,
       windowsHide: true,
-      stdio: ["ignore", "pipe", "ignore"],
+      stdio: ["ignore", "pipe", "pipe"],
     });
     const chunks: Buffer[] = [];
     let size = 0,
       done = false;
-    const fail = () => {
+    let stderr = "";
+    const fail = (reason = "exit") => {
       if (done) return;
       done = true;
       child.kill();
       clearTimeout(timer);
       clearInterval(watch);
-      reject(
-        new HttpError(
-          502,
-          "Repository read failed or exceeded its limits. Check the URL, read access and repository size.",
-        ),
-      );
+      reject(gitFailure(stderr, reason));
     };
-    const timer = setTimeout(fail, timeout);
+    const timer = setTimeout(() => fail("timeout"), timeout);
     let checking = false;
     const watch = setInterval(async () => {
       if (!monitor || checking || done) return;
@@ -94,7 +139,7 @@ async function git(
           if (e.isFile()) {
             bytes += (await stat(join(e.parentPath, e.name))).size;
             if (bytes > 200_000_000) {
-              fail();
+              fail("limit");
               break;
             }
           }
@@ -106,10 +151,16 @@ async function git(
     }, 1500);
     child.stdout.on("data", (chunk: Buffer) => {
       size += chunk.length;
-      if (size > limit) fail();
+      if (size > limit) fail("limit");
       else chunks.push(chunk);
     });
-    child.on("error", fail);
+    child.stderr.on("data", (chunk: Buffer) => {
+      if (stderr.length < 8192)
+        stderr += chunk.toString().slice(0, 8192 - stderr.length);
+    });
+    child.on("error", (error: NodeJS.ErrnoException) =>
+      fail(error.code === "ENOENT" ? "missing" : "exit"),
+    );
     child.on("close", (code) => {
       clearTimeout(timer);
       clearInterval(watch);
@@ -245,7 +296,12 @@ export async function readRepository(
       !rel.startsWith("clearance-source-")
     )
       throw new Error("Unexpected temporary scan directory");
-    await rm(absolute, { recursive: true, force: true });
+    await rm(absolute, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
     for (const key of Object.keys(request.env)) delete request.env[key];
   }
 }

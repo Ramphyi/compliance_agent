@@ -10,6 +10,7 @@ export type Config = {
   externalAi: boolean;
   regulatoryFetch: boolean;
   repositoryFetch?: boolean;
+  localDataFile?: string;
 };
 export function getConfig(): Config {
   const production = process.env.NODE_ENV === "production";
@@ -20,6 +21,12 @@ export function getConfig(): Config {
     apiUrl: process.env.API_URL || "http://localhost:4000",
     demo: process.env.DEMO_MODE === "true",
     memory: process.env.DB_DRIVER === "memory",
+    localDataFile:
+      !production &&
+      process.env.DEMO_MODE === "true" &&
+      process.env.DB_DRIVER === "memory"
+        ? process.env.LOCAL_DATA_FILE || ".local/workspace.json"
+        : undefined,
     databaseUrl: process.env.DATABASE_URL,
     externalAi: process.env.ALLOW_EXTERNAL_AI === "true",
     regulatoryFetch: process.env.ALLOW_REGULATORY_FETCH === "true",

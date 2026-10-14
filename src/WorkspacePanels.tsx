@@ -1,3 +1,4 @@
+import AccountConnections from "./AccountConnections";
 import { useEffect, useState } from "react";
 import {
   Terminal,
@@ -447,7 +448,7 @@ export function SettingsPanel({
 }: {
   user: User;
   config: any;
-  project: Project;
+  project?: Project;
   onEdit: () => void;
   onUserUpdate: () => void;
 }) {
@@ -462,196 +463,216 @@ export function SettingsPanel({
       .catch((e) => setError(e.message));
   }, []);
   return (
-    <div className="settings-grid">
-      <section className="card settings-card">
-        <SectionTitle title="Your account" />
-        <div className="account-summary">
-          <span className="user-avatar large-avatar">{user.name[0]}</span>
-          <div>
-            <h3>{user.name}</h3>
-            <p>{user.email}</p>
-            <Badge tone="green">
-              {user.verified ? "Email confirmed" : "Awaiting confirmation"}
-            </Badge>
+    <>
+      <AccountConnections />
+      <div className="settings-grid">
+        <section className="card settings-card">
+          <SectionTitle title="Your account" />
+          <div className="account-summary">
+            <span className="user-avatar large-avatar">{user.name[0]}</span>
+            <div>
+              <h3>{user.name}</h3>
+              <p>{user.email}</p>
+              <Badge tone="green">
+                {user.verified ? "Email confirmed" : "Awaiting confirmation"}
+              </Badge>
+            </div>
           </div>
-        </div>
-        <div className="settings-divider" />
-        <SectionTitle
-          title="Two-step verification"
-          description="Add a phone verification step when signing in."
-        />
-        <Badge tone={user.mfa_enabled ? "green" : "neutral"}>
-          {user.mfa_enabled ? "Enabled" : "Not enabled"}
-        </Badge>
-        {!user.mfa_enabled && (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setBusy(true);
-              setError("");
-              const data = Object.fromEntries(new FormData(e.currentTarget));
-              try {
-                if (challenge) {
-                  await post("/auth/mfa/verify", {
-                    challenge,
-                    code: data.code,
-                  });
-                  setChallenge("");
-                  setMessage("Two-step verification is enabled.");
-                  onUserUpdate();
-                } else {
-                  const r = await post("/auth/mfa/enroll", data);
-                  setChallenge(r.challenge);
-                  setMessage("Code sent. Enter it below to finish setup.");
+          <div className="settings-divider" />
+          <SectionTitle
+            title="Two-step verification"
+            description="Add a phone verification step when signing in."
+          />
+          <Badge tone={user.mfa_enabled ? "green" : "neutral"}>
+            {user.mfa_enabled ? "Enabled" : "Not enabled"}
+          </Badge>
+          {!user.mfa_enabled && (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setBusy(true);
+                setError("");
+                const data = Object.fromEntries(new FormData(e.currentTarget));
+                try {
+                  if (challenge) {
+                    await post("/auth/mfa/verify", {
+                      challenge,
+                      code: data.code,
+                    });
+                    setChallenge("");
+                    setMessage("Two-step verification is enabled.");
+                    onUserUpdate();
+                  } else {
+                    const r = await post("/auth/mfa/enroll", data);
+                    setChallenge(r.challenge);
+                    setMessage("Code sent. Enter it below to finish setup.");
+                  }
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  setBusy(false);
                 }
-              } catch (e) {
-                setError((e as Error).message);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            {challenge ? (
-              <Field label="Verification code">
-                <input
-                  name="code"
-                  required
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{4,10}"
-                />
-              </Field>
-            ) : (
-              <>
-                <Field
-                  label="Phone number"
-                  hint="Use international format, e.g. +40712345678."
-                >
+              }}
+            >
+              {challenge ? (
+                <Field label="Verification code">
                   <input
-                    type="tel"
-                    name="phone"
+                    name="code"
                     required
-                    pattern="\+[1-9][0-9]{7,14}"
-                    placeholder="+40…"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]{4,10}"
                   />
                 </Field>
-                <Field label="Delivery channel">
-                  <select name="channel">
-                    <option value="sms">SMS</option>
-                    <option value="whatsapp">WhatsApp</option>
-                  </select>
-                </Field>
-                <Field
-                  label="Current password"
-                  hint="Required for email accounts. Google accounts need a sign-in within the last 10 minutes."
-                >
-                  <input
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                  />
-                </Field>
-              </>
-            )}
-            {!config.otp && (
-              <p className="provider-note">
-                Configure Twilio Verify credentials to enable delivery.
-              </p>
-            )}
-            <Button variant="navy" busy={busy} disabled={!config.otp}>
-              <Smartphone size={15} />
-              {challenge ? "Verify and enable" : "Send verification code"}
-            </Button>
-          </form>
-        )}
-        {error && <div className="alert error">{error}</div>}
-        {message && <div className="alert success">{message}</div>}
-      </section>
-      <div>
-        <section className="card settings-card">
-          <SectionTitle title="Product context">
-            <Button variant="outline small" onClick={onEdit}>
-              Edit context <ArrowUpRight size={14} />
-            </Button>
-          </SectionTitle>
-          <dl className="settings-facts">
-            <div>
-              <dt>Product</dt>
-              <dd>{project.profile.name}</dd>
-            </div>
-            <div>
-              <dt>Industry</dt>
-              <dd>{project.profile.industry}</dd>
-            </div>
-            <div>
-              <dt>Markets</dt>
-              <dd>{project.profile.countries.join(", ")}</dd>
-            </div>
-            <div>
-              <dt>External AI research</dt>
-              <dd>
-                {project.profile.externalAi
-                  ? "Project opted in"
-                  : "Project opted out"}
-              </dd>
-            </div>
-          </dl>
+              ) : (
+                <>
+                  <Field
+                    label="Phone number"
+                    hint="Use international format, e.g. +40712345678."
+                  >
+                    <input
+                      type="tel"
+                      name="phone"
+                      required
+                      pattern="\+[1-9][0-9]{7,14}"
+                      placeholder="+40…"
+                    />
+                  </Field>
+                  <Field label="Delivery channel">
+                    <select name="channel">
+                      <option value="sms">SMS</option>
+                      <option value="whatsapp">WhatsApp</option>
+                    </select>
+                  </Field>
+                  <Field
+                    label="Current password"
+                    hint="Required for email accounts. Google accounts need a sign-in within the last 10 minutes."
+                  >
+                    <input
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                    />
+                  </Field>
+                </>
+              )}
+              {!config.otp && (
+                <p className="provider-note">
+                  Configure Twilio Verify credentials to enable delivery.
+                </p>
+              )}
+              <Button variant="navy" busy={busy} disabled={!config.otp}>
+                <Smartphone size={15} />
+                {challenge ? "Verify and enable" : "Send verification code"}
+              </Button>
+            </form>
+          )}
+          {error && <div className="alert error">{error}</div>}
+          {message && <div className="alert success">{message}</div>}
         </section>
-        <section className="card settings-card">
-          <SectionTitle title="Deployment boundaries" />
-          <dl className="settings-facts">
-            {[
-              ["Database", config.demo ? "Ephemeral demo" : "PostgreSQL"],
-              [
-                "OpenAI research",
-                config.externalAi ? "Configured" : "Disabled / not configured",
-              ],
-              ["Brevo mail", config.email ? "Configured" : "Not configured"],
-              ["Google OAuth", config.google ? "Configured" : "Not configured"],
-              ["SMS / WhatsApp", config.otp ? "Configured" : "Not configured"],
-            ].map(([key, value]) => (
-              <div key={key}>
-                <dt>{key}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="subtle-note">
-            <Server size={16} /> Production uses your deployment’s environment
-            variables. Secrets are never exposed in this UI.
+        <div>
+          {project && (
+            <section className="card settings-card">
+              <SectionTitle title="Product context">
+                <Button variant="outline small" onClick={onEdit}>
+                  Edit context <ArrowUpRight size={14} />
+                </Button>
+              </SectionTitle>
+              <dl className="settings-facts">
+                <div>
+                  <dt>Product</dt>
+                  <dd>{project.profile.name}</dd>
+                </div>
+                <div>
+                  <dt>Industry</dt>
+                  <dd>{project.profile.industry}</dd>
+                </div>
+                <div>
+                  <dt>Markets</dt>
+                  <dd>{project.profile.countries.join(", ")}</dd>
+                </div>
+                <div>
+                  <dt>External AI research</dt>
+                  <dd>
+                    {project.profile.externalAi
+                      ? "Project opted in"
+                      : "Project opted out"}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
+          <section className="card settings-card">
+            <SectionTitle title="Deployment boundaries" />
+            <dl className="settings-facts">
+              {[
+                [
+                  "Database",
+                  config.demo
+                    ? config.persistent
+                      ? "Persistent local workspace"
+                      : "Ephemeral demo"
+                    : "PostgreSQL",
+                ],
+                [
+                  "OpenAI research",
+                  config.externalAi
+                    ? "Configured"
+                    : "Disabled / not configured",
+                ],
+                ["Brevo mail", config.email ? "Configured" : "Not configured"],
+                [
+                  "Google OAuth",
+                  config.google ? "Configured" : "Not configured",
+                ],
+                [
+                  "SMS / WhatsApp",
+                  config.otp ? "Configured" : "Not configured",
+                ],
+              ].map(([key, value]) => (
+                <div key={key}>
+                  <dt>{key}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="subtle-note">
+              <Server size={16} /> Production uses your deployment’s environment
+              variables. Secrets are never exposed in this UI.
+            </div>
+          </section>
+        </div>
+        <section className="card audit-card">
+          <SectionTitle
+            title="Workspace audit trail"
+            description="Recent account, policy, assessment and evidence actions."
+          />
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>ACTION</th>
+                  <th>TARGET</th>
+                  <th>RECORDED</th>
+                </tr>
+              </thead>
+              <tbody>
+                {audit.map((a) => (
+                  <tr key={a.id}>
+                    <td>
+                      <code>{a.action}</code>
+                    </td>
+                    <td>
+                      <code>{a.target}</code>
+                    </td>
+                    <td>{new Date(a.created_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>
-      <section className="card audit-card">
-        <SectionTitle
-          title="Workspace audit trail"
-          description="Recent account, policy, assessment and evidence actions."
-        />
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>ACTION</th>
-                <th>TARGET</th>
-                <th>RECORDED</th>
-              </tr>
-            </thead>
-            <tbody>
-              {audit.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <code>{a.action}</code>
-                  </td>
-                  <td>
-                    <code>{a.target}</code>
-                  </td>
-                  <td>{new Date(a.created_at).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+    </>
   );
 }

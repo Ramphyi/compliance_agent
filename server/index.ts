@@ -1,8 +1,10 @@
 import { getConfig } from "./config.js";
 import { createDb } from "./db.js";
 import { createApp } from "./app.js";
+import { loadLocalAccount } from "./local-account.js";
 const config = getConfig();
 const db = await createDb(config);
+await loadLocalAccount(db, config);
 const app = createApp(db, config);
 const server = app.listen(
   config.port,

@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, NavLink, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  NavLink,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   LayoutDashboard,
   ScanLine,
@@ -56,6 +62,14 @@ import type {
 } from "../shared/types";
 import Onboarding from "./Onboarding";
 import {
+  NewProject,
+  ProjectList,
+  ProjectSteps,
+  ConnectCode,
+  ProjectQuestions,
+  NextStep,
+} from "./ProjectFlow";
+import {
   Integrations,
   SettingsPanel,
   RegulatoryWatch,
@@ -68,21 +82,25 @@ type Data = {
   controls: Omit<Control, "applies">[];
 };
 const navItems = [
-  ["", "Overview", LayoutDashboard],
-  ["assessments", "Assessments", ScanLine],
-  ["evidence", "Evidence vault", FolderCheck],
-  ["policies", "Policy library", BookOpen],
+  ["projects", "All projects", Layers],
+  ["connect", "Connect code", Code2],
+  ["questions", "Project questions", BookOpen],
+  ["", "Problems & next steps", LayoutDashboard],
+  ["assessments", "Check history", ScanLine],
+  ["evidence", "Evidence & review", FolderCheck],
+  ["policies", "Custom rules", BookOpen],
   ["regulations", "Regulatory watch", Radio],
   ["integrations", "Integrations", Plug],
 ] as const;
 export default function Workspace() {
   const navigate = useNavigate();
   const { section = "" } = useParams();
+  const [params] = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [config, setConfig] = useState<any>({});
   const [projects, setProjects] = useState<Project[]>([]);
   const [selected, setSelected] = useState(
-    localStorage.getItem("clearance-project") || "",
+    params.get("project") || localStorage.getItem("clearance-project") || "",
   );
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,10 +108,12 @@ export default function Workspace() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [onboard, setOnboard] = useState(false);
+  const [newProject, setNewProject] = useState(false);
   const [edit, setEdit] = useState(false);
   const [evidenceModal, setEvidenceModal] = useState(false);
   const [ruleModal, setRuleModal] = useState(false);
   const [finding, setFinding] = useState<Finding | null>(null);
+  const [historyRun, setHistoryRun] = useState<Run | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [notifications, setNotifications] = useState(false);
@@ -124,6 +144,14 @@ export default function Workspace() {
         (list.some((p) => p.id === current) ? current : list[0]?.id || ""),
     );
   }, []);
+  useEffect(() => {
+    const pid = params.get("project");
+    if (pid && projects.some((p) => p.id === pid)) setSelected(pid);
+  }, [params, projects]);
+  function openProject(pid: string, page = "") {
+    setSelected(pid);
+    navigate(`/app${page ? "/" + page : ""}?project=${pid}`);
+  }
   useEffect(() => {
     Promise.all([api("/auth/me"), api("/config")])
       .then(([me, conf]) => {
@@ -251,7 +279,12 @@ export default function Workspace() {
             <select
               aria-label="Select project"
               value={selected}
-              onChange={(e) => setSelected(e.target.value)}
+              onChange={(e) =>
+                openProject(
+                  e.target.value,
+                  section === "projects" ? "" : section,
+                )
+              }
             >
               {!projects.length && <option value="">Create a project</option>}
               {projects.map((p) => (
@@ -267,7 +300,7 @@ export default function Workspace() {
           {navItems.map(([path, label, Icon]) => (
             <NavLink
               end
-              to={`/app${path ? "/" + path : ""}`}
+              to={`/app${path ? "/" + path : ""}${path === "projects" || !selected ? "" : "?project=" + selected}`}
               className={({ isActive }) => (isActive ? "active" : "")}
               key={path}
             >
@@ -289,11 +322,10 @@ export default function Workspace() {
         <button
           className="add-workspace"
           onClick={() => {
-            setEdit(false);
-            setOnboard(true);
+            setNewProject(true);
           }}
         >
-          <Plus size={16} /> Add a product
+          <Plus size={16} /> New project
         </button>
         <div className="sidebar-bottom">
           <div className="sidebar-tip">
@@ -403,8 +435,8 @@ export default function Workspace() {
                 <span className="status-dot" /> INTERACTIVE PREVIEW
               </span>
               <p>
-                Sample workspace · data resets on server restart · integrations
-                require credentials
+                Local preview · data resets on server restart · use PostgreSQL
+                for lasting project storage
               </p>
               <Link to="/signup">
                 Create an account <ArrowUpRight size={12} />
@@ -423,13 +455,19 @@ export default function Workspace() {
               </button>
             </div>
           )}
-          {!selected ? (
+          {section === "projects" ? (
+            <ProjectList
+              projects={projects}
+              onOpen={openProject}
+              onNew={() => setNewProject(true)}
+            />
+          ) : !selected ? (
             <Empty
-              title="Your next launch starts here."
-              description="Add a product to map its markets, requirements and evidence."
+              title="Connect your first project"
+              description="Start with code, confirm the project questions, and keep track of what needs fixing."
             >
-              <Button variant="orange" onClick={() => setOnboard(true)}>
-                <Plus size={16} /> Add your first product
+              <Button variant="orange" onClick={() => setNewProject(true)}>
+                <Plus size={16} /> Create your first project
               </Button>
             </Empty>
           ) : !data ? (
@@ -444,24 +482,26 @@ export default function Workspace() {
                     {data.project.profile.softwareType.toUpperCase()}
                   </div>
                   <h1>
-                    {section === ""
-                      ? "A clearer view. A confident next step."
-                      : pageTitle}
+                    {section === "" ? "Problems & next steps" : pageTitle}
                   </h1>
                   <p>
                     {section === ""
-                      ? "Your compliance picture, connected. Here’s where things stand."
-                      : section === "assessments"
-                        ? "Follow the reasoning. Keep the history. Make every review traceable."
-                        : section === "evidence"
-                          ? "One place for the records behind your requirements."
-                          : section === "policies"
-                            ? "A shared baseline, with room for the rules that make you different."
-                            : section === "regulations"
-                              ? "Official sources, explicit freshness, and changes worth reviewing."
-                              : section === "integrations"
-                                ? "Bring compliance into the tools you already work with."
-                                : "Your identity, product context and workspace boundaries."}
+                      ? "What needs attention, why it matters, and what to do next."
+                      : section === "connect"
+                        ? "Bring in your repository, local folder or coding agent."
+                        : section === "questions"
+                          ? "Confirm the facts about this project before reviewing its requirements."
+                          : section === "assessments"
+                            ? "Follow the reasoning. Keep the history. Make every review traceable."
+                            : section === "evidence"
+                              ? "One place for the records behind your requirements."
+                              : section === "policies"
+                                ? "A shared baseline, with room for the rules that make you different."
+                                : section === "regulations"
+                                  ? "Official sources, explicit freshness, and changes worth reviewing."
+                                  : section === "integrations"
+                                    ? "Bring compliance into the tools you already work with."
+                                    : "Your identity, product context and workspace boundaries."}
                   </p>
                 </div>
                 <div className="heading-actions">
@@ -500,8 +540,34 @@ export default function Workspace() {
                   ) : null}
                 </div>
               </div>
+              <ProjectSteps project={data.project} section={section} />
+              {section === "connect" && (
+                <ConnectCode
+                  key={selected}
+                  project={data.project}
+                  onSaved={async () => {
+                    await refresh();
+                    await loadProjects(selected);
+                  }}
+                />
+              )}
+              {section === "questions" && (
+                <ProjectQuestions
+                  key={selected}
+                  project={data.project}
+                  onSaved={async () => {
+                    await refresh();
+                    await loadProjects(selected);
+                  }}
+                  onAssess={async () => {
+                    await assess();
+                    openProject(selected);
+                  }}
+                />
+              )}
               {section === "" && (
                 <>
+                  <NextStep project={data.project} latest={latest} />
                   <div className="stats-grid">
                     <article className="stat-card">
                       <div>
@@ -588,142 +654,10 @@ export default function Workspace() {
                       </Link>
                     </article>
                   </div>
-                  <div className="overview-columns">
-                    <section className="card frameworks-card">
-                      <SectionTitle
-                        title="Your compliance landscape"
-                        description="A focused view of the frameworks in scope."
-                      >
-                        <button
-                          className="icon-button"
-                          aria-label="Edit product context"
-                          onClick={() => {
-                            setEdit(true);
-                            setOnboard(true);
-                          }}
-                        >
-                          <MoreHorizontal size={20} />
-                        </button>
-                      </SectionTitle>
-                      {!frameworks.length ? (
-                        <Empty
-                          title="Let’s map your requirements"
-                          description="Run an assessment to build your first compliance landscape."
-                        />
-                      ) : (
-                        frameworks.map((framework, i) => {
-                          const items = completed!.findings.filter(
-                            (f) => f.framework === framework,
-                          );
-                          const covered = items.filter(
-                            (f) => f.status === "covered",
-                          ).length;
-                          return (
-                            <div className="framework-row" key={framework}>
-                              <span className={`framework-icon fi-${i % 4}`}>
-                                {framework.includes("AI") ||
-                                framework.includes("42001") ? (
-                                  <Code2 size={19} />
-                                ) : framework.includes("GDPR") ? (
-                                  <Globe2 size={19} />
-                                ) : (
-                                  <ShieldCheck size={19} />
-                                )}
-                              </span>
-                              <div>
-                                <strong>{framework}</strong>
-                                <span>
-                                  {covered} of {items.length} controls covered
-                                </span>
-                              </div>
-                              <div className="framework-progress">
-                                <span>
-                                  {Math.round((covered / items.length) * 100)}%
-                                </span>
-                                <div>
-                                  <i
-                                    style={{
-                                      width: `${(covered / items.length) * 100}%`,
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                              <Badge
-                                tone={
-                                  covered === items.length ? "green" : "amber"
-                                }
-                              >
-                                {covered === items.length
-                                  ? "Covered"
-                                  : "In progress"}
-                              </Badge>
-                            </div>
-                          );
-                        })
-                      )}
-                      <footer>
-                        <Globe2 size={14} />
-                        <span>
-                          {data.project.profile.countries.join(" · ")}
-                        </span>
-                        <button
-                          className="text-link"
-                          onClick={() => {
-                            setEdit(true);
-                            setOnboard(true);
-                          }}
-                        >
-                          Manage scope <ArrowUpRight size={13} />
-                        </button>
-                      </footer>
-                    </section>
-                    <section className="agent-card">
-                      <div className="agent-card-top">
-                        <span className="agent-orb">
-                          <ScanLine size={22} />
-                        </span>
-                        <Badge tone="dark">
-                          {busy ? "Working" : "Ready when you are"}
-                        </Badge>
-                      </div>
-                      <span className="eyebrow">YOUR COMPLIANCE WORKFLOW</span>
-                      <h2>
-                        Context in.
-                        <br />
-                        Clarity out.
-                      </h2>
-                      <p>
-                        From understanding your product to reviewing the
-                        evidence. Every step, visible.
-                      </p>
-                      <div className="agent-stages">
-                        {[
-                          "Understand your product",
-                          "Map relevant requirements",
-                          "Review evidence & surface gaps",
-                        ].map((label, i) => (
-                          <div key={label}>
-                            <span>
-                              {latest?.status === "completed" ? (
-                                <Check size={12} />
-                              ) : (
-                                i + 1
-                              )}
-                            </span>
-                            {label}
-                          </div>
-                        ))}
-                      </div>
-                      <button onClick={() => navigate("/app/assessments")}>
-                        Explore agent activity <ArrowRight size={16} />
-                      </button>
-                      <div className="agent-grid" />
-                    </section>
-                  </div>
                   <section className="card findings-card">
                     <SectionTitle
-                      title="A little attention. A lot more confidence."
-                      description="Prioritized findings from your latest assessment."
+                      title="What needs fixing?"
+                      description="Open a problem to see why it matters and the next action. Missing evidence means unverified, not necessarily broken code."
                     >
                       <Badge tone="neutral">{gaps.length} open checks</Badge>
                     </SectionTitle>
@@ -903,10 +837,7 @@ export default function Workspace() {
                     />
                     <div className="history-list">
                       {data.runs.map((r) => (
-                        <button
-                          key={r.id}
-                          onClick={() => download(`assessment-${r.id}.json`, r)}
-                        >
+                        <button key={r.id} onClick={() => setHistoryRun(r)}>
                           <span className="square-icon neutral">
                             <ScanLine size={18} />
                           </span>
@@ -929,8 +860,8 @@ export default function Workspace() {
                       )}
                     </div>
                     <div className="subtle-note">
-                      <FileText size={16} /> Select a run to download its full
-                      findings and event trail.
+                      <FileText size={16} /> Select a run to review its findings
+                      or download the full record.
                     </div>
                   </section>
                 </div>
@@ -1150,6 +1081,52 @@ export default function Workspace() {
           }}
         />
       )}
+      {historyRun && (
+        <Modal
+          title="Previous assessment"
+          subtitle={`${date(historyRun.created_at)} · ${historyRun.status} · ${historyRun.score}% evidence coverage`}
+          onClose={() => setHistoryRun(null)}
+          wide
+        >
+          <div className="modal-body">
+            <p>These are the findings recorded at the time of this run.</p>
+            <div className="history-findings">
+              {historyRun.findings.map((f) => (
+                <article key={f.id}>
+                  <strong>{f.title}</strong>
+                  <Badge tone={f.status === "covered" ? "green" : "amber"}>
+                    {f.status}
+                  </Badge>
+                  <p>{f.action}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+          <footer className="modal-footer">
+            <Button variant="ghost" onClick={() => setHistoryRun(null)}>
+              Close
+            </Button>
+            <Button
+              variant="orange"
+              onClick={() =>
+                download(`assessment-${historyRun.id}.json`, historyRun)
+              }
+            >
+              <Download size={15} /> Download record
+            </Button>
+          </footer>
+        </Modal>
+      )}
+      {newProject && (
+        <NewProject
+          onClose={() => setNewProject(false)}
+          onSaved={async (pid) => {
+            setNewProject(false);
+            await loadProjects(pid);
+            openProject(pid, "connect");
+          }}
+        />
+      )}
       {evidenceModal && data && (
         <EvidenceModal
           data={data}
@@ -1201,9 +1178,24 @@ export default function Workspace() {
             <Button variant="ghost" onClick={() => setFinding(null)}>
               Close
             </Button>
-            <Button variant="orange" onClick={() => setEvidenceModal(true)}>
-              <Plus size={15} /> Add evidence
-            </Button>
+            {finding.framework === "Project questions" ? (
+              <Button
+                variant="orange"
+                onClick={() => {
+                  openProject(
+                    selected,
+                    finding.id === "code-snapshot" ? "connect" : "questions",
+                  );
+                  setFinding(null);
+                }}
+              >
+                Complete project setup <ArrowRight size={15} />
+              </Button>
+            ) : (
+              <Button variant="orange" onClick={() => setEvidenceModal(true)}>
+                <Plus size={15} /> Add evidence
+              </Button>
+            )}
           </footer>
         </Modal>
       )}

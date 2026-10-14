@@ -19,9 +19,12 @@ const config: Config = {
 };
 let db: DB, server: Server, uid: string, pid: string, base: string;
 const key = "clr_test_only_" + id();
-const run = (env: Record<string, string>) =>
+const run = (
+  env: Record<string, string>,
+  args = ["scripts/compliance-gate.mjs"],
+) =>
   new Promise<{ code: number | null; output: string }>((resolve) => {
-    const child = spawn(process.execPath, ["scripts/compliance-gate.mjs"], {
+    const child = spawn(process.execPath, args, {
       windowsHide: true,
       env: { ...process.env, ...env },
       stdio: ["ignore", "pipe", "pipe"],
@@ -59,6 +62,38 @@ afterEach(async () => {
   await db.end();
 });
 describe("actual CI command-line behavior", () => {
+  it("syncs a local inventory through the CLI, rejects read-only keys and never prints credentials", async () => {
+    const env = {
+      CLEARANCE_URL: base,
+      CLEARANCE_PROJECT_ID: pid,
+      CLEARANCE_API_KEY: key,
+    };
+    const args = ["scripts/connect-project.mjs", "tests", "--send"];
+    const denied = await run(env, args);
+    expect(denied.code).toBe(2);
+    expect(denied.output).toContain("HTTP 403");
+    await db.query("UPDATE api_keys SET scopes=$1 WHERE token_hash=$2", [
+      '["evidence"]',
+      hash(key),
+    ]);
+    const accepted = await run(env, args);
+    expect(accepted.code).toBe(0);
+    expect(accepted.output).toContain("Code snapshot saved");
+    expect(accepted.output).not.toContain(key);
+    const profile = (
+      await db.query("SELECT profile FROM projects WHERE id=$1", [pid])
+    ).rows[0].profile;
+    expect(profile.discovery.snapshot.filesInspected).toBeGreaterThan(0);
+    expect(profile.discovery.snapshot.artifacts.tests.length).toBeGreaterThan(
+      0,
+    );
+    const insecure = await run(
+      { ...env, CLEARANCE_URL: "http://example.com" },
+      args,
+    );
+    expect(insecure.code).toBe(2);
+    expect(insecure.output).toContain("Use HTTPS");
+  });
   it("fails closed when credentials are absent or invalid", async () => {
     expect(
       (

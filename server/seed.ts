@@ -3,6 +3,14 @@ import type { Config } from "./config.js";
 import { id } from "./security.js";
 import { runAssessment } from "./engine.js";
 import memosReport from "../docs/experiments/memos.json";
+export async function seedEmptyDemo(db: DB) {
+  const uid = id();
+  await db.query(
+    "INSERT INTO users (id,email,name,verified) VALUES ($1,$2,$3,true)",
+    [uid, `demo+${uid}@clearance.local`, "Local project owner"],
+  );
+  return uid;
+}
 export async function seedMemosDemo(db: DB, config: Config) {
   const userId = id(),
     projectId = id(),
@@ -13,7 +21,14 @@ export async function seedMemosDemo(db: DB, config: Config) {
   );
   await db.query(
     "INSERT INTO projects (id,owner_id,profile) VALUES ($1,$2,$3)",
-    [projectId, userId, JSON.stringify(memosReport.profile)],
+    [
+      projectId,
+      userId,
+      JSON.stringify({
+        ...memosReport.profile,
+        discovery: memosReport.discovery,
+      }),
+    ],
   );
   await db.query(
     "INSERT INTO rules (id,project_id,title,description,severity) VALUES ($1,$2,$3,$4,$5)",

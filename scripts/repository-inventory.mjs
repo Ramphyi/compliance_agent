@@ -114,6 +114,7 @@ export async function inspectRepository(directory) {
             "express",
             "fastify",
             "openai",
+            "@anthropic-ai/sdk",
             "@modelcontextprotocol/sdk",
             "pg",
             "prisma",
@@ -173,7 +174,8 @@ export async function inspectRepository(directory) {
       ),
       pipelines: files.filter(
         (f) =>
-          f.startsWith(".github/workflows/") || /gitlab-ci|Jenkinsfile/.test(f),
+          f.startsWith(".github/workflows/") ||
+          /gitlab-ci|bitbucket-pipelines|Jenkinsfile/.test(f),
       ),
       mobile: files.filter((f) => /AndroidManifest\.xml$|Info\.plist$/.test(f)),
       embedded: files.filter((f) =>

@@ -8,6 +8,7 @@ export type Profile = {
   dataTypes: string[];
   usesAi: boolean;
   externalAi: boolean;
+  discovery?: import("./discovery").Discovery;
 };
 export type Project = {
   id: string;

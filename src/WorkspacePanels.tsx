@@ -41,6 +41,7 @@ export function Integrations({
     {
       mcpServers: {
         clearance: {
+          type: "http",
           url: endpoint,
           headers: { Authorization: "Bearer YOUR_CLEARANCE_API_KEY" },
         },
@@ -100,6 +101,9 @@ export function Integrations({
           <div className="tool-chips">
             {[
               "list_projects",
+              "get_project_questions",
+              "submit_code_snapshot",
+              "answer_project_questions",
               "get_assessment",
               "run_assessment",
               "submit_evidence",

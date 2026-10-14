@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { controls, sources } from "./catalog.js";
+import { unansweredQuestions } from "../shared/discovery.js";
 import { id, audit, HttpError, hash } from "./security.js";
 import type { DB } from "./db.js";
 import type { Config } from "./config.js";
@@ -44,18 +45,48 @@ export function evaluate(
       "Submit supporting evidence and have it reviewed against this policy.",
     source: "",
   }));
-  return [...applicable, ...custom].map((c) => {
-    const matches = evidence.filter((e) => e.control_id === c.id);
-    return {
-      ...c,
-      status: matches.some((e) => e.status === "approved")
-        ? "covered"
-        : matches.some((e) => e.status === "submitted")
-          ? "review"
-          : "missing",
-      evidenceIds: matches.map((e) => e.id),
-    };
-  });
+  const setup: Finding[] = unansweredQuestions(project.profile).map((q) => ({
+    id: `question:${q.id}`,
+    title: q.title,
+    framework: "Project questions",
+    category: "Project setup",
+    severity: "high",
+    description: q.why,
+    action: `Answer this in Project questions. ${q.hint}`,
+    source: "",
+    status: "missing",
+    evidenceIds: [],
+  }));
+  if (project.profile.discovery && !project.profile.discovery.snapshot)
+    setup.push({
+      id: "code-snapshot",
+      title: "Connect a code snapshot",
+      framework: "Project questions",
+      category: "Project setup",
+      severity: "high",
+      description:
+        "The code source is saved, but no repository metadata has been imported.",
+      action:
+        "Open Connect code and import a folder inventory or send one through MCP.",
+      source: "",
+      status: "missing",
+      evidenceIds: [],
+    });
+  return [
+    ...setup,
+    ...[...applicable, ...custom].map((c) => {
+      const matches = evidence.filter((e) => e.control_id === c.id);
+      return {
+        ...c,
+        status: matches.some((e) => e.status === "approved")
+          ? "covered"
+          : matches.some((e) => e.status === "submitted")
+            ? "review"
+            : "missing",
+        evidenceIds: matches.map((e) => e.id),
+      };
+    }),
+  ] as Finding[];
 }
 const active = new Set<string>();
 export const inputDigest = (
@@ -100,7 +131,7 @@ export async function runAssessment(
     await add(
       "Discovery",
       "Product context mapped",
-      `${project.profile.softwareType} · ${project.profile.industry} · ${project.profile.countries.join(", ")}. Scope comes from your declared profile, not a repository scan.`,
+      `${project.profile.softwareType} · ${project.profile.industry} · ${project.profile.countries.join(", ")}. ${project.profile.discovery?.snapshot ? `Repository metadata imported: ${project.profile.discovery.snapshot.filesInspected} files, ${project.profile.discovery.snapshot.technologyHints.join(", ")}. ${unansweredQuestions(project.profile).length} project questions unanswered. No source execution or semantic code audit was performed.` : "Scope comes from your declared profile; no code snapshot imported."}`,
     );
     const evidence = (
       await db.query("SELECT * FROM evidence WHERE project_id=$1", [projectId])
@@ -146,7 +177,11 @@ export async function runAssessment(
           instructions: skill,
           input: JSON.stringify({
             date: new Date().toISOString().slice(0, 10),
-            profile: project.profile,
+            profile: Object.fromEntries(
+              Object.entries(project.profile).filter(
+                ([key]) => key !== "discovery",
+              ),
+            ),
             candidateControls: findings.map((f) => ({
               title: f.title,
               source: f.source,

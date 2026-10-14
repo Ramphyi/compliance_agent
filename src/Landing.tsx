@@ -11,7 +11,7 @@ import {
   Plus,
 } from "lucide-react";
 import { Logo } from "./ui";
-import { post } from "./api";
+import { post, api, ApiError } from "./api";
 import "./marketing.css";
 const repo = "https://github.com/Ramphyi/compliance_agent";
 const memosCommit = "8120a6cee03003ee7968b49b2109f816fa4d96a4";
@@ -172,6 +172,55 @@ function Demo({
     </div>
   );
 }
+function StartProject({
+  compact = false,
+  label = "Connect your project",
+}: {
+  compact?: boolean;
+  label?: string;
+}) {
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  return (
+    <div className={compact ? "m-demo m-header-cta" : "m-demo"}>
+      <button
+        className="m-button"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            try {
+              await api("/auth/me");
+            } catch (e) {
+              if (!(e instanceof ApiError) || e.status !== 401) throw e;
+              const config = await api("/config");
+              if (!config.demo) {
+                navigate("/signup");
+                return;
+              }
+              await post("/demo", { example: "empty" });
+            }
+            navigate("/app/projects");
+          } catch (e) {
+            setError((e as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Opening projects…" : label}
+        <ArrowRight size={17} />
+      </button>
+      {error && (
+        <p className="m-error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
 const briefs = {
   saas: {
     name: "A SaaS team entering Europe",
@@ -254,65 +303,73 @@ function Home() {
     <>
       <section className="m-home-hero m-wrap">
         <div>
-          <Label>FOR THE ENGINEER WHO ALSO OWNS COMPLIANCE</Label>
+          <Label>COMPLIANCE FOR THE SOFTWARE YOU’RE BUILDING</Label>
           <h1 tabIndex={-1}>
-            Someone has to ask the <em>awkward</em> launch questions.
+            Connect your code.
+            <br />
+            Know what needs <em>fixing.</em>
           </h1>
           <p className="m-lead">
-            What rules apply? Where is the evidence? Who actually reviewed it?
-            Clearance puts the answers next to the product you’re shipping.
+            Bring in a project from GitHub, Bitbucket, a local folder or your
+            coding agent. Answer questions about how it’s used. Get a list of
+            compliance gaps, keep the fixes together, and check again before the
+            next release.
           </p>
           <div className="m-actions">
-            <Demo />
+            <StartProject />
             <Go to="/platform">See how it works</Go>
           </div>
           <p className="m-caption">
-            Open the sample workspace. No account or API key needed.
+            Local preview: start without an account. Project data resets on
+            server restart.
           </p>
         </div>
         <ReleaseBrief />
       </section>
       <div className="m-index-strip">
         <div className="m-wrap">
-          <span>CONTEXT FIRST. EVIDENCE NEXT.</span>
-          <span>SaaS</span>
-          <span>AI products</span>
-          <span>Mobile apps</span>
-          <span>Embedded software</span>
+          <span>START WHERE YOUR CODE LIVES</span>
+          <span>GitHub checkout</span>
+          <span>Bitbucket checkout</span>
+          <span>Local folder</span>
+          <span>MCP / IDE agent</span>
         </div>
       </div>
       <section className="m-wrap m-editorial">
         <div>
-          <Label>THE PROBLEM WE’RE WORKING ON</Label>
+          <Label>ONE PROJECT. A REPEATABLE REVIEW.</Label>
           <h2>
-            The spreadsheet isn’t the hard part.
+            You don’t need to start
             <br />
-            Keeping it true is.
+            with a compliance framework.
           </h2>
         </div>
         <div>
           <p>
-            A privacy notice sits in one folder. Security answers live in a
-            sales document. An engineer remembers why the AI feature was
-            classified a certain way. Then the product changes.
+            Start with the app you’re building. Clearance reads a bounded code
+            inventory to identify technology hints and ask relevant questions.
+            You confirm who will use it, what data it handles and where it will
+            be sold.
           </p>
           <p>
-            Clearance keeps the product’s context, candidate requirements,
-            review decisions and release checks together. You can see what
-            changed and which decisions need another look.
+            Your saved project holds the answers, candidate requirements,
+            supporting evidence and every assessment. Come back after a change,
+            refresh the code snapshot and rerun the checks. An imported file
+            list is a starting point; your agent and reviewer investigate the
+            implementation.
           </p>
-          <Go to="/about">Why we built it this way</Go>
+          <Demo secondary />
         </div>
       </section>
       <section className="m-navy">
         <div className="m-wrap">
           <div className="m-section-heading">
             <div>
-              <Label>AN ORDINARY RELEASE, WITH FEWER LOOSE ENDS</Label>
+              <Label>HOW IT WORKS</Label>
               <h2>
-                A place for the work
+                From your repository
                 <br />
-                between “it runs” and “it’s ready.”
+                to your next action.
               </h2>
             </div>
             <Go to="/platform">Inside the product</Go>
@@ -321,18 +378,18 @@ function Home() {
             {[
               [
                 "01",
-                "Describe the actual product",
-                "Markets, customers, data and intended use. A consumer mobile app should not inherit a generic B2B checklist.",
+                "Connect code & answer questions",
+                "Create a project. Import a local checkout from GitHub or Bitbucket, select a folder, or send metadata through MCP. Confirm the questions about your app’s users, markets and data.",
               ],
               [
                 "02",
-                "Give each requirement a record",
-                "Keep the source, proposed action and supporting evidence together. Reviewers make explicit decisions.",
+                "See what needs attention",
+                "Run an assessment. Each problem explains what needs checking, why it matters and the next action. Ask your coding agent to investigate and attach evidence for review.",
               ],
               [
                 "03",
-                "Check again at release time",
-                "Changed inputs and stale assessments block the gate. The same review is available in your workspace, agent and pipeline.",
+                "Fix, verify & return",
+                "Keep working in your IDE. Refresh the snapshot and rerun this same project after changes. Review the history in the app or check the release gate from your pipeline.",
               ],
             ].map(([n, t, p]) => (
               <article key={n}>
@@ -446,8 +503,9 @@ function Platform() {
         }
       >
         <p>
-          Every finding needs context. Every approval needs a record. Clearance
-          connects them without asking your team to remember the whole story.
+          Create a project for each app. Connect its code, confirm the project
+          questions, review the problems, and return to the same project
+          whenever you need to check again.
         </p>
       </Intro>
       <section className="m-wrap m-product-spread">
@@ -458,17 +516,22 @@ function Platform() {
         </div>
         <img
           src="/marketing/workspace.png"
-          alt="Clearance sample workspace showing evidence coverage, applicable frameworks and open checks"
+          alt="Clearance project workspace with GitHub, Bitbucket, local folder and MCP connection options, followed by questions, problems and check history"
           width="1440"
-          height="1000"
+          height="1141"
         />
       </section>
       <section className="m-wrap m-detail-list">
         {[
           [
-            "Start with context",
-            "Define software type, industry, countries, audience and data categories. Record AI use separately so a conventional app with an AI feature can still be scoped correctly.",
-            "A change of market is a change of input.",
+            "Connect your code",
+            "Import metadata from your GitHub or Bitbucket checkout, choose a local folder, or connect your coding agent over MCP. Source files stay on your computer. Repository URLs are references, not automatic account connections.",
+            "Refresh the snapshot when your code changes.",
+          ],
+          [
+            "Answer project questions",
+            "Questions adapt to your product profile and recognized repository signals. Answer in the website or let your agent propose answers with file references. Confirm the markets, audience and intended use yourself.",
+            "A dependency can suggest a question; it cannot prove a legal obligation.",
           ],
           [
             "Map candidate requirements",
@@ -773,6 +836,7 @@ function Integrations() {
             {
               mcpServers: {
                 clearance: {
+                  type: "http",
                   url: "https://clearance.example.com/mcp",
                   headers: { Authorization: "Bearer YOUR_CLEARANCE_API_KEY" },
                 },
@@ -796,6 +860,21 @@ function Integrations() {
             </thead>
             <tbody>
               {[
+                [
+                  "get_project_questions",
+                  "read",
+                  "Reads adaptive questions, the saved answers and imported code metadata.",
+                ],
+                [
+                  "submit_code_snapshot",
+                  "evidence",
+                  "Imports bounded repository metadata and invalidates the previous gate.",
+                ],
+                [
+                  "answer_project_questions",
+                  "evidence",
+                  "Saves answers from the user or agent without approving evidence.",
+                ],
                 [
                   "list_projects",
                   "read",
@@ -1330,8 +1409,9 @@ function FieldNotes({ article = false }: { article?: boolean }) {
           <p>
             The experiment creates an isolated Clearance instance, declares the
             scenario, adds a repository-review policy and connects through the
-            MCP SDK. It discovers the tools, reads the assessment skill, runs an
-            assessment and submits the inventory as evidence.
+            MCP SDK. It imports code metadata, reads the generated questions,
+            saves explicit scenario answers and unknowns, runs an assessment and
+            submits the inventory as evidence.
           </p>
           <p>
             The record enters the submitted state. The MCP client cannot promote
@@ -1341,7 +1421,7 @@ function FieldNotes({ article = false }: { article?: boolean }) {
           <p className="m-experiment-result">
             Recorded run: 1,342 files discovered within the depth limit, 398
             test filenames found, nine candidate controls and six high-priority
-            gaps. All eight workflow checks passed.
+            gaps. All ten workflow checks passed.
           </p>
           <p>
             The CLI gate blocks because required evidence has not been reviewed.
@@ -1493,10 +1573,7 @@ export default function Landing() {
           </nav>
           <div className="m-header-actions">
             <Link to="/login">Log in</Link>
-            <Link className="m-button m-header-cta" to="/signup">
-              Get started
-              <ArrowUpRight size={16} />
-            </Link>
+            <StartProject compact label="Start a project" />
             <button
               className="m-menu-button"
               aria-label={menu ? "Close navigation" : "Open navigation"}
@@ -1521,9 +1598,7 @@ export default function Landing() {
             you haven’t answered yet.
           </h2>
           <div className="m-actions">
-            <Go to="/signup" primary>
-              Create your workspace
-            </Go>
+            <StartProject label="Open your projects" />
             <Go to="/platform">Take a closer look</Go>
           </div>
         </div>

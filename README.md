@@ -12,7 +12,25 @@ npm ci
 npm run dev
 ```
 
-Open **http://localhost:5173** and choose **Explore the workspace**. Each demo visitor gets an isolated owner and sample product. The demo uses `pg-mem`; everything resets when the API restarts. It does not send mail, call a model, or fake successful integrations. No API credentials are needed for the demo.
+Open **http://127.0.0.1:5173** and choose **Connect your project**, then **New project**. This opens an empty local workspace, or reuses your signed-in workspace. **Explore the workspace** remains available as a separate sample. The preview uses `pg-mem`; everything resets when the API restarts. Use the PostgreSQL setup below for lasting project storage. No API credentials are needed to select a folder and try the browser workflow.
+
+## Project workflow
+
+1. **Create a project.** Choose GitHub, Bitbucket, a local folder or MCP / IDE agent. GitHub and Bitbucket use your local authenticated checkout; saving a repository URL does not grant account access or automatically fetch code.
+2. **Connect code.** Select a project folder in the browser. Review the bounded metadata and confirm import. Source contents are not uploaded. Alternatively, use the CLI below or have your agent call `submit_code_snapshot`.
+3. **Answer project questions.** Confirm markets, audience, intended use and data. Questions adapt to the profile and signals such as AI dependencies, mobile configuration and missing privacy/test filenames. The user or MCP agent can save answers; they do not approve evidence. Unknowns should remain explicit.
+4. **Review problems.** Run an assessment. Each finding has a reason and next action. Missing evidence means unverified, not a proven implementation defect. A coding agent can investigate code, help fix it and submit evidence for human review.
+5. **Return and recheck.** Open All projects, choose the same project, refresh its code snapshot and run another assessment. Earlier runs remain available. Changed snapshots, answers, profile or evidence invalidate the old gate.
+
+Collect metadata from a local checkout (run from the Clearance repository):
+
+```powershell
+node scripts/connect-project.mjs "D:\path\to\your-app" > snapshot.json
+```
+
+Import that JSON under **Connect code → Or import a CLI inventory JSON**. To sync directly, set `CLEARANCE_URL`, `CLEARANCE_PROJECT_ID` and `CLEARANCE_API_KEY` in the local environment, then append `--send`. The key needs `evidence` scope. The command refuses non-HTTPS remote URLs and redirects, uses a timeout, never runs the target's code, and never prints the key. An optional Git revision identifies the checkout; uncommitted source contents are not inspected. Reimport after changes; there is no background repository watcher.
+
+For Claude Code or an IDE agent with MCP tool support, open **Connect code → MCP / IDE agent**, create a key with `read`, `assess`, and `evidence` scopes, copy the server configuration into the client's MCP settings, and copy the project-specific continuation prompt. The agent reads the assessment skill, imports metadata, asks/answers the project questions, assesses, submits records, and reruns on the same project. Autocomplete alone cannot call MCP tools. Claude Code's HTTP server format is documented in its [official MCP guide](https://code.claude.com/docs/en/mcp). Keep the real bearer key in local client settings or environment expansion, outside version control.
 
 ## What works
 
@@ -24,7 +42,7 @@ Open **http://localhost:5173** and choose **Explore the workspace**. Each demo v
 - Memos experiment: a reproducible assessment of a pinned open-source repository, using the real MCP SDK and CI command. Open `/field-notes/memos` and choose **Open the Memos example** to review the same scenario in an isolated workspace, with no pre-approved evidence.
 - Custom policies: create/delete product requirements and include them in the assessment and release gate.
 - Authentication: email/password with scrypt, Brevo confirmation and reset mail, Google OAuth with state/nonce/PKCE, optional Twilio Verify SMS/WhatsApp second factor.
-- MCP: actual stateless Streamable HTTP server, scoped bearer keys, five tools and two resources.
+- MCP: actual stateless Streamable HTTP server, scoped bearer keys, eight tools and two resources.
 - CI/CD: a fail-closed command-line gate; rejects missing, incomplete, changed-input or older-than-seven-days reports, and high-priority controls without owner-approved evidence.
 - Official-source monitor: explicit opt-in, fixed HTTPS source catalog, bounded fetches and page-change fingerprints. Page change is not a legal interpretation.
 - OpenAI Responses web research: opt-in at both deployment and project level, official domains, citations, failure visibility, `store: false`. Only the declared profile and candidate control titles/URLs are sent; evidence text is excluded.
@@ -82,6 +100,7 @@ Create a key in **Integrations**. It is displayed once, SHA-256 hashed in storag
 {
   "mcpServers": {
     "clearance": {
+      "type": "http",
       "url": "https://your-clearance-host/mcp",
       "headers": { "Authorization": "Bearer YOUR_CLEARANCE_API_KEY" }
     }
@@ -94,6 +113,9 @@ Some clients use different config field names or require OAuth discovery; static
 | Tool                 | Scope      | Behavior                                 |
 | -------------------- | ---------- | ---------------------------------------- |
 | `list_projects`      | `read`     | Owned products only                      |
+| `get_project_questions` | `read` | Profile, code snapshot, questions and saved answers |
+| `submit_code_snapshot` | `evidence` | Import bounded code metadata; invalidates prior gate |
+| `answer_project_questions` | `evidence` | Save question answers; never approves controls |
 | `get_assessment`     | `read`     | Latest run, findings and events          |
 | `check_release_gate` | `read`     | Current fail-closed gate result          |
 | `run_assessment`     | `assess`   | New assessment; respects research opt-in |

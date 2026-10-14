@@ -17,8 +17,14 @@ import {
   releaseGate,
 } from "./engine.js";
 import { controls, sources } from "./catalog.js";
-import { seedDemo, seedMemosDemo } from "./seed.js";
+import { seedDemo, seedMemosDemo, seedEmptyDemo } from "./seed.js";
 import { mcpHandler } from "./mcp.js";
+import {
+  getDiscovery,
+  connectProject,
+  submitSnapshot,
+  saveAnswers,
+} from "./discovery.js";
 export function createApp(
   db: DB,
   config: Config,
@@ -119,11 +125,15 @@ export function createApp(
     async (req, res) => {
       if (!config.demo) throw new HttpError(404, "Not found.");
       const { example } = z
-        .object({ example: z.enum(["default", "memos"]).default("default") })
+        .object({
+          example: z.enum(["default", "memos", "empty"]).default("default"),
+        })
         .parse(req.body ?? {});
-      const uid = await (example === "memos"
-        ? seedMemosDemo(db, config)
-        : seedDemo(db, config));
+      const uid = await (example === "empty"
+        ? seedEmptyDemo(db)
+        : example === "memos"
+          ? seedMemosDemo(db, config)
+          : seedDemo(db, config));
       await auth.issue(uid, res);
       res.json({ ok: true });
     },
@@ -150,6 +160,26 @@ export function createApp(
     await audit(db, req.userId!, "project.created", pid);
     res.status(201).json({ id: pid, profile });
   });
+  api.get("/projects/:id/discovery", auth.scope("read"), async (req, res) =>
+    res.json(await getDiscovery(db, req.userId!, String(req.params.id))),
+  );
+  api.put("/projects/:id/connection", auth.browserOnly, async (req, res) =>
+    res.json(
+      await connectProject(db, req.userId!, String(req.params.id), req.body),
+    ),
+  );
+  api.post("/projects/:id/snapshot", auth.scope("evidence"), async (req, res) =>
+    res
+      .status(201)
+      .json(
+        await submitSnapshot(db, req.userId!, String(req.params.id), req.body),
+      ),
+  );
+  api.put("/projects/:id/answers", auth.scope("evidence"), async (req, res) =>
+    res.json(
+      await saveAnswers(db, req.userId!, String(req.params.id), req.body),
+    ),
+  );
   api.put("/projects/:id", auth.browserOnly, async (req, res) => {
     await ownedProject(db, req.userId!, String(req.params.id));
     const profile = profileSchema.parse(req.body);

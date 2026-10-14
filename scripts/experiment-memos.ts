@@ -119,7 +119,7 @@ try {
     }),
   );
   const tools = await client.listTools();
-  assert.equal(tools.tools.length, 5);
+  assert.equal(tools.tools.length, 8);
   const skill = await client.readResource({
     uri: "clearance://skills/assessment",
   });
@@ -128,6 +128,55 @@ try {
   assert(projects.some((p: any) => p.id === project.id));
   steps.push(
     "Real MCP SDK initialization, tool discovery and skill resource passed",
+  );
+  const snapshot = {
+    filesInspected: inventory.filesInspected,
+    technologyHints: inventory.technologyHints,
+    artifacts: Object.fromEntries(
+      Object.entries(inventory.artifacts).map(([name, paths]) => [
+        name,
+        (paths as string[]).slice(0, 30),
+      ]),
+    ),
+    truncated:
+      inventory.truncated ||
+      Object.values(inventory.artifacts).some(
+        (paths) => (paths as string[]).length > 30,
+      ),
+    generatedAt: inventory.generatedAt,
+    revision: expectedCommit,
+  };
+  await api(`/projects/${project.id}/connection`, "PUT", {
+    provider: "github",
+    repository: "https://github.com/usememos/memos",
+  });
+  await call("submit_code_snapshot", { projectId: project.id, snapshot });
+  const questions = await call("get_project_questions", {
+    projectId: project.id,
+  });
+  assert(questions.questions.some((q: any) => q.id === "ai"));
+  steps.push(
+    "MCP imported real Memos metadata and generated an AI-specific project question",
+  );
+  const answers = Object.fromEntries(
+    questions.questions.map((q: any) => [
+      q.id,
+      q.id === "purpose"
+        ? profile.description
+        : q.id === "markets"
+          ? "Hypothetical operator scenario: adult business users in the EU; not a claim about every Memos deployment."
+          : q.id === "ai"
+            ? "go.mod declares openai-go; provider/ai contains optional integrations. Whether deployed and what data reaches the model remain unverified."
+            : "Unverified in this metadata-only experiment. The operator must investigate and provide implementation evidence before release.",
+    ]),
+  );
+  await call("answer_project_questions", { projectId: project.id, answers });
+  const answered = await call("get_project_questions", {
+    projectId: project.id,
+  });
+  assert.equal(answered.unanswered.length, 0);
+  steps.push(
+    "MCP saved explicit scenario answers and unknowns without approving evidence",
   );
   const initial = await call("run_assessment", { projectId: project.id });
   assert.equal(initial.status, "completed");
@@ -212,6 +261,13 @@ try {
       externalResearch: false,
     },
     profile,
+    discovery: {
+      provider: "github",
+      repository: "https://github.com/usememos/memos",
+      snapshot,
+      importedAt: new Date().toISOString(),
+      answers,
+    },
     inventory: {
       filesInspected: inventory.filesInspected,
       truncated: inventory.truncated,

@@ -22,7 +22,7 @@ test("landing, sample assessment, evidence review, policy, MCP key and onboardin
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "awkward",
+    "Connect your code",
   );
   await page.screenshot({
     path: "test-results/landing-desktop.png",
@@ -31,7 +31,7 @@ test("landing, sample assessment, evidence review, policy, MCP key and onboardin
   await page.getByRole("button", { name: "Explore the workspace" }).click();
   await expect(
     page.getByRole("heading", {
-      name: "A clearer view. A confident next step.",
+      name: "Problems & next steps",
     }),
   ).toBeVisible();
   await expect(page.getByText("50%", { exact: true })).toBeVisible();
@@ -52,7 +52,7 @@ test("landing, sample assessment, evidence review, policy, MCP key and onboardin
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page
     .locator(".sidebar")
-    .getByRole("link", { name: "Evidence vault" })
+    .getByRole("link", { name: "Evidence & review" })
     .click();
   await page.getByRole("button", { name: "Add evidence", exact: true }).click();
   await page
@@ -73,7 +73,7 @@ test("landing, sample assessment, evidence review, policy, MCP key and onboardin
   await expect(evidence).toContainText("submitted");
   await evidence.getByRole("button", { name: "Approve" }).click();
   await expect(evidence).toContainText("approved");
-  await page.getByRole("link", { name: "Policy library" }).click();
+  await page.getByRole("link", { name: "Custom rules" }).click();
   await page.getByRole("button", { name: "Add custom policy" }).click();
   await page.getByLabel("Policy title").fill("European data residency");
   await page
@@ -106,33 +106,6 @@ test("landing, sample assessment, evidence review, policy, MCP key and onboardin
   await expect(
     page.getByRole("button", { name: "Check sources" }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "Add a product" }).click();
-  await page.getByLabel("Product name").fill("Pocket Health");
-  await page
-    .getByLabel("What does your product do?")
-    .fill(
-      "A mobile health journaling application for adult consumers in the European Union.",
-    );
-  await page.getByLabel("Software type").selectOption("mobile");
-  await page.getByLabel("Industry").selectOption("Healthcare");
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByLabel("Who is your product for?").selectOption("Consumers");
-  await page.getByRole("button", { name: "Health data", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Create workspace", exact: true })
-    .click();
-  await page.getByRole("link", { name: "Overview", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Run assessment", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText("Assessment complete");
-  await page.getByRole("link", { name: "Policy library" }).click();
-  await expect(
-    page.getByRole("heading", {
-      name: "Review mobile permissions and disclosures",
-    }),
-  ).toBeVisible();
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Workspace audit trail" }),
@@ -157,7 +130,7 @@ test("mobile navigation and responsive layout", async ({ page }) => {
   await page.getByRole("button", { name: "Explore the workspace" }).click();
   await expect(
     page.getByRole("heading", {
-      name: "A clearer view. A confident next step.",
+      name: "Problems & next steps",
     }),
   ).toBeVisible();
   expect(
@@ -170,7 +143,7 @@ test("mobile navigation and responsive layout", async ({ page }) => {
     fullPage: true,
   });
   await page.getByRole("button", { name: "Open navigation" }).click();
-  await page.getByRole("link", { name: "Assessments", exact: true }).click();
+  await page.getByRole("link", { name: "Check history", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Agent activity", exact: true }),
   ).toBeVisible();

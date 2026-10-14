@@ -58,6 +58,20 @@ afterEach(async () => {
 });
 describe("research boundaries", () => {
   it("sends only declared context, retains citations, and never lets model text approve evidence", async () => {
+    const profile = (
+      await db.query("SELECT profile FROM projects WHERE id=$1", [pid])
+    ).rows[0].profile;
+    await db.query("UPDATE projects SET profile=$1 WHERE id=$2", [
+      JSON.stringify({
+        ...profile,
+        discovery: {
+          provider: "local",
+          repository: "",
+          answers: { purpose: "NEVER_SEND_THIS_DISCOVERY_ANSWER" },
+        },
+      }),
+      pid,
+    ]);
     await db.query(
       "INSERT INTO evidence (id,project_id,control_id,title,content) VALUES ($1,$2,$3,$4,$5)",
       [

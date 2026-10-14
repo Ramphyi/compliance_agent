@@ -29,7 +29,7 @@ test("Memos field note opens the real repository example for review", async ({
   await expect(page.locator(".workspace-switch")).toContainText("Memos");
   await page
     .locator(".sidebar")
-    .getByRole("link", { name: "Evidence vault" })
+    .getByRole("link", { name: "Evidence & review" })
     .click();
   await expect(
     page.getByRole("heading", { name: "Pinned Memos repository metadata" }),

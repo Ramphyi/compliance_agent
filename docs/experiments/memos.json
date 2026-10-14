@@ -1,6 +1,6 @@
 {
   "experiment": "Memos repository to MCP to CI",
-  "verifiedAt": "2026-10-13T23:46:20.387Z",
+  "verifiedAt": "2026-10-14T01:14:48.649Z",
   "result": "passed",
   "source": {
     "repository": "https://github.com/usememos/memos",
@@ -26,6 +26,87 @@
     ],
     "usesAi": true,
     "externalAi": false
+  },
+  "discovery": {
+    "provider": "github",
+    "repository": "https://github.com/usememos/memos",
+    "snapshot": {
+      "filesInspected": 1342,
+      "technologyHints": [
+        "Go",
+        "PostgreSQL Go driver",
+        "mcp-go-sdk",
+        "openai-go",
+        "react",
+        "vite"
+      ],
+      "artifacts": {
+        "privacy": [],
+        "security": [
+          "SECURITY.md",
+          "web/tests/memo-content-security.test.tsx"
+        ],
+        "licenses": [
+          "LICENSE"
+        ],
+        "tests": [
+          "cmd/memos/log_test.go",
+          "cmd/memos/main_test.go",
+          "core/access/memo_test.go",
+          "core/memoexport/expansion_test.go",
+          "core/memoexport/memoexport_test.go",
+          "core/notification/email_test.go",
+          "core/usagelimit/usagelimit_test.go",
+          "filter/engine_test.go",
+          "filter/functions_test.go",
+          "filter/time_test.go",
+          "internal/clientip/clientip_test.go",
+          "internal/email/client_test.go",
+          "internal/email/config_test.go",
+          "internal/email/email_test.go",
+          "internal/email/message_test.go",
+          "internal/identifier/resource_name_test.go",
+          "internal/identifier/username_test.go",
+          "internal/imagelimit/imagelimit_test.go",
+          "internal/linkmeta/html_meta_test.go",
+          "internal/motionphoto/motionphoto_test.go",
+          "internal/motionphoto/reader_test.go",
+          "internal/profile/profile_test.go",
+          "internal/ratelimit/ratelimit_test.go",
+          "internal/version/version_test.go",
+          "internal/webhook/webhook_test.go",
+          "markdown/extensions/mention_test.go",
+          "markdown/markdown_test.go",
+          "markdown/parser/gfm_email_test.go",
+          "markdown/parser/math_test.go",
+          "markdown/parser/mention_test.go"
+        ],
+        "pipelines": [
+          ".github/workflows/backend-tests.yml",
+          ".github/workflows/build-canary-image.yml",
+          ".github/workflows/demo-deploy.yml",
+          ".github/workflows/frontend-tests.yml",
+          ".github/workflows/proto-linter.yml",
+          ".github/workflows/release.yml",
+          ".github/workflows/stale.yml",
+          ".github/workflows/upgrade-smoke.yml"
+        ],
+        "mobile": [],
+        "embedded": []
+      },
+      "truncated": true,
+      "generatedAt": "2026-10-14T01:14:48.164Z",
+      "revision": "8120a6cee03003ee7968b49b2109f816fa4d96a4"
+    },
+    "importedAt": "2026-10-14T01:14:48.649Z",
+    "answers": {
+      "purpose": "A hypothetical operator offers a self-hosted Memos-based notes service to adult business users in the EU. Notes and account records can contain personal data. Optional AI integrations in the pinned repository are included conservatively in scope; enabled deployment features still need owner confirmation.",
+      "markets": "Hypothetical operator scenario: adult business users in the EU; not a claim about every Memos deployment.",
+      "data": "Unverified in this metadata-only experiment. The operator must investigate and provide implementation evidence before release.",
+      "access": "Unverified in this metadata-only experiment. The operator must investigate and provide implementation evidence before release.",
+      "ai": "go.mod declares openai-go; provider/ai contains optional integrations. Whether deployed and what data reaches the model remain unverified.",
+      "privacy_notice": "Unverified in this metadata-only experiment. The operator must investigate and provide implementation evidence before release."
+    }
   },
   "inventory": {
     "filesInspected": 1342,
@@ -70,6 +151,8 @@
     "Nested React and Go discovery verified",
     "Go tests and MIT license discovered",
     "Real MCP SDK initialization, tool discovery and skill resource passed",
+    "MCP imported real Memos metadata and generated an AI-specific project question",
+    "MCP saved explicit scenario answers and unknowns without approving evidence",
     "MCP evidence submission remained unapproved and invalidated the prior gate",
     "Bearer key could not approve evidence",
     "Real CLI exited 1 for unreviewed high-priority evidence, as expected",

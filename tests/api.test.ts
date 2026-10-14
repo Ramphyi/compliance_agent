@@ -71,6 +71,15 @@ async function demo() {
   return { a, pid: projects.body[0].id };
 }
 describe("identity boundaries", () => {
+  it("opens an empty local workspace without preloading a sample project", async () => {
+    const a = browser();
+    await a
+      .post("/api/demo")
+      .set("Origin", origin)
+      .send({ example: "empty" })
+      .expect(200);
+    expect((await a.get("/api/projects")).body).toEqual([]);
+  });
   it("creates an isolated Memos example with no pre-approved evidence", async () => {
     const a = browser();
     await a
@@ -265,6 +274,208 @@ describe("identity boundaries", () => {
       .expect(400);
   });
 });
+
+describe("code-connected projects", () => {
+  const snapshot = {
+    filesInspected: 4,
+    technologyHints: ["react", "openai"],
+    generatedAt: "2026-10-14T08:00:00.000Z",
+    truncated: false,
+    artifacts: {
+      privacy: [],
+      security: [],
+      licenses: ["LICENSE"],
+      tests: ["app.test.ts"],
+      pipelines: [],
+      mobile: [],
+      embedded: [],
+    },
+  };
+  it("imports code, adapts questions, saves answers and preserves earlier runs when rechecking", async () => {
+    const { a, pid } = await demo();
+    await a
+      .put(`/api/projects/${pid}/connection`)
+      .set("Origin", origin)
+      .send({
+        provider: "github",
+        repository: "https://github.com/team/project",
+      })
+      .expect(200);
+    const imported = await a
+      .post(`/api/projects/${pid}/snapshot`)
+      .set("Origin", origin)
+      .send({ ...snapshot, secret: "MUST_BE_STRIPPED" })
+      .expect(201);
+    expect(imported.body.unanswered).toEqual(
+      expect.arrayContaining(["ai", "privacy_notice"]),
+    );
+    expect(JSON.stringify(imported.body)).not.toContain("MUST_BE_STRIPPED");
+    const first = await a
+      .post(`/api/projects/${pid}/assess`)
+      .set("Origin", origin)
+      .expect(201);
+    expect(first.body.findings.some((f: any) => f.id === "question:ai")).toBe(
+      true,
+    );
+    expect(imported.body).not.toHaveProperty("project");
+    expect(imported.body).not.toHaveProperty("connection");
+    const answers = Object.fromEntries(
+      imported.body.unanswered.map((qid: string) => [
+        qid,
+        "Owner confirmed the declared profile; implementation needs review.",
+      ]),
+    );
+    const saved = await a
+      .put(`/api/projects/${pid}/answers`)
+      .set("Origin", origin)
+      .send(answers)
+      .expect(200);
+    expect(saved.body.unanswered).toEqual([]);
+    expect((await a.get(`/api/projects/${pid}/gate`)).body.reason).toContain(
+      "Inputs changed",
+    );
+    const second = await a
+      .post(`/api/projects/${pid}/assess`)
+      .set("Origin", origin)
+      .expect(201);
+    expect(
+      second.body.findings.some((f: any) => f.id.startsWith("question:")),
+    ).toBe(false);
+    const detail = (await a.get(`/api/projects/${pid}`)).body;
+    expect(detail.runs.map((r: any) => r.id)).toEqual(
+      expect.arrayContaining([first.body.id, second.body.id]),
+    );
+    expect(
+      detail.evidence.filter((e: any) => e.status === "approved"),
+    ).toHaveLength(4);
+    await a
+      .post(`/api/projects/${pid}/snapshot`)
+      .set("Origin", origin)
+      .send({ ...snapshot, revision: "abc1234" })
+      .expect(201);
+    expect((await a.get(`/api/projects/${pid}/gate`)).body.reason).toContain(
+      "Inputs changed",
+    );
+    await a
+      .put(`/api/projects/${pid}/connection`)
+      .set("Origin", origin)
+      .send({
+        provider: "bitbucket",
+        repository: "https://bitbucket.org/team/other",
+      })
+      .expect(200);
+    const changed = (await a.get(`/api/projects/${pid}/discovery`)).body;
+    expect(changed.connection.snapshot).toBeUndefined();
+    expect(changed.connection.answers).toEqual({});
+  });
+  it("enforces ownership, scopes and bounded inputs on discovery endpoints", async () => {
+    const { a, pid } = await demo(),
+      other = await demo();
+    await other.a.get(`/api/projects/${pid}/discovery`).expect(404);
+    await other.a
+      .post(`/api/projects/${pid}/snapshot`)
+      .set("Origin", origin)
+      .send(snapshot)
+      .expect(404);
+    await a
+      .put(`/api/projects/${pid}/connection`)
+      .set("Origin", origin)
+      .send({
+        provider: "github",
+        repository: "https://token@github.com/team/repo",
+      })
+      .expect(400);
+    await a
+      .put(`/api/projects/${pid}/connection`)
+      .set("Origin", origin)
+      .send({
+        provider: "github",
+        repository: "https://github.com.evil.test/team/repo",
+      })
+      .expect(400);
+    await a
+      .post(`/api/projects/${pid}/snapshot`)
+      .set("Origin", origin)
+      .send({ ...snapshot, filesInspected: 5001 })
+      .expect(400);
+    await a
+      .post(`/api/projects/${pid}/snapshot`)
+      .set("Origin", origin)
+      .send(snapshot)
+      .expect(201);
+    await a
+      .put(`/api/projects/${pid}/answers`)
+      .set("Origin", origin)
+      .send({ invented: "No such question" })
+      .expect(400);
+    const key = (
+      await a
+        .post("/api/keys")
+        .set("Origin", origin)
+        .send({ name: "Read only", scopes: ["read"] })
+    ).body.key;
+    await request(app)
+      .post(`/api/projects/${pid}/snapshot`)
+      .set("Authorization", `Bearer ${key}`)
+      .send(snapshot)
+      .expect(403);
+    await request(app)
+      .put(`/api/projects/${pid}/answers`)
+      .set("Authorization", `Bearer ${key}`)
+      .send({ purpose: "An answer" })
+      .expect(403);
+  });
+  it("lets an MCP agent import metadata, read and answer questions without approving evidence", async () => {
+    const { a, pid } = await demo();
+    const key = (
+      await a
+        .post("/api/keys")
+        .set("Origin", origin)
+        .send({ name: "Project agent", scopes: ["read", "assess", "evidence"] })
+    ).body.key;
+    const call = async (name: string, args: object) => {
+      const response = await request(app)
+        .post("/mcp")
+        .set("Authorization", `Bearer ${key}`)
+        .set("Accept", "application/json, text/event-stream")
+        .send({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name, arguments: args },
+        })
+        .expect(200);
+      expect(response.body.result.isError).not.toBe(true);
+      return JSON.parse(response.body.result.content[0].text);
+    };
+    await call("submit_code_snapshot", { projectId: pid, snapshot });
+    const state = await call("get_project_questions", { projectId: pid });
+    expect(state.unanswered).toContain("ai");
+    await call("answer_project_questions", {
+      projectId: pid,
+      answers: {
+        ai: "Optional OpenAI feature found in package.json; ask owner if deployed.",
+      },
+    });
+    expect(
+      (await call("get_project_questions", { projectId: pid })).connection
+        .answers.ai,
+    ).toContain("package.json");
+    const run = await call("run_assessment", { projectId: pid });
+    expect(run.findings.some((f: any) => f.id === "question:ai")).toBe(false);
+    expect(run.findings.some((f: any) => f.id === "question:purpose")).toBe(
+      true,
+    );
+    expect((await call("check_release_gate", { projectId: pid })).passed).toBe(
+      false,
+    );
+    await request(app)
+      .put(`/api/projects/${pid}/connection`)
+      .set("Authorization", `Bearer ${key}`)
+      .send({ provider: "local" })
+      .expect(403);
+  });
+});
 describe("ownership, assessment and release gates", () => {
   it("isolates projects, evidence, keys and reports by owner", async () => {
     const one = await demo();
@@ -424,7 +635,7 @@ describe("MCP and key scopes", () => {
     }).expect(200);
     expect(init.body.result.serverInfo.name).toBe("clearance");
     const listed = await call("tools/list").expect(200);
-    expect(listed.body.result.tools).toHaveLength(5);
+    expect(listed.body.result.tools).toHaveLength(8);
     const tool = await call("tools/call", {
       name: "get_assessment",
       arguments: { projectId: pid },
@@ -454,6 +665,7 @@ describe("MCP and key scopes", () => {
       .send({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} })
       .expect(200);
     expect(r.body.result.tools.map((t: any) => t.name)).toEqual([
+      "get_project_questions",
       "list_projects",
       "get_assessment",
       "check_release_gate",

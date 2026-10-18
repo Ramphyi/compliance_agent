@@ -1,0 +1,666 @@
+id: eu-cra
+title: Regulation (EU) 2024/2847 on horizontal cybersecurity requirements for products with digital elements (Cyber Resilience Act)
+shortTitle: EU Cyber Resilience Act
+version: Regulation (EU) 2024/2847
+authority: European Union
+kind: regulation
+jurisdictions: [EU]
+url: https://eur-lex.europa.eu/eli/reg/2024/2847/oj
+textPolicy: open
+summary: >
+  The Cyber Resilience Act sets mandatory cybersecurity requirements for hardware and
+  software products with digital elements placed on the EU market, and for their remote
+  data processing. Manufacturers must design products to the essential requirements of
+  Annex I Part I, handle vulnerabilities for a support period of normally at least five
+  years (Annex I Part II), report actively exploited vulnerabilities and severe incidents,
+  provide user information (Annex II), and carry out conformity assessment before CE
+  marking, with stricter routes for important (Annex III) and critical (Annex IV) products.
+applicability:
+  all:
+    - { fact: markets, in: [EU] }
+    - not: { fact: productTypes, in: [medical-device, automotive-ecu] }
+    - any:
+        - { fact: productTypes, in: [mobile-app, desktop-app, embedded-firmware, iot-device, industrial-control, library-sdk] }
+        - all:
+            - { fact: productTypes, in: [web-app, backend-api, ai-system] }
+            - { fact: distribution, in: [direct-download, on-premise, preinstalled-hardware, oem-supply, apple-app-store, google-play] }
+applicabilityNote: >
+  Applies to products with digital elements (hardware with firmware, installable
+  software, apps, libraries and components sold separately) made available on the EU
+  market in the course of a commercial activity. Remote data processing (for example the
+  cloud backend or API a device or app needs to perform a function) is covered as part of
+  that product. Pure SaaS with no product is outside the CRA and falls under NIS2.
+  Excluded are medical devices (Regulations 2017/745 and 2017/746), type-approved
+  vehicles (Regulation 2019/2144), civil aviation and marine equipment, and products for
+  national security or defence; confirm with counsel for aftermarket vehicle devices.
+  Free and open-source software developed or supplied outside a commercial activity is
+  out of scope; open-source software stewards have a light-touch regime (Art. 24). The
+  agent must also determine whether the product is in an important (Annex III) or
+  critical (Annex IV) category, which changes the conformity assessment route. For radio
+  equipment, the RED cybersecurity requirements (Delegated Regulation 2022/30, EN 18031)
+  apply until the CRA takes over on 11 December 2027.
+keyDates:
+  - { date: "2024-12-10", note: Entry into force }
+  - { date: "2025-12-21", note: Implementing Regulation (EU) 2025/2392 on the technical descriptions of important and critical product categories enters into force }
+  - { date: "2026-06-11", note: Provisions on notification of conformity assessment bodies (Chapter IV) apply }
+  - { date: "2026-09-11", note: "Reporting obligations for actively exploited vulnerabilities and severe incidents (Art. 14) apply, including to products already on the market" }
+  - { date: "2027-12-11", note: All obligations apply }
+controls:
+  - ref: AnnexI.I.2(a)
+    title: No known exploitable vulnerabilities at release
+    requirement: >
+      Products must be made available on the market without known exploitable
+      vulnerabilities.
+    category: vulnerability-management
+    severity: critical
+    fixability: code
+    guidance: >
+      Check that every release is scanned for known vulnerabilities in its own code and
+      dependencies before shipping: software composition analysis against the SBOM (OSV,
+      Grype, Trivy, Dependency-Track), container and firmware image scans, and SAST. Look
+      for a release gate that blocks known exploitable CVEs (for example those in CISA KEV
+      or with public exploits) and for documented assessments (VEX statements) of CVEs
+      judged not exploitable. Pinned but outdated vulnerable dependencies, vendored TLS or
+      RTOS stacks at old versions, and open critical dependency alerts are gaps.
+    evidence:
+      - Release gate on known exploitable vulnerabilities
+      - VEX or triage record for unfixed CVEs
+      - Current SBOM scan results
+    checks: [unpinned-dependencies]
+    artifacts: [vulnerability-scanning, sbom, ci-pipeline]
+    crosswalk: ["nist-ssdf:PW.4.4", "en-18031:GEC-1", "iec-62443-4-1:SVV-3"]
+
+  - ref: AnnexI.I.2(b)
+    title: Secure by default configuration with reset
+    requirement: >
+      Products must be supplied with a secure by default configuration, unless otherwise
+      agreed with a business user for a tailor-made product, including the possibility to
+      reset the product to its original state.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Inspect default configuration files, sdkconfig.defaults, first-boot code and
+      environment templates: no universal default passwords, debug and test interfaces off,
+      remote management off until configured, TLS on, least-privilege defaults, telemetry
+      within what the user agreed. Check a factory reset returns to this secure default
+      rather than to an open setup mode reachable by anyone nearby.
+    evidence:
+      - Secure default configuration in release builds
+      - Factory reset to secure state
+    checks: [default-credentials, debug-enabled, debug-interface-enabled, tls-verification-disabled]
+    crosswalk: ["etsi-en-303-645:5.1-1", "en-18031:GEC-2", "nist-ssdf:PW.9.1", "owasp-top10:A02"]
+
+  - ref: AnnexI.I.2(c)
+    title: Security updates, automatic by default
+    requirement: >
+      Vulnerabilities must be addressable through security updates, including where
+      applicable automatic security updates enabled by default with a clear opt-out,
+      notification of available updates, and the option to postpone them temporarily.
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Identify the update mechanism (OTA agent, app store, package repository, installer
+      auto-update such as Sparkle or Squirrel, MCUboot or ESP-IDF OTA) and check automatic
+      security updates are on by default where the product type allows, with a user
+      setting to opt out and postpone, and user notification of available updates. Check
+      updates are signed and verified (see AnnexI.I.2(f)) and that products marked as not
+      updatable have a documented justification.
+    evidence:
+      - Update mechanism with automatic security updates by default
+      - Opt-out, postpone and notification options
+    checks: [firmware-update-unsigned]
+    artifacts: [update-policy]
+    crosswalk: ["etsi-en-303-645:5.3-2", "en-18031:SUM-1", "iec-62443-4-2:EDR 3.10", "nist-ir-8259:8259A-5"]
+
+  - ref: AnnexI.I.2(d)
+    title: Protection from unauthorised access
+    requirement: >
+      Products must protect against unauthorised access through appropriate control
+      mechanisms such as authentication, identity and access management, and report on
+      possible unauthorised access.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Enumerate every interface (web UI, local and cloud APIs, BLE, serial console, admin
+      tools) and check authentication and authorization are enforced server-side or on the
+      device, with brute-force protection and logging of failed or suspicious access.
+      Flag unauthenticated endpoints that change state, JWTs decoded without verification
+      and shared default credentials.
+    evidence:
+      - Authentication and authorization on every interface
+      - Logging or alerting of failed and suspicious access
+    checks: [default-credentials, missing-rate-limiting, jwt-unverified, hardcoded-secret]
+    crosswalk: ["en-18031:ACM-1", "en-18031:AUM-1", "iec-62443-4-2:CR 1.1", "owasp-top10:A01"]
+
+  - ref: AnnexI.I.2(e)
+    title: Confidentiality of data
+    requirement: >
+      Products must protect the confidentiality of stored, transmitted or otherwise
+      processed data, personal or other, for example by encrypting relevant data at rest
+      and in transit with state of the art mechanisms.
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Check transport encryption with certificate validation everywhere (TLS 1.2 or 1.3,
+      mbedTLS MBEDTLS_SSL_VERIFY_REQUIRED, no InsecureSkipVerify or rejectUnauthorized
+      false, no cleartext MQTT or HTTP), encryption of sensitive data at rest (flash
+      encryption CONFIG_SECURE_FLASH_ENC_ENABLED, NVS encryption, encrypted databases,
+      Android Keystore and iOS Keychain), and current algorithms without hard-coded keys.
+    evidence:
+      - Encrypted, validated transport
+      - Encryption at rest for sensitive data
+    checks: [cleartext-transport, tls-verification-disabled, weak-cipher, hardcoded-crypto-key, mobile-cleartext-allowed]
+    crosswalk: ["en-18031:SCM-2", "etsi-en-303-645:5.5-1", "iec-62443-4-2:CR 4.1", "owasp-top10:A04"]
+
+  - ref: AnnexI.I.2(f)
+    title: Integrity of data, commands, programs and configuration
+    requirement: >
+      Products must protect the integrity of stored, transmitted or processed data,
+      commands, programs and configuration against unauthorised manipulation, and report on
+      corruptions.
+    category: hardware-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check secure boot (CONFIG_SECURE_BOOT, MCUboot signature validation, verified boot),
+      signed updates, authenticated commands from cloud and app (signed or MAC-protected
+      messages, mutual TLS), integrity checks on configuration, and reporting of integrity
+      failures to the user or backend. Flag unsigned firmware updates, CRC-only checks and
+      MD5 or SHA-1 used for integrity.
+    evidence:
+      - Secure boot and signed updates
+      - Authenticated commands and integrity-checked configuration
+    checks: [secure-boot-disabled, firmware-update-unsigned, weak-hash, unsafe-deserialization]
+    crosswalk: ["iec-62443-4-2:CR 3.4", "etsi-en-303-645:5.3-10", "owasp-top10:A08"]
+
+  - ref: AnnexI.I.2(g)
+    title: Data minimisation
+    requirement: >
+      Products must process only data, personal or other, that is adequate, relevant and
+      limited to what is necessary for the intended purpose.
+    category: data-protection
+    severity: medium
+    fixability: code
+    guidance: >
+      Compare data collected in code (telemetry payloads, analytics events, device
+      identifiers, location, logs) with the documented purpose. Flag analytics or
+      advertising SDKs not needed for the function, collection of precise location or
+      contacts without a clear need, and logs containing personal data.
+    evidence:
+      - Data inventory matched to purposes
+      - No unnecessary collection in telemetry and logs
+    checks: [analytics-tracking-sdk, pii-in-logs]
+    artifacts: [processing-records]
+    crosswalk: ["gdpr:Art.5(1)(c)", "etsi-en-303-645:6-1"]
+
+  - ref: AnnexI.I.2(h)
+    title: Availability and resilience of essential functions
+    requirement: >
+      Products must protect the availability of essential and basic functions, also after
+      an incident, including through resilience and mitigation against denial-of-service
+      attacks.
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for watchdogs (IWDG, ESP task watchdog, systemd WatchdogSec) in device main
+      loops, rate limiting and connection limits on network services, bounded queues and
+      timeouts, local operation when the cloud is unreachable, and recovery to a known good
+      firmware after a failed update (A/B partitions, rollback).
+    evidence:
+      - Watchdog and recovery mechanisms
+      - Rate and resource limits on network services
+    checks: [missing-watchdog, missing-rate-limiting]
+    crosswalk: ["iec-62443-4-2:CR 7.1", "etsi-en-303-645:5.9-2"]
+
+  - ref: AnnexI.I.2(i)
+    title: Minimise impact on other devices and networks
+    requirement: >
+      Products must minimise their own negative impact, and that of connected devices, on
+      the availability of services provided by other devices or networks.
+    category: resilience-availability
+    severity: low
+    fixability: code
+    guidance: >
+      Check reconnect and retry logic uses exponential back-off with jitter, that
+      fleet-wide synchronised actions (update checks, telemetry at fixed times) are
+      randomised, and that the product cannot be abused as a reflector or amplifier (no open
+      UPnP, SSDP or DNS services on WAN interfaces).
+    evidence:
+      - Back-off with jitter and randomised scheduling
+      - No amplification-prone services exposed
+    crosswalk: ["etsi-en-303-645:5.9-2"]
+
+  - ref: AnnexI.I.2(j)
+    title: Limit attack surfaces
+    requirement: >
+      Products must be designed, developed and produced to limit attack surfaces, including
+      external interfaces.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Enumerate listening ports, exported components, debug interfaces and enabled
+      services. Flag telnet, FTP, debug HTTP endpoints, JTAG or SWD left open, exported
+      Android components without permissions, wildcard CORS, and unused features compiled
+      into release builds. Good looks like disabled-by-default optional services and
+      documented interfaces.
+    evidence:
+      - Documented minimal set of interfaces and services
+      - Debug and test interfaces disabled in release
+    checks: [debug-interface-enabled, debug-enabled, mobile-exported-component, cors-wildcard, cleartext-transport]
+    crosswalk: ["etsi-en-303-645:5.6-1", "iec-62443-4-2:CR 7.7", "en-18031:GEC-2"]
+
+  - ref: AnnexI.I.2(k)
+    title: Exploitation mitigation
+    requirement: >
+      Products must be designed, developed and produced to reduce the impact of an
+      incident using appropriate exploitation mitigation mechanisms and techniques.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Check compiler and platform hardening: -fstack-protector-strong,
+      -D_FORTIFY_SOURCE, PIE and ASLR, RELRO and NX (-Wl,-z,relro,-z,now), CFI where
+      available, MPU or MMU isolation and stack guards on MCUs (ESP-IDF
+      CONFIG_COMPILER_STACK_CHECK_MODE, Zephyr CONFIG_HW_STACK_PROTECTION, TrustZone
+      partitioning), privilege separation and sandboxing, memory-safe languages for new
+      parsers. Flag unsafe C string functions and processes running as root.
+    evidence:
+      - Hardening flags in release builds
+      - Privilege separation or memory protection
+    checks: [unsafe-c-functions, docker-root-user]
+    artifacts: [static-analysis-config]
+    crosswalk: ["nist-ssdf:PW.6.2", "cert-c:STR31-C", "iec-62443-4-1:SD-1"]
+
+  - ref: AnnexI.I.2(l)
+    title: Security logging and monitoring with opt-out
+    requirement: >
+      Products must provide security-related information by recording and monitoring
+      relevant internal activity, including access to or modification of data, services or
+      functions, with an opt-out mechanism for the user.
+    category: logging-monitoring
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for a security event log covering logins, failed access, configuration and
+      firmware changes, and data access, available to the user or administrator and with a
+      user setting to opt out where the logging is not essential. Check logs exclude
+      secrets and unnecessary personal data and are protected against tampering.
+    evidence:
+      - Security event logging of access and modifications
+      - User opt-out where applicable
+    checks: [pii-in-logs]
+    crosswalk: ["iec-62443-4-2:CR 2.8", "owasp-top10:A09", "en-18031:LGM-1", "nist-ir-8259:8259A-6"]
+
+  - ref: AnnexI.I.2(m)
+    title: Secure removal of data and settings
+    requirement: >
+      Users must be able to securely and easily remove all data and settings permanently,
+      and any transfer of data to other products or systems must be secure.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for a factory reset or account deletion that erases credentials, keys, user
+      content, logs and cloud-side personal data (erasing NVS or flash partitions, not only
+      clearing a flag; deleting backend records), and that export or migration features use
+      authenticated, encrypted channels.
+    evidence:
+      - Complete factory reset and account deletion
+      - Secure data export or transfer
+    crosswalk: ["etsi-en-303-645:5.11-1", "iec-62443-4-2:CR 4.2", "en-18031:DLM-1", "gdpr:Art.17"]
+
+  - ref: AnnexI.II.1
+    title: Identify components and draw up an SBOM
+    requirement: >
+      Manufacturers must identify and document vulnerabilities and components in the
+      product, including a software bill of materials in a commonly used, machine-readable
+      format covering at least the top-level dependencies.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Look for SBOM generation in the build (CycloneDX or SPDX via Syft, cdxgen, CycloneDX
+      Maven or Gradle plugins, Yocto create-spdx, Zephyr west spdx, ESP-IDF esp-idf-sbom)
+      stored with each release. For firmware, check that vendored components (RTOS, TLS,
+      vendor HAL, bootloader) appear in the SBOM with versions. The SBOM is part of the
+      technical documentation; making it public is optional.
+    evidence:
+      - Machine-readable SBOM per release
+      - SBOM includes vendored and binary components
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile]
+    crosswalk: ["nist-ssdf:PS.3.2", "iec-62443-4-1:SM-9", "owasp-top10:A03"]
+
+  - ref: AnnexI.II.2
+    title: Remediate vulnerabilities without delay
+    requirement: >
+      Manufacturers must address and remediate vulnerabilities without delay in relation to
+      the risk, including through security updates, provided separately from functionality
+      updates where technically feasible.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Check for remediation timelines by severity in the security policy, dependency update
+      automation, and release practice: separate security patch releases or branches
+      (for example patch versions that contain only fixes), and the age of open security
+      alerts compared with the stated timelines.
+    evidence:
+      - Severity-based remediation timelines
+      - Security-only patch releases
+    artifacts: [security-policy, dependency-update-automation, changelog]
+    crosswalk: ["nist-ssdf:RV.2.2", "iec-62443-4-1:DM-5", "nis2:Art.21(2)(e)", "iso-iec-27001:A.8.8"]
+
+  - ref: AnnexI.II.3
+    title: Regular security testing and review
+    requirement: >
+      Manufacturers must apply effective and regular tests and reviews of the security of
+      the product.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for security testing in CI (SAST, SCA, secret scanning, fuzzing of parsers,
+      DAST for web interfaces), periodic penetration tests, and security review in the pull
+      request process. Scheduled scans of released versions show that review continues
+      after release.
+    evidence:
+      - Security tests in CI and on a schedule
+      - Periodic penetration test reports
+    artifacts: [static-analysis-config, vulnerability-scanning, automated-tests, ci-pipeline]
+    crosswalk: ["nist-ssdf:PW.8.2", "iec-62443-4-1:SVV-3"]
+
+  - ref: AnnexI.II.4
+    title: Disclose fixed vulnerabilities with advisories
+    requirement: >
+      Once a security update is available, manufacturers must publicly disclose information
+      about fixed vulnerabilities, including description, affected products, impact,
+      severity and remediation guidance, unless a delay is justified by security risk.
+    category: vulnerability-management
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for published security advisories (GitHub Security Advisories, CSAF documents,
+      an advisories page), CVE identifiers in release notes, and a changelog that marks
+      security fixes with severity and remediation steps.
+    evidence:
+      - Published advisories for fixed vulnerabilities
+      - Security fixes flagged in release notes
+    artifacts: [changelog, security-policy]
+    crosswalk: ["iec-62443-4-1:DM-5", "nist-ir-8259:8259B-3"]
+
+  - ref: AnnexI.II.5
+    title: Coordinated vulnerability disclosure policy
+    requirement: >
+      Manufacturers must put in place and enforce a policy on coordinated vulnerability
+      disclosure.
+    category: vulnerability-management
+    severity: high
+    fixability: document
+    guidance: >
+      Look for SECURITY.md or a published CVD policy describing how reports are received,
+      acknowledged, triaged, fixed and disclosed, with timelines and coordination with
+      reporters, CSIRTs and upstream maintainers.
+    evidence:
+      - Published coordinated vulnerability disclosure policy
+    artifacts: [security-policy]
+    crosswalk: ["etsi-en-303-645:5.2-1", "nist-ssdf:RV.1.3", "iec-62443-4-1:DM-1"]
+
+  - ref: AnnexI.II.6
+    title: Contact address for vulnerability reports
+    requirement: >
+      Manufacturers must facilitate sharing of information about potential vulnerabilities
+      in the product and its third-party components, including by providing a contact
+      address for reporting vulnerabilities.
+    category: vulnerability-management
+    severity: high
+    fixability: document
+    guidance: >
+      Check that a reporting contact (security@ address, web form, security.txt per RFC
+      9116) is published in SECURITY.md, the product website, the user documentation and,
+      for web interfaces, at /.well-known/security.txt. The same single point of contact
+      must appear in the user information (Annex II point 2).
+    evidence:
+      - Published vulnerability reporting contact
+    artifacts: [security-policy, user-documentation]
+    crosswalk: ["uk-psti:Sch1.2", "nist-ir-8259:8259B-2"]
+
+  - ref: AnnexI.II.7
+    title: Secure update distribution
+    requirement: >
+      Manufacturers must provide mechanisms to distribute updates securely so that
+      vulnerabilities are fixed or mitigated in a timely manner, automatically where
+      applicable for security updates.
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Check the update server and client: updates served over TLS with certificate
+      validation, signed artefacts verified on the client (MCUboot, secure boot v2, signed
+      packages, code-signed installers), protection against rollback, and staged rollout
+      with rollback on failure.
+    evidence:
+      - Signed updates delivered over authenticated channels
+      - Rollback protection and staged rollout
+    checks: [firmware-update-unsigned, tls-verification-disabled, cleartext-transport]
+    artifacts: [update-policy]
+    crosswalk: ["iec-62443-4-1:SUM-4", "etsi-en-303-645:5.3-10", "en-18031:SUM-2"]
+
+  - ref: AnnexI.II.8
+    title: Free security updates with advisories
+    requirement: >
+      Available security updates must be disseminated without delay and, unless otherwise
+      agreed with a business user for a tailor-made product, free of charge, with advisory
+      messages telling users what to do.
+    category: updates-maintenance
+    severity: high
+    fixability: process
+    guidance: >
+      Check that security updates are not gated behind paid plans or maintenance contracts
+      (licence checks in the updater, paid-tier flags on update endpoints), and that update
+      notifications include release notes explaining the security impact and any user
+      action.
+    evidence:
+      - Security updates available free of charge
+      - Advisory messages accompanying updates
+    artifacts: [update-policy, changelog]
+    crosswalk: ["iec-62443-4-1:SUM-5"]
+
+  - ref: Art.13(2)
+    title: Cybersecurity risk assessment
+    requirement: >
+      Manufacturers must carry out a cybersecurity risk assessment of the product, take it
+      into account in planning, design, development, production, delivery and maintenance,
+      document it, and update it during the support period. It must state how each Annex I
+      requirement applies.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a risk assessment or threat model (docs/security/risk-assessment*,
+      threat-model*) that covers intended purpose, reasonably foreseeable use, operational
+      environment, assets and interfaces, and that maps each Annex I Part I requirement to
+      the implemented measure or a justification for non-applicability. Check that its
+      interfaces match those in the code and that it is dated and updated.
+    evidence:
+      - Documented cybersecurity risk assessment with Annex I mapping
+      - Update history during the support period
+    artifacts: [threat-model, risk-management-file, architecture-doc]
+    crosswalk: ["iec-62443-4-1:SR-2", "nist-ssdf:PW.1.1", "en-18031:GEC-1"]
+
+  - ref: Art.13(5)
+    title: Due diligence on third-party components
+    requirement: >
+      Manufacturers must exercise due diligence when integrating third-party components,
+      including free and open-source software, so they do not compromise the product's
+      cybersecurity (Art. 13(5)), and must report vulnerabilities found in a component to
+      the person or entity maintaining it and remediate them (Art. 13(6)).
+    category: supply-chain
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a dependency acceptance policy (maintenance status, licence, security
+      history), SCA scanning, pinned versions, and evidence of upstream reporting or
+      contributed fixes for component vulnerabilities (links to upstream issues or pull
+      requests in the changelog).
+    evidence:
+      - Component selection and monitoring policy
+      - Upstream reporting of component vulnerabilities
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, vulnerability-scanning, dependency-lockfile]
+    crosswalk: ["nist-ssdf:PW.4.1", "iec-62443-4-1:SM-9", "nis2:Art.21(2)(d)"]
+
+  - ref: Art.13(8)
+    title: Defined support period
+    requirement: >
+      Manufacturers must handle vulnerabilities effectively during a support period that
+      reflects the expected use time and is at least five years unless the product is
+      expected to be used for less (Art. 13(8)). Each security update must stay available
+      for at least ten years after issue or for the rest of the support period, whichever
+      is longer (Art. 13(9)). The end date of support, at least month and year, must be
+      clearly stated at the time of purchase (Art. 13(19)).
+    category: updates-maintenance
+    severity: high
+    fixability: document
+    guidance: >
+      Look for an update or support policy stating the support period end date (month and
+      year) per product, and check that it is at least five years or justified by a
+      shorter expected use time. Check that the update infrastructure keeps old security
+      updates downloadable.
+    evidence:
+      - Published support period of at least five years or justified shorter period
+      - Archive of security updates
+    artifacts: [update-policy, user-documentation]
+    crosswalk: ["etsi-en-303-645:5.3-13", "uk-psti:Sch1.3", "iec-62443-4-1:SUM-5"]
+
+  - ref: Art.14
+    title: Report actively exploited vulnerabilities and severe incidents
+    requirement: >
+      From 11 September 2026, manufacturers must notify actively exploited vulnerabilities
+      and severe incidents affecting the product's security, through the ENISA single
+      reporting platform to the coordinating CSIRT and ENISA: an early warning within 24
+      hours, a notification within 72 hours, and a final report (14 days after a fix is
+      available for vulnerabilities, one month for incidents). Affected users must be
+      informed.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Look for an incident and vulnerability response plan that names the CRA reporting
+      duty, the 24-hour, 72-hour and final-report timelines, the responsible role, the
+      coordinating CSIRT (the CSIRT of the Member State of main establishment), and
+      templates for user notification. Monitoring for in-the-wild exploitation (CISA KEV,
+      threat intelligence, customer reports) must feed this process.
+    evidence:
+      - Incident response plan with CRA reporting timelines
+      - Named reporting owner and user notification template
+    artifacts: [incident-response-plan, security-policy]
+    crosswalk: ["nis2:Art.23", "iec-62443-4-1:DM-5"]
+
+  - ref: AnnexII
+    title: User information and instructions
+    requirement: >
+      Products must come with Annex II information: manufacturer identity and contact, the
+      single point of contact for vulnerability reports and the CVD policy location,
+      product identification, intended purpose and security properties, foreseeable risks,
+      the EU declaration of conformity address, the support type and end date, and
+      instructions for secure commissioning, updates, decommissioning and data removal,
+      disabling automatic updates, integration, and where to find the SBOM if made
+      available.
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for user documentation (README, docs/, manuals, a product security page) that
+      covers each Annex II item, especially the support period end date, the vulnerability
+      contact, secure setup and update instructions, how to turn off automatic updates,
+      and how to securely erase the product.
+    evidence:
+      - User documentation covering all Annex II items
+    artifacts: [user-documentation, security-policy, update-policy]
+    crosswalk: ["iec-62443-4-1:SG-3", "nist-ir-8259:8259B-4"]
+
+  - ref: AnnexIII
+    title: Product classification and conformity assessment route
+    requirement: >
+      Manufacturers must determine whether the product's core functionality falls into an
+      important product category (Annex III Class I or Class II) or a critical category
+      (Annex IV), and use the corresponding conformity assessment procedure before
+      affixing the CE marking: self-assessment for default products, harmonised standards
+      or third-party assessment for Class I, third-party assessment for Class II, and
+      European certification or third-party assessment for critical products.
+    category: governance
+    severity: high
+    fixability: document
+    guidance: >
+      Classify the product from its core functionality. Class I includes identity and
+      access management products, browsers, password managers, anti-malware, VPNs, network
+      management, SIEM, boot managers, PKI software, network interfaces, operating systems,
+      routers, modems and switches, security-relevant microprocessors and microcontrollers,
+      ASICs and FPGAs, smart home assistants and smart home security products (locks,
+      cameras, baby monitors, alarms), connected toys with social or location features and
+      health or children's wearables. Class II includes hypervisors and container runtimes,
+      firewalls and IDS or IPS, and tamper-resistant microprocessors and microcontrollers.
+      Annex IV covers hardware security boxes, smart meter gateways and smartcards or secure
+      elements. The technical descriptions of each category are set by Implementing
+      Regulation (EU) 2025/2392, and classification follows the product's core
+      functionality (integrating a listed component does not by itself classify the whole
+      product). Look for the classification, the chosen module and the technical
+      documentation and EU declaration of conformity drafts.
+    evidence:
+      - Documented product classification
+      - Conformity assessment plan, technical documentation and EU declaration of conformity
+    artifacts: [architecture-doc, risk-management-file]
+
+  - ref: Art.24
+    title: Open-source software steward obligations
+    requirement: >
+      Legal persons that steward free and open-source software intended for commercial
+      activities must have a documented cybersecurity policy that fosters secure
+      development and effective vulnerability handling, cooperate with market surveillance
+      authorities, and report actively exploited vulnerabilities and severe incidents to the
+      extent they are involved in development.
+    category: governance
+    severity: medium
+    fixability: document
+    when: { fact: openSource, in: [open-source] }
+    guidance: >
+      For an open-source project backed by a foundation or company that supports
+      commercial use, look for a SECURITY.md describing vulnerability intake, triage and
+      disclosure, a security policy for contributors and maintainers (review, signed
+      releases, dependency hygiene) and a named security contact. If the project is
+      monetised by the organisation as a product, full manufacturer obligations apply
+      instead.
+    evidence:
+      - Documented cybersecurity policy for the project
+      - Vulnerability reporting process and contact
+    artifacts: [security-policy, code-review-process]
+    crosswalk: ["nist-ssdf:RV.1.3"]
+
+  - ref: Art.3(2)
+    title: Remote data processing is part of the product
+    requirement: >
+      Remote data processing designed and developed by or for the manufacturer, without
+      which the product could not perform one of its functions, is part of the product and
+      must meet the same essential requirements.
+    category: governance
+    severity: high
+    fixability: code
+    when: { fact: connectivity, in: [internet, cellular] }
+    guidance: >
+      If the repository contains or calls a cloud backend, companion API or provisioning
+      service that the device or app needs to function, apply the Annex I checks to it too:
+      authentication and authorization of device and user calls, TLS, input validation,
+      logging, secure defaults and vulnerability handling. Flag backend endpoints that
+      control devices without authenticating the user and device.
+    evidence:
+      - Backend covered by the risk assessment and security testing
+    checks: [sql-injection-risk, jwt-unverified, cors-wildcard, missing-security-headers]
+    artifacts: [threat-model, architecture-doc]
+    crosswalk: ["nist-ir-8259:8425-Scope", "owasp-top10:A01"]

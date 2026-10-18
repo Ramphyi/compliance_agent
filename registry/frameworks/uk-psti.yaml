@@ -1,0 +1,165 @@
+id: uk-psti
+title: The Product Security and Telecommunications Infrastructure (Security Requirements for Relevant Connectable Products) Regulations 2023
+shortTitle: UK PSTI
+version: SI 2023/1007 as amended by SI 2025/211 and SI 2025/1267
+authority: UK Parliament (Department for Science, Innovation and Technology; enforced by the Office for Product Safety and Standards)
+kind: regulation
+jurisdictions: [UK]
+url: https://www.legislation.gov.uk/uksi/2023/1007/contents/made
+textPolicy: open
+summary: >
+  The UK PSTI regime (Part 1 of the Product Security and Telecommunications
+  Infrastructure Act 2022 and SI 2023/1007) requires manufacturers of consumer connectable
+  products made available in the UK to ban universal default passwords, publish how to
+  report security issues, and publish a minimum security update period, and to supply a
+  statement of compliance. Importers and distributors have matching duties.
+applicability:
+  all:
+    - { fact: markets, in: [UK] }
+    - { fact: audience, in: [consumers, children] }
+    - any:
+        - { fact: productTypes, in: [iot-device] }
+        - all:
+            - { fact: productTypes, in: [embedded-firmware] }
+            - { fact: connectivity, in: [internet, wifi, bluetooth, cellular, nfc-uwb] }
+applicabilityNote: >
+  Applies to internet- or network-connectable products (smart home devices, cameras,
+  wearables, smart TVs, routers, smartphones, connected toys) made available to UK
+  consumers, including the companion app and other software needed for the product's
+  intended purposes. Excepted products (Schedule 3) include EV smart charge points,
+  medical devices, assured smart meters, desktop and laptop computers and non-cellular
+  tablets (unless designed for children under 14), Northern Ireland products under the
+  Windsor Framework, and, since February 2025, type-approved motor vehicles, two- and
+  three-wheel vehicles and quadricycles, and agricultural and forestry vehicles. Deemed
+  compliance is possible through ETSI EN 303 645 V2.1.1 provisions 5.1-1, 5.1-2, 5.2-1
+  and 5.3-13 (or ISO/IEC 29147 for reporting), and since December 2025 through a
+  current Japan JC-STAR STAR-1 label or a Singapore Cybersecurity Labelling Scheme label.
+  Penalties under the Act reach the greater of GBP 10 million or 4 % of qualifying
+  worldwide revenue, plus daily penalties.
+keyDates:
+  - { date: "2024-04-29", note: Security requirements and statement of compliance duties in force }
+  - { date: "2025-02-25", note: SI 2025/211 in force (adds vehicle exceptions to Schedule 3) }
+  - { date: "2025-12-04", note: SI 2025/1267 in force (JC-STAR STAR-1 and Singapore CLS labels give deemed compliance) }
+controls:
+  - ref: Sch1.1
+    title: No universal default passwords
+    requirement: >
+      Outside the factory default state, passwords for the product's hardware and
+      software must be unique per product or defined by the user. Unique passwords must not
+      be based on incremental counters, public information or product identifiers (unless
+      through accepted keyed hashing or encryption), or be otherwise guessable.
+      Cryptographic keys, non-IP pairing PINs and API keys are not passwords here.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Search device firmware, companion app and provisioning tooling for shared passwords:
+      web UI and app login defaults (admin/admin, 1234), softAP Wi-Fi passwords, telnet or
+      SSH root passwords baked into the rootfs, local API passwords, and constants such as
+      DEFAULT_PASSWORD. Check how per-device passwords on labels are generated: flag
+      derivation from serial number, MAC or a counter without a keyed function and secret.
+      Good looks like random per-device passwords from a factory HSM, or a mandatory
+      user-defined password before any network service is exposed.
+    evidence:
+      - No universal default passwords in firmware, app or images
+      - Per-device password generation from a secure random source, or forced user choice
+    checks: [default-credentials, hardcoded-secret, insecure-random]
+    crosswalk: ["etsi-en-303-645:5.1-1", "etsi-en-303-645:5.1-2", "en-18031:AUM-5", "eu-cra:AnnexI.I.2(b)"]
+
+  - ref: Sch1.2
+    title: Information on how to report security issues
+    requirement: >
+      The manufacturer must publish at least one point of contact for reporting security
+      issues, and state when reporters will get an acknowledgement and status updates until
+      resolution. The information must be accessible, clear, transparent, in English,
+      free, and not require personal information or a prior request.
+    category: vulnerability-management
+    severity: high
+    fixability: document
+    guidance: >
+      Look for SECURITY.md, a vulnerability disclosure page on the product website, a
+      security.txt, and references in the user documentation and app. Check the text names
+      a contact (email or web form that does not require an account), the acknowledgement
+      time and the status update commitment.
+    evidence:
+      - Published contact point for security reports
+      - Stated acknowledgement and update timelines
+    artifacts: [security-policy]
+    crosswalk: ["etsi-en-303-645:5.2-1", "eu-cra:AnnexI.II.6", "iec-62443-4-1:DM-1"]
+
+  - ref: Sch1.3
+    title: Published minimum security update period
+    requirement: >
+      The manufacturer must publish the defined support period during which security
+      updates will be provided, in clear terms understandable without technical knowledge,
+      with the same prominence as the main product information when sold on its own
+      website. A published period may be extended but must not be shortened.
+    category: updates-maintenance
+    severity: high
+    fixability: document
+    guidance: >
+      Look for an update policy or support period statement (UPDATE_POLICY.md, docs,
+      website copy, packaging text in the repository) that gives an end date or a clear
+      period. Check that it covers the device firmware and the companion app, and that
+      the update mechanism in the code can actually deliver security updates for that
+      period.
+    evidence:
+      - Published defined support period with end date
+      - Working security update mechanism
+    artifacts: [update-policy, user-documentation]
+    crosswalk: ["etsi-en-303-645:5.3-13", "eu-cra:Art.13(8)", "iec-62443-4-1:SUM-5"]
+
+  - ref: s.9
+    title: Statement of compliance
+    requirement: >
+      The product must be accompanied by a statement of compliance (or a summary of it)
+      prepared by or for the manufacturer, containing the Schedule 4 minimum information:
+      product type and batch, manufacturer name and address, declarations of
+      preparation and compliance, the defined support period, signatory details, place and
+      date of issue, and any standard relied on. The manufacturer must keep a copy for the
+      longer of 10 years and the support period (regulation 8).
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a statement of compliance template or generated document in the repository
+      (docs/compliance/psti*, packaging inserts, release artefacts) and check it lists all
+      Schedule 4 items and matches the published support period. If deemed compliance is
+      relied on, check the referenced standard version (ETSI EN 303 645 V2.1.1) or label
+      (JC-STAR STAR-1, Singapore CLS) is named.
+    evidence:
+      - Statement of compliance with all Schedule 4 items per product and batch
+      - Retention arrangement for copies
+    artifacts: [user-documentation]
+    crosswalk: ["eu-cra:AnnexII"]
+
+  - ref: s.10
+    title: Investigate and act on compliance failures
+    requirement: >
+      The manufacturer must investigate when it knows or suspects a compliance failure,
+      take steps to remedy it, and inform the enforcement authority, importers,
+      distributors and, where relevant, customers (sections 10 and 11 of the Act).
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for an internal procedure covering PSTI compliance failures (for example a
+      default password discovered in the field or a missed support-period commitment),
+      with responsibility for notifying the Office for Product Safety and Standards.
+    evidence:
+      - Compliance failure investigation and notification procedure
+    artifacts: [incident-response-plan]
+
+  - ref: s.12
+    title: Records of investigations and failures
+    requirement: >
+      The manufacturer must keep records of investigations into potential compliance
+      failures and of actual failures, with outcomes and remedial steps, for 10 years.
+    category: governance
+    severity: low
+    fixability: process
+    guidance: >
+      Check that the compliance procedure names where records are kept and the 10-year
+      retention period. The repository will usually show only the procedure.
+    evidence:
+      - Record-keeping procedure with 10-year retention

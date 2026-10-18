@@ -1,0 +1,360 @@
+id: nist-ssdf
+title: "Secure Software Development Framework (SSDF) Version 1.1: Recommendations for Mitigating the Risk of Software Vulnerabilities (NIST SP 800-218)"
+shortTitle: NIST SSDF (SP 800-218)
+version: SP 800-218 v1.1 (February 2022)
+authority: NIST
+kind: guideline
+jurisdictions: [US, global]
+url: https://csrc.nist.gov/pubs/sp/800/218/final
+textPolicy: open
+summary: >
+  The SSDF is a set of outcome-based secure development practices in four groups:
+  Prepare the Organization (PO), Protect the Software (PS), Produce Well-Secured Software
+  (PW) and Respond to Vulnerabilities (RV). It is technology-neutral, maps to most other
+  secure development standards, and is the basis for US federal software supplier
+  expectations.
+applicability:
+  always: true
+applicabilityNote: >
+  Applied as a baseline to all software, because its practices are general and map to
+  IEC 62443-4-1, IEC 81001-5-1, the EU CRA and ISO/IEC 27001 secure development
+  controls. It carries contractual weight mainly for suppliers to US federal agencies. In
+  January 2026 OMB memorandum M-26-05 rescinded the mandatory common-form self-attestation
+  (M-22-18 and M-23-16); agencies may still ask for an attestation or SBOM based on risk,
+  so confirm customer contract terms. SP 800-218 Rev. 1 (SSDF v1.2) was released as an
+  initial public draft in December 2025 and adds practices for continuous improvement and
+  reliable software updates; it was not final when this file was written, so v1.1
+  practice IDs are used.
+keyDates:
+  - { date: "2022-02-03", note: SP 800-218 v1.1 published }
+  - { date: "2025-12-17", note: SP 800-218 Rev. 1 (SSDF v1.2) initial public draft released }
+  - { date: "2026-01-23", note: OMB M-26-05 rescinds the mandatory federal attestation memoranda M-22-18 and M-23-16 }
+controls:
+  - ref: PO.1.1
+    title: Security requirements for development infrastructure and processes
+    requirement: >
+      Identify and document the security requirements for the organisation's development
+      infrastructure and processes, and keep them current.
+    category: secure-development
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a secure development policy or SDL document (SECURITY.md sections,
+      docs/sdl.md, CONTRIBUTING.md security rules) that states required practices: review,
+      scanning, secret handling, dependency policy, release signing. Check that CI
+      enforces what the document requires.
+    evidence:
+      - Secure development policy in the repository
+      - CI gates matching the policy
+    artifacts: [coding-standard, code-review-process]
+    crosswalk: ["iec-62443-4-1:SM-1", "iso-iec-27001:A.8.25"]
+
+  - ref: PO.4.1
+    title: Criteria for software security checks
+    requirement: >
+      Define criteria for security checks at each stage (for example no unresolved high
+      findings at release) and track them through the lifecycle.
+    category: testing-verification
+    severity: medium
+    fixability: code
+    guidance: >
+      Check CI for security gates with explicit thresholds: SAST or CodeQL failing on high
+      severity, dependency audit failing on known critical CVEs, secret scanning blocking
+      pushes, coverage thresholds. A pipeline that runs scanners with continue-on-error or
+      || true and never fails does not meet this.
+    evidence:
+      - CI security gates with defined failure thresholds
+    artifacts: [ci-pipeline, static-analysis-config, vulnerability-scanning]
+
+  - ref: PO.5.1
+    title: Separate and protect development environments
+    requirement: >
+      Separate and protect each environment used in development (development, build, test,
+      distribution) with least privilege and monitoring.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Check CI configuration for least-privilege tokens (permissions blocks in GitHub
+      Actions, no write-all), environment protection rules for deployments, OIDC federation
+      instead of long-lived cloud keys, secrets scoped to environments, and pinned
+      third-party actions. Flag pull_request_target workflows that check out untrusted code
+      with secrets available.
+    evidence:
+      - Least-privilege CI tokens and protected deployment environments
+      - No long-lived credentials in CI variables where OIDC is possible
+    checks: [hardcoded-secret, unpinned-dependencies]
+    artifacts: [ci-pipeline]
+    crosswalk: ["iec-62443-4-1:SM-7", "iso-iec-27001:A.8.31", "iec-81001-5-1:5.1.2"]
+
+  - ref: PS.1.1
+    title: Protect all forms of code from unauthorised access and tampering
+    requirement: >
+      Store all code and configuration with least-privilege access, change tracking and
+      protection against tampering.
+    category: supply-chain
+    severity: high
+    fixability: process
+    guidance: >
+      Look for CODEOWNERS, branch protection evidence (required reviews, status checks,
+      no force push), signed commits or tags where required, and secret scanning. Check
+      that infrastructure as code and build scripts are in version control too.
+    evidence:
+      - Branch protection with required reviews
+      - Secret scanning enabled
+    checks: [hardcoded-secret]
+    artifacts: [code-review-process]
+    crosswalk: ["iec-62443-4-1:SM-7", "iso-iec-27001:A.8.4"]
+
+  - ref: PS.2.1
+    title: Release integrity verification
+    requirement: >
+      Make integrity verification information available for releases, such as
+      cryptographic hashes and code signatures, so acquirers can verify what they received.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Check the release workflow signs artefacts (cosign or Sigstore for containers,
+      GPG-signed tags, Authenticode or Apple notarisation for desktop apps, signed firmware
+      images) and publishes checksums. Check signing keys are held in KMS or HSM rather than
+      in the repository.
+    evidence:
+      - Signed release artefacts and published checksums
+      - Signing keys protected outside the repository
+    checks: [hardcoded-secret, firmware-update-unsigned]
+    artifacts: [ci-pipeline]
+    crosswalk: ["iec-62443-4-1:SM-8", "owasp-top10:A08"]
+
+  - ref: PS.3.2
+    title: Provenance data and SBOM for each release
+    requirement: >
+      Collect, protect, maintain and share provenance data for all components of each
+      release, for example in a software bill of materials.
+    category: supply-chain
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for SBOM generation in the release pipeline (Syft, cdxgen, CycloneDX plugins,
+      SPDX tools, Yocto create-spdx), build provenance attestations (SLSA, GitHub artifact
+      attestations), and archived release artefacts with their SBOM.
+    evidence:
+      - SBOM per release in a standard format
+      - Build provenance attestation
+    artifacts: [sbom, ci-pipeline]
+    crosswalk: ["eu-cra:AnnexI.II.1"]
+
+  - ref: PW.1.1
+    title: Risk modelling of the design
+    requirement: >
+      Use threat modelling, attack modelling or attack surface mapping to assess security
+      risk of the software design.
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a threat model or attack surface description covering entry points found in
+      code (routes, listeners, message consumers, file parsers, update channels) and
+      mitigations linked to requirements or tickets.
+    evidence:
+      - Current threat model covering the attack surface
+    artifacts: [threat-model]
+    crosswalk: ["iec-62443-4-1:SR-2", "eu-cra:Art.13(2)", "owasp-top10:A06", "iec-81001-5-1:7.2"]
+
+  - ref: PW.4.1
+    title: Acquire and maintain well-secured components
+    requirement: >
+      Acquire third-party components from trusted sources, choose maintained components,
+      and keep them updated.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Check lockfiles and pinned versions, update automation (Dependabot, Renovate), and
+      signs of abandoned or very old dependencies. For vendored C libraries, check the
+      version is recorded and current against upstream security releases.
+    evidence:
+      - Pinned, maintained dependencies with update automation
+    checks: [unpinned-dependencies]
+    artifacts: [dependency-lockfile, dependency-update-automation, third-party-notices]
+    crosswalk: ["iec-62443-4-1:SM-9", "owasp-top10:A03"]
+
+  - ref: PW.4.4
+    title: Verify acquired components remain secure
+    requirement: >
+      Verify that acquired components meet security requirements and keep checking them
+      for new vulnerabilities over their lifetime.
+    category: vulnerability-management
+    severity: high
+    fixability: code
+    guidance: >
+      Look for software composition analysis in CI and on a schedule (npm audit, pip-audit,
+      OSV-Scanner, Grype, Trivy, Dependency-Track fed by the SBOM). Scheduled scans matter
+      because new CVEs appear after release.
+    evidence:
+      - Scheduled dependency vulnerability scanning
+    artifacts: [vulnerability-scanning, sbom]
+    crosswalk: ["eu-cra:AnnexI.I.2(a)"]
+
+  - ref: PW.5.1
+    title: Follow secure coding practices
+    requirement: >
+      Follow secure coding practices appropriate to the languages and environment, such as
+      validating input, encoding output, avoiding unsafe functions and handling errors.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Check for a coding standard and linters that enforce it (ESLint security plugins,
+      Bandit, gosec, Semgrep rules, clang-tidy, MISRA or CERT checkers). The deterministic
+      detectors listed here are direct evidence of gaps.
+    evidence:
+      - Coding standard and enforcing linters
+      - No unsafe patterns flagged by detectors
+    checks: [sql-injection-risk, command-injection-risk, xss-risk, unsafe-deserialization, dynamic-code-eval, unsafe-c-functions, path-traversal-risk]
+    artifacts: [coding-standard, static-analysis-config]
+    crosswalk: ["iec-62443-4-1:SI-2", "cert-c:STR31-C", "owasp-top10:A05", "iso-iec-27001:A.8.28", "iec-81001-5-1:5.5.1"]
+
+  - ref: PW.6.2
+    title: Secure compiler and build settings
+    requirement: >
+      Determine and use the compiler, interpreter and build tool features that improve
+      executable security, and configure them consistently.
+    category: secure-development
+    severity: medium
+    fixability: code
+    guidance: >
+      For C and C++ check -fstack-protector-strong, -D_FORTIFY_SOURCE=2 or 3, -fPIE -pie,
+      -Wl,-z,relro,-z,now, -Wformat-security, -Wall -Wextra -Werror; for MCUs check stack
+      canaries (CONFIG_COMPILER_STACK_CHECK_MODE_STRONG on ESP-IDF, CONFIG_STACK_CANARIES on
+      Zephyr) and MPU stack guards. For managed languages check strict compiler modes
+      (TypeScript strict, Go vet, Rust deny warnings) and release builds without debug
+      flags.
+    evidence:
+      - Hardening and warning flags in release build configuration
+    checks: [debug-enabled]
+    artifacts: [ci-pipeline]
+    crosswalk: ["eu-cra:AnnexI.I.2(k)"]
+
+  - ref: PW.7.2
+    title: Code review and code analysis
+    requirement: >
+      Review and analyse human-readable code for vulnerabilities, using peer review and
+      automated tools, and record and triage the results.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Check that static analysis (CodeQL, Semgrep, SonarQube, Coverity, cppcheck,
+      clang-tidy) runs on every pull request and that reviews are mandatory. Check that
+      findings are triaged rather than globally suppressed.
+    evidence:
+      - Static analysis on every change
+      - Mandatory peer review
+    artifacts: [static-analysis-config, code-review-process, ci-pipeline]
+    crosswalk: ["iec-62443-4-1:SI-1"]
+
+  - ref: PW.8.2
+    title: Security testing of executable code
+    requirement: >
+      Scope, design and run security tests of the executable code, such as fuzzing,
+      dynamic scanning and penetration testing, and document the results.
+    category: testing-verification
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for fuzz targets (libFuzzer, AFL++, Jazzer, go test -fuzz, cargo fuzz), dynamic
+      scanning (OWASP ZAP baseline in CI), negative security tests for authorization and
+      input validation, and penetration test reports for the current release.
+    evidence:
+      - Fuzzing or dynamic security testing in CI
+      - Negative security test cases
+    artifacts: [automated-tests, vulnerability-scanning]
+    crosswalk: ["iec-62443-4-1:SVV-3", "eu-cra:AnnexI.II.3", "iso-iec-27001:A.8.29"]
+
+  - ref: PW.9.1
+    title: Secure default settings
+    requirement: >
+      Define a secure baseline configuration and ship the software with secure settings by
+      default.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Check default configuration files and environment templates: debug off, no default
+      passwords, TLS on, verbose errors off, admin interfaces off or restricted, telemetry
+      opt-in where required. Flag .env.example or config defaults that would be insecure if
+      deployed unchanged.
+    evidence:
+      - Secure defaults in shipped configuration
+    checks: [default-credentials, debug-enabled, tls-verification-disabled]
+    artifacts: [user-documentation]
+    crosswalk: ["eu-cra:AnnexI.I.2(b)", "owasp-top10:A02"]
+
+  - ref: RV.1.1
+    title: Monitor for vulnerability information
+    requirement: >
+      Gather information on potential vulnerabilities in the software and its components
+      from users, researchers and public sources, and investigate credible reports.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Look for subscriptions to advisories (GitHub security advisories, OSV, vendor PSIRT
+      feeds for RTOS and TLS libraries) through automation, and an intake for external
+      reports. Scheduled SCA scans against the released SBOM are good evidence.
+    evidence:
+      - Automated advisory monitoring for all components
+    artifacts: [vulnerability-scanning, dependency-update-automation]
+    crosswalk: ["eu-cra:AnnexI.II.2", "iso-iec-27001:A.8.8", "iec-81001-5-1:6.2.1"]
+
+  - ref: RV.1.3
+    title: Vulnerability disclosure policy
+    requirement: >
+      Have a policy for vulnerability disclosure and remediation, with defined roles and
+      processes, and a way for others to report vulnerabilities.
+    category: vulnerability-management
+    severity: high
+    fixability: document
+    guidance: >
+      Look for SECURITY.md or a published vulnerability disclosure policy with a contact,
+      scope, safe harbour, acknowledgement time and coordinated disclosure timeline, and a
+      security.txt for web properties.
+    evidence:
+      - Published vulnerability disclosure policy and contact
+    artifacts: [security-policy]
+    crosswalk: ["eu-cra:AnnexI.II.5", "etsi-en-303-645:5.2-1", "iec-62443-4-1:DM-1"]
+
+  - ref: RV.2.2
+    title: Remediate vulnerabilities by risk
+    requirement: >
+      Plan and implement risk responses for vulnerabilities, including fixes, mitigations
+      and advisories, prioritised by risk.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Look for remediation timelines by severity in the security policy, security fixes in
+      the changelog, published advisories, and open dependency alerts that exceed the stated
+      timelines (a gap).
+    evidence:
+      - Severity-based remediation timelines
+      - Security advisories and changelog entries
+    artifacts: [security-policy, changelog]
+    crosswalk: ["iec-62443-4-1:DM-5", "eu-cra:AnnexI.II.4"]
+
+  - ref: RV.3.3
+    title: Fix classes of vulnerabilities, not single instances
+    requirement: >
+      Analyse the software for other instances of a reported problem and fix them
+      proactively, and update processes or tooling to prevent recurrence.
+    category: vulnerability-management
+    severity: medium
+    fixability: process
+    guidance: >
+      After a security fix, check whether the same pattern still exists elsewhere (the
+      deterministic detectors help) and whether a lint rule, Semgrep rule or test was added
+      to stop it coming back.
+    evidence:
+      - Variant analysis and new detection rules after fixes
+    artifacts: [static-analysis-config]

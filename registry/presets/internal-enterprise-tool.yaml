@@ -1,0 +1,29 @@
+id: internal-enterprise-tool
+title: Internal enterprise tool (EU, employee data)
+description: >
+  An internal web tool used only by our own employees in the EU, processing
+  employee personal data. Lower external exposure, but still brings GDPR duties
+  for employee data (lawful basis, minimisation, access control, retention),
+  the OWASP Top 10 and ASVS baseline for the web application, and basic access
+  and logging hygiene suited to an in-house system.
+examples: []
+answers:
+  productTypes: [web-app, backend-api]
+  sector: [general]
+  markets: [EU]
+  audience: [employees-internal]
+  orgRole: in-house
+  orgSize: medium
+  dataCategories: [personal, credentials]
+  aiUsage: none
+  safetyCritical: "no"
+  connectivity: [internet]
+  updates: continuous-deployment
+  distribution: [internal-only]
+  regulatedEntity: [none]
+  certificationsTarget: [none]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify:
+  - npm test

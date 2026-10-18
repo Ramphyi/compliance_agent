@@ -1,0 +1,543 @@
+id: pci-dss
+title: Payment Card Industry Data Security Standard
+shortTitle: PCI DSS
+version: v4.0.1 (June 2024)
+authority: PCI Security Standards Council
+kind: contract
+jurisdictions: [global]
+url: https://www.pcisecuritystandards.org/standards/pci-dss/
+textPolicy: paraphrased
+summary: >
+  PCI DSS is the card industry's security standard for any entity that stores, processes
+  or transmits cardholder data or sensitive authentication data, or can affect its
+  security, enforced through card brand and acquirer contracts. This file focuses on the
+  requirements a repository and pipeline can evidence: protection of stored account data,
+  strong cryptography in transit, secure software development, payment page script
+  control, access control and authentication, audit logging, payment page change
+  detection, and targeted risk analysis.
+applicability:
+  all:
+    - { fact: dataCategories, in: [payment-cards] }
+    - { not: { fact: paymentHandling, equals: none } }
+applicabilityNote: >
+  Scope depends on how card data flows. If the product stores, processes or transmits
+  card data (paymentHandling stores-card-data), the full standard applies and most
+  controls here are in scope. If card entry is fully outsourced to a PCI DSS compliant
+  provider through a redirect or iframe (often SAQ A), or through a provider SDK or
+  hosted fields so the PAN never touches your systems (SAQ A or SAQ A-EP depending on
+  whether your page can affect the card form), a reduced set applies, centred on the
+  security of the page that hosts or launches the payment form (6.4.3, 11.6.1),
+  patching, admin access and provider management. The January 2025 revision of SAQ A
+  replaced 6.4.3 and 11.6.1 with an eligibility statement that the merchant site is not
+  susceptible to script attacks that could affect the e-commerce system, which in
+  practice still needs script controls or a provider confirmation. The future-dated
+  requirements of v4.0 became mandatory on 31 March 2025. Confirm the applicable SAQ or
+  assessment type with the acquirer or a QSA. Requirement text is licensed and is
+  paraphrased here.
+keyDates:
+  - { date: "2024-06-11", note: PCI DSS v4.0.1 published }
+  - { date: "2024-12-31", note: PCI DSS v4.0 retired; v4.0.1 is the active version }
+  - { date: "2025-03-31", note: "Future-dated v4.0 requirements (including 6.4.3, 11.6.1, 8.4.2, 3.5.1.1, 12.3.1) became mandatory" }
+controls:
+  - ref: "Req3.2.1"
+    title: Minimise stored account data with retention and secure deletion
+    requirement: >
+      Keep stored account data to the minimum needed, with defined retention periods and
+      secure deletion when no longer needed, including data held before authorisation.
+    category: data-protection
+    severity: high
+    fixability: code
+    when: { fact: paymentHandling, equals: stores-card-data }
+    guidance: >
+      Find every place card data can land: database columns (pan, card_number, cc_num),
+      queues, caches, logs, analytics events, support tool exports, files and backups.
+      Check that only what is needed is stored (tokens from the processor instead of PAN
+      where possible), that retention is enforced by code (scheduled purge jobs, TTLs,
+      partition drops) and that deletion covers backups within the defined period. Flag
+      card data in unexpected stores, especially logs and analytics, and data kept
+      indefinitely.
+    evidence:
+      - Data inventory of every location holding account data
+      - Automated retention and purge jobs
+      - Use of processor tokens instead of stored PAN where possible
+    checks: [pii-in-logs]
+    artifacts: [processing-records, backup-restore]
+    crosswalk: ["gdpr:Art.5(1)(e)", "dora:Art.8"]
+
+  - ref: "Req3.3.1"
+    title: No sensitive authentication data after authorisation
+    requirement: >
+      Do not keep sensitive authentication data (full track data, card verification codes
+      such as CVV2 or CVC2, PINs and PIN blocks) after authorisation, even if encrypted;
+      any held before authorisation must be encrypted with strong cryptography (3.3.1 to
+      3.3.2).
+    category: data-protection
+    severity: critical
+    fixability: code
+    when: { fact: paymentHandling, equals: stores-card-data }
+    guidance: >
+      Search models, migrations, DTOs and logs for fields such as cvv, cvc, cvv2,
+      security_code, track1, track2, pin_block, and check that they are never persisted,
+      logged, cached or sent to analytics. Check request logging and APM middleware
+      (morgan, Express or Rails request logs, Sentry breadcrumbs, OpenTelemetry attribute
+      capture) for redaction of card fields. If pre-authorisation storage is needed (for
+      example a retry queue), it must be encrypted and purged right after authorisation.
+      Flag any CVV column, CVV in logs, or request body logging on payment endpoints.
+    evidence:
+      - No persistence of CVV, track or PIN data in schemas or logs
+      - Redaction of card fields in request logging and error tracking
+    checks: [pii-in-logs]
+    artifacts: []
+    crosswalk: ["hipaa-security:164.312(a)(2)(iv)", "owasp-asvs:V16.2.5"]
+
+  - ref: "Req3.4.1"
+    title: Mask PAN when displayed
+    requirement: >
+      Mask the PAN wherever it is displayed so that at most the BIN and last four digits
+      are shown, unless a person has a documented business need to see more.
+    category: data-protection
+    severity: high
+    fixability: code
+    when: { fact: paymentHandling, equals: stores-card-data }
+    guidance: >
+      Look for a single masking function (maskPan, formatCardNumber) used in UI
+      components, admin tools, receipts, emails, exports and API responses, returning at
+      most the first six or eight and last four digits. Check that APIs do not return the
+      full PAN to the client and then mask it in the browser, and that roles allowed to
+      see full PAN are explicit and logged. Flag full PAN in API responses, CSV exports,
+      emails or support views.
+    evidence:
+      - Central masking function applied in UI, API, exports and notifications
+      - Role-restricted and logged access to full PAN
+    checks: [pii-in-logs]
+    artifacts: []
+    crosswalk: ["iso-iec-27001:A.8.11"]
+
+  - ref: "Req3.5.1"
+    title: Render stored PAN unreadable
+    requirement: >
+      Make the PAN unreadable wherever it is stored, using keyed cryptographic hashes of
+      the whole PAN, truncation, index tokens, or strong encryption with key management;
+      hashes must be keyed, and disk-level encryption alone is acceptable only for
+      removable media (3.5.1, 3.5.1.1, 3.5.1.2).
+    category: cryptography
+    severity: critical
+    fixability: code
+    when: { fact: paymentHandling, equals: stores-card-data }
+    guidance: >
+      Check how PAN columns are protected: application or field-level encryption with
+      AES-GCM and keys from a KMS or HSM (envelope encryption), tokenisation through a
+      vault, or HMAC-SHA-256 with a secret key for lookup hashes. Unkeyed SHA-256 of a PAN
+      is not acceptable because PANs are easy to brute force. Transparent database or
+      disk encryption on its own does not meet the requirement for non-removable storage.
+      Flag plaintext PAN columns, unkeyed hashes, hardcoded keys and ECB mode.
+    evidence:
+      - Field-level encryption or tokenisation of PAN with keys in KMS or HSM
+      - Keyed hashes for PAN lookups
+    checks: [hardcoded-crypto-key, weak-cipher, weak-hash]
+    artifacts: []
+    crosswalk: ["hipaa-security:164.312(a)(2)(iv)", "owasp-asvs:V11.3.2", "dora:RTS1774-Art.6"]
+
+  - ref: "Req3.6.1"
+    title: Cryptographic key management
+    requirement: >
+      Protect the keys that protect stored account data: restrict access to the fewest
+      custodians, store keys securely and separately from the data, and manage their full
+      life cycle (generation, distribution, storage, crypto-period rotation, retirement,
+      split knowledge where manual operations exist, and prevention of unauthorised
+      substitution) (3.6 and 3.7).
+    category: secrets-management
+    severity: high
+    fixability: code
+    when: { fact: paymentHandling, equals: stores-card-data }
+    guidance: >
+      Check that data-encryption keys come from a KMS or HSM (AWS KMS, Google Cloud KMS,
+      Azure Key Vault, HashiCorp Vault Transit), that key-encrypting keys never leave it,
+      that IAM policies limit who can decrypt, that rotation is configured, and that key
+      material is never in source code, environment files committed to git, container
+      images or logs. Flag literal keys, keys in config files, and broad decrypt
+      permissions.
+    evidence:
+      - KMS or HSM managed keys with restricted decrypt permissions
+      - Documented and configured key rotation
+    checks: [hardcoded-crypto-key, hardcoded-secret]
+    artifacts: [security-policy]
+    crosswalk: ["dora:RTS1774-Art.6", "iec-81001-5-1:5.8.3"]
+
+  - ref: "Req4.2.1"
+    title: Strong cryptography for card data in transit
+    requirement: >
+      Protect the PAN with strong cryptography whenever it crosses open or public
+      networks: only trusted, valid and unrevoked certificates, only secure protocol
+      versions and configurations, and encryption strength suited to the method; keep an
+      inventory of trusted keys and certificates (4.2.1 and 4.2.1.1).
+    category: communications-security
+    severity: high
+    fixability: code
+    when: { fact: paymentHandling, in: [stores-card-data, tokenized-sdk] }
+    guidance: >
+      Check TLS settings on load balancers, ingress and web servers (TLS 1.2 or 1.3 only,
+      no CBC-only legacy suites, HSTS), certificate validation in all HTTP clients that
+      call payment processors, mutual TLS where processors support it, and automated
+      certificate renewal and inventory (cert-manager, ACM). For a page that hosts a
+      provider SDK or hosted fields, the page itself must be served over HTTPS so the
+      script cannot be swapped in transit. Flag disabled verification, http:// payment
+      endpoints, and legacy protocol flags.
+    evidence:
+      - Modern TLS configuration and HSTS on payment-related endpoints
+      - Certificate validation in outbound clients
+      - Inventory of certificates and keys with expiry monitoring
+    checks: [tls-verification-disabled, cleartext-transport, weak-cipher, missing-security-headers]
+    artifacts: []
+    crosswalk: ["hipaa-security:164.312(e)(1)", "psd2-sca:RTS-Art.35", "owasp-asvs:V12.2.1"]
+
+  - ref: "Req6.2.3"
+    title: Secure development and code review before release
+    requirement: >
+      Develop bespoke and custom software securely, train developers in secure coding at
+      least annually, and review code before release to find and fix vulnerabilities,
+      with manual reviews done by someone other than the author (6.2.1 to 6.2.3.1).
+    category: secure-development
+    severity: high
+    fixability: process
+    when: { fact: paymentHandling, in: [stores-card-data, tokenized-sdk] }
+    guidance: >
+      Check branch protection with required reviews by someone other than the author,
+      CODEOWNERS for payment and authentication code, SAST in CI (CodeQL, Semgrep,
+      SonarQube) with blocking rules, a secure coding guideline in the repository, and
+      evidence of annual developer security training. Flag direct pushes to production
+      branches and payment code merged without review.
+    evidence:
+      - Required independent code review on protected branches
+      - SAST in CI and a secure coding guideline
+      - Developer secure coding training records
+    artifacts: [code-review-process, static-analysis-config, coding-standard, ci-pipeline]
+    crosswalk: ["nist-ssdf:PW.7.2", "iec-81001-5-1:5.5.1", "iso-iec-27001:A.8.28"]
+
+  - ref: "Req6.2.4"
+    title: Engineering techniques that prevent common software attacks
+    requirement: >
+      Use defined techniques to prevent or mitigate common attacks in bespoke software:
+      injection, attacks on data structures and memory, misuse of cryptography, business
+      logic abuse (including API abuse, cross-site scripting and request forgery), access
+      control bypass, and other high-risk vulnerabilities.
+    category: input-validation
+    severity: high
+    fixability: code
+    when: { fact: paymentHandling, in: [stores-card-data, tokenized-sdk] }
+    guidance: >
+      Check for parameterised queries or ORMs, output encoding and a strict Content
+      Security Policy, CSRF tokens or SameSite cookies on state-changing requests,
+      server-side authorisation on every payment and account endpoint, idempotency keys
+      and amount validation on payment APIs (no client-supplied prices), schema validation
+      of request bodies (zod, Joi, pydantic), and safe deserialisation. Flag the detector
+      hits listed here on any code path near payment or account management.
+    evidence:
+      - Injection, XSS and CSRF defences in place
+      - Server-side validation of amounts and authorisation on payment APIs
+    checks: [sql-injection-risk, command-injection-risk, xss-risk, path-traversal-risk, unsafe-deserialization, dynamic-code-eval, cors-wildcard, jwt-unverified]
+    artifacts: [static-analysis-config]
+    crosswalk: ["owasp-top10:A03", "owasp-asvs:V1.2.1", "iec-81001-5-1:5.5.1"]
+
+  - ref: "Req6.3.2"
+    title: Inventory of bespoke software and third-party components
+    requirement: >
+      Keep an inventory of bespoke and custom software and of the third-party components
+      built into it, to support vulnerability and patch management.
+    category: supply-chain
+    severity: medium
+    fixability: code
+    when: { fact: paymentHandling, in: [stores-card-data, tokenized-sdk] }
+    guidance: >
+      Look for an SBOM generated in CI (CycloneDX or SPDX via syft, cdxgen or build
+      plugins) per release, committed lockfiles, and a list of the organisation's own
+      applications and services in scope. Check that the SBOM feeds vulnerability
+      scanning. Flag missing lockfiles and components with no version.
+    evidence:
+      - SBOM per release and committed lockfiles
+      - Inventory of in-scope bespoke applications
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile]
+    crosswalk: ["fda-cybersecurity:524B(b)(3)", "iec-62304:8.1.2", "nist-ssdf:PS.3.2"]
+
+  - ref: "Req6.3.3"
+    title: Patch known vulnerabilities, critical ones within a month
+    requirement: >
+      Protect system components from known vulnerabilities by installing applicable
+      security patches, with critical or high-security patches installed within one
+      month of release.
+    category: vulnerability-management
+    severity: high
+    fixability: code
+    guidance: >
+      Check automated dependency updates (Dependabot, Renovate) and container base image
+      updates, vulnerability scanning in CI with severity gates (Trivy, Grype, npm audit,
+      pip-audit), and the age of open critical alerts. For e-commerce sites that only
+      redirect or embed a provider iframe, this still covers the site, CMS and plugins
+      that render the checkout link or iframe. Flag critical vulnerabilities open longer
+      than a month and end-of-life runtimes.
+    evidence:
+      - Automated dependency and image updates
+      - Vulnerability scanning with remediation within one month for critical issues
+    checks: [unpinned-dependencies]
+    artifacts: [dependency-update-automation, vulnerability-scanning]
+    crosswalk: ["fda-cybersecurity:524B(b)(2)", "iec-81001-5-1:6.1.1", "dora:RTS1774-Art.10"]
+
+  - ref: "Req6.4.3"
+    title: Authorised, integrity-checked and inventoried payment page scripts
+    requirement: >
+      Manage every script loaded and executed in the consumer's browser on payment pages:
+      confirm each is authorised, assure its integrity, and keep an inventory with a
+      written justification for each.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Identify the payment page: the checkout page that hosts the provider iframe, hosted
+      fields or SDK, or the page that redirects to the provider. Check for a strict
+      Content Security Policy (script-src allow-list or nonces and strict-dynamic, no
+      unsafe-inline), Subresource Integrity (integrity and crossorigin attributes) on
+      static third-party scripts, no tag manager or analytics scripts on the checkout
+      page, scripts self-hosted or pinned by version, and an inventory of scripts with
+      their purpose (for example docs/pci/payment-page-scripts.md). For redirect or iframe
+      integrations (SAQ A), this is how the merchant shows its site is not susceptible to
+      script attacks; for pages where your code builds the card form, it is a direct
+      requirement. Flag analytics or chat widgets on checkout, scripts loaded from
+      unpinned CDN URLs without SRI, and CSP with unsafe-inline or wildcards.
+    evidence:
+      - Payment page script inventory with justification
+      - CSP and SRI enforced on the payment page
+      - No non-essential third-party scripts on checkout
+    checks: [missing-security-headers, analytics-tracking-sdk, xss-risk]
+    artifacts: []
+    crosswalk: ["owasp-asvs:V3.4.3", "owasp-top10:A08"]
+
+  - ref: "Req6.5.1"
+    title: Change management and separation of environments
+    requirement: >
+      Make production changes through a defined procedure (reason, security impact,
+      approval, testing, rollback), confirm PCI DSS controls after significant changes,
+      separate pre-production from production, keep live PANs out of test environments,
+      and remove test data and accounts before go-live (6.5.1 to 6.5.6).
+    category: secure-development
+    severity: medium
+    fixability: process
+    when: { fact: paymentHandling, in: [stores-card-data, tokenized-sdk] }
+    guidance: >
+      Check that deployments go through CI/CD with approvals (environment protection
+      rules, required reviewers), that pull request templates record security impact and
+      rollback, that staging and production use separate accounts, credentials and data,
+      that seed and fixture data use test card numbers from the processor's sandbox, and
+      that test accounts and debug routes are not deployed to production. Flag real card
+      numbers in fixtures, shared credentials across environments, and manual production
+      changes.
+    evidence:
+      - Gated deployment pipeline with approvals and rollback
+      - Separate environments and credentials
+      - Test card numbers only in non-production data
+    checks: [hardcoded-secret, debug-enabled, default-credentials]
+    artifacts: [ci-pipeline, code-review-process]
+    crosswalk: ["dora:RTS1774-Art.17", "iec-62304:8.2", "soc2:CC8.1"]
+
+  - ref: "Req7.2.1"
+    title: Least-privilege access to cardholder data
+    requirement: >
+      Define an access control model and grant access to system components and
+      cardholder data by job function with least privilege, review user and application
+      accounts periodically, and restrict direct queries to cardholder data stores (7.2.1
+      to 7.2.6).
+    category: authentication-access
+    severity: high
+    fixability: code
+    when: { fact: paymentHandling, equals: stores-card-data }
+    guidance: >
+      Check role definitions and server-side authorisation for any endpoint or admin view
+      touching card data, database roles that separate application access from human
+      access, IAM policies scoped to specific resources rather than wildcards, and service
+      accounts with only the permissions they need. Flag admin roles with full access by
+      default, wildcard IAM policies, and shared database superuser credentials in
+      application config.
+    evidence:
+      - Documented role model enforced server side
+      - Least-privilege IAM and database roles
+      - Periodic access review records
+    checks: [hardcoded-secret]
+    artifacts: [security-policy]
+    crosswalk: ["hipaa-security:164.308(a)(4)", "soc2:CC6.3"]
+
+  - ref: "Req8.3.6"
+    title: Authentication rules - lockout, password strength, idle timeout
+    requirement: >
+      Authenticate every user, protect authentication factors with strong cryptography,
+      lock accounts after no more than 10 failed attempts for at least 30 minutes, require
+      passwords of at least 12 characters with letters and numbers (or 8 where the system
+      cannot support 12), prevent reuse of the last four, and require re-authentication
+      after 15 minutes of inactivity (8.2.8, 8.3.1 to 8.3.9).
+    category: authentication-access
+    severity: high
+    fixability: code
+    when: { fact: paymentHandling, in: [stores-card-data, tokenized-sdk] }
+    guidance: >
+      Check the identity provider or authentication code for staff and admin users with
+      access to payment systems: password policy settings (minimum length 12), lockout
+      or throttling thresholds, password hashing with argon2, bcrypt, scrypt or PBKDF2,
+      history checks, forced change of initial passwords, and an idle session timeout of
+      15 minutes or less for administrative consoles. Flag weaker policies, unlimited
+      login attempts, weak hashing and long-lived admin sessions.
+    evidence:
+      - Password policy and lockout configuration
+      - Strong password hashing
+      - 15-minute idle timeout for administrative sessions
+    checks: [weak-password-hash, missing-rate-limiting, insecure-cookie]
+    artifacts: []
+    crosswalk: ["hipaa-security:164.308(a)(5)(ii)(D)", "hipaa-security:164.312(a)(2)(iii)", "owasp-asvs:V6.2.1"]
+
+  - ref: "Req8.4.2"
+    title: Multi-factor authentication for access to the cardholder data environment
+    requirement: >
+      Require MFA for all access into the cardholder data environment and for all remote
+      network access, implemented so it resists replay, cannot be bypassed, uses at least
+      two different factor types, and needs every factor to succeed (8.4.1 to 8.5.1).
+    category: authentication-access
+    severity: high
+    fixability: code
+    when: { fact: paymentHandling, in: [stores-card-data, tokenized-sdk] }
+    guidance: >
+      Check MFA enforcement for admin consoles, cloud accounts, bastions and VPNs that
+      reach payment systems (identity provider policies, AWS IAM conditions requiring MFA,
+      MFA middleware in admin routes), and that MFA cannot be skipped by alternate routes
+      such as API tokens, legacy login endpoints or "remember me" bypasses. Prefer
+      phishing-resistant factors (WebAuthn, passkeys). Flag admin routes reachable without
+      MFA and MFA checked only in the client.
+    evidence:
+      - MFA enforced for all administrative and CDE access
+      - No bypass paths through APIs or legacy endpoints
+    checks: [jwt-unverified]
+    artifacts: [security-policy]
+    crosswalk: ["hipaa-security:164.312(d)", "psd2-sca:RTS-Art.9", "owasp-asvs:V6.3.3"]
+
+  - ref: "Req8.6.2"
+    title: No hardcoded passwords for system and application accounts
+    requirement: >
+      Do not hardcode passwords or passphrases for application and system accounts that
+      can be used for interactive login in scripts, configuration files or source code,
+      and manage and rotate them.
+    category: secrets-management
+    severity: critical
+    fixability: code
+    when: { fact: paymentHandling, in: [stores-card-data, tokenized-sdk] }
+    guidance: >
+      Check that processor API keys, database passwords and service credentials come from
+      a secret manager or the CI secret store at runtime, that .env files are not
+      committed, that secret scanning runs in CI and pre-commit (gitleaks, trufflehog,
+      GitHub secret scanning), and that rotation is possible without code changes. Flag
+      every hardcoded secret, payment provider secret keys in frontend bundles, and
+      credentials in Docker images or infrastructure code.
+    evidence:
+      - Secrets loaded from a secret manager at runtime
+      - Secret scanning in CI and pre-commit
+      - Rotation procedure for application credentials
+    checks: [hardcoded-secret, default-credentials]
+    artifacts: [ci-pipeline]
+    crosswalk: ["owasp-asvs:V13.3.1", "iec-81001-5-1:5.1.2"]
+
+  - ref: "Req10.2.1"
+    title: Audit logs for access to cardholder data and admin actions
+    requirement: >
+      Enable audit logs that capture individual access to cardholder data, administrative
+      actions, access to logs, failed access attempts, credential changes, log
+      start/stop, and creation or deletion of system objects; each record identifies the
+      user, event type, time, outcome, origin and affected resource. Protect logs from
+      change, review them daily with automation, and keep 12 months with three months
+      immediately available (10.2 to 10.5).
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    when: { fact: paymentHandling, equals: stores-card-data }
+    guidance: >
+      Look for structured audit logging on payment and admin code paths (who, what, when,
+      outcome, source IP, resource ID), shipping to a central store with immutability
+      (S3 Object Lock, write-once log buckets, SIEM), alert rules for anomalies, and
+      retention set to at least 12 months. Make sure the logs never contain PAN or
+      sensitive authentication data. Flag admin actions and card data access with no
+      audit record, logs stored only on the host, and short retention.
+    evidence:
+      - Audit records with the required fields for card data access and admin actions
+      - Central, tamper-resistant log storage with 12-month retention
+      - Automated daily review and alerting
+    checks: [pii-in-logs]
+    artifacts: [incident-response-plan]
+    crosswalk: ["hipaa-security:164.312(b)", "dora:Art.10", "soc2:CC7.2"]
+
+  - ref: "Req11.6.1"
+    title: Change and tamper detection on payment pages
+    requirement: >
+      Deploy a mechanism that alerts staff to unauthorised changes to the security-relevant
+      HTTP headers and the script contents of payment pages as received by the consumer's
+      browser, running at least weekly or at a frequency set by targeted risk analysis.
+    category: logging-monitoring
+    severity: high
+    guidance: >
+      Look for client-side monitoring of the checkout page: CSP reporting (report-to or
+      report-uri endpoints with alerting), a commercial or open-source page integrity
+      monitor, or a scheduled synthetic check that fetches the payment page and compares
+      headers and script hashes against an approved baseline and alerts on drift. Check
+      that alerts reach someone and that the baseline is updated through change control.
+      For redirect or iframe integrations, apply it to the page that hosts the iframe or
+      redirect, or obtain the provider's confirmation as SAQ A eligibility evidence. Flag
+      checkout pages with no monitoring.
+    evidence:
+      - Header and script change detection on the payment page
+      - Alerting and baseline management
+      - Frequency justified by targeted risk analysis where not weekly
+    fixability: code
+    checks: [missing-security-headers]
+    artifacts: [incident-response-plan]
+    crosswalk: ["owasp-asvs:V3.4.3"]
+
+  - ref: "Req12.3.1"
+    title: Targeted risk analysis and cryptography review
+    requirement: >
+      Perform a documented targeted risk analysis for each requirement that lets the
+      entity choose how often to do something (for example 11.6.1 frequency), review it
+      at least every 12 months, and review cryptographic cipher suites, protocols and
+      in-use technologies at least every 12 months (12.3.1, 12.3.3, 12.3.4).
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    when: { fact: paymentHandling, in: [stores-card-data, tokenized-sdk] }
+    guidance: >
+      Look for targeted risk analysis documents for each flexible-frequency control
+      (docs/pci/tra-*.md) and an inventory of cipher suites, protocols, libraries and
+      platforms in use with review dates and end-of-life plans. Compare the inventory with
+      the actual TLS configuration and crypto libraries in the code. Flag frequencies
+      chosen with no analysis and stale reviews.
+    evidence:
+      - Targeted risk analyses for flexible-frequency requirements
+      - Annual cryptography and technology review records
+    artifacts: [risk-management-file]
+    crosswalk: ["dora:Art.8", "iso-iec-27001:6.1.2"]
+
+  - ref: "Req12.8.1"
+    title: Payment service provider management and responsibility split
+    requirement: >
+      Keep a list of third-party service providers that handle account data or can affect
+      its security, have written agreements acknowledging their responsibilities, monitor
+      their PCI DSS compliance at least annually, and document which requirements each
+      party manages (12.8.1 to 12.8.5).
+    category: supply-chain
+    severity: medium
+    fixability: process
+    guidance: >
+      Identify the payment providers, hosting, CDN and tag providers in the code and
+      infrastructure, and check for their current PCI DSS attestations of compliance and a
+      responsibility matrix (who handles 6.4.3, 11.6.1, logging and so on). For redirect and
+      SDK integrations, check that the provider is listed as PCI DSS compliant and that the
+      integration follows the provider's PCI guidance (hosted fields, iframe, redirect).
+      Flag custom card forms that post directly to your server when the documented
+      integration is supposed to be hosted fields.
+    evidence:
+      - Provider list with current attestations of compliance
+      - Responsibility matrix per provider
+    artifacts: [processing-records]
+    crosswalk: ["dora:Art.28", "hipaa-security:164.308(b)(1)", "soc2:CC9.2"]

@@ -1,0 +1,1 @@
+{"verify": ["make all", "make test"]}

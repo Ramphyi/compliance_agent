@@ -1,0 +1,343 @@
+id: ro-national
+title: Romanian national rules for data protection, ePrivacy, consumer protection and cybersecurity
+shortTitle: Romania national rules
+version: "Law 190/2018, Law 506/2004, OG 21/1992, OUG 34/2014, Law 365/2002, ANPC Order 449/2022 as amended, OUG 155/2024 (consolidated forms as of 2026)"
+authority: Parliament and Government of Romania; ANSPDCP, ANPC and DNSC as regulators
+kind: regulation
+jurisdictions: [RO]
+url: https://legislatie.just.ro/Public/DetaliiDocument/203151
+textPolicy: paraphrased
+summary: >
+  Romanian national rules that sit on top of EU law for products offered in Romania:
+  Law 190/2018 (GDPR implementing measures on national identification numbers,
+  genetic, biometric and health data and employee monitoring), Law 506/2004 (ePrivacy
+  transposition: cookies, unsolicited communications), consumer law for online sales
+  (OG 21/1992, OUG 34/2014, Law 365/2002, ANPC alternative dispute resolution
+  information), the ANSPDCP breach channel, and the national NIS2 framework
+  (OUG 155/2024) with Law 58/2023.
+applicability: { fact: markets, in: [RO] }
+applicabilityNote: >
+  Applies when the product is offered to users or customers in Romania or the
+  organisation is established there. Data protection controls need personal data;
+  consumer controls apply to business-to-consumer sales; the cybersecurity control
+  applies to NIS2 essential or important entities and their suppliers. Several texts
+  are frequently amended by emergency ordinance; check the consolidated text on
+  legislatie.just.ro and confirm with Romanian counsel.
+keyDates:
+  - { date: "2022-08-18", note: ANPC Order 449/2022 on SAL information for consumers became applicable }
+  - { date: "2025-07-20", note: "EU ODR (SOL) platform discontinued by Regulation (EU) 2024/3228; the link duty ended" }
+  - { date: "2025-08-20", note: "DNSC Orders 1/2025 (registration) and 2/2025 (risk methodology) under OUG 155/2024 published" }
+  - { date: "2026-06-19", note: "EU online withdrawal function (Directive (EU) 2023/2673, new CRD Art. 11a) applies to distance contracts" }
+controls:
+  - ref: "L190-Art.3"
+    title: Genetic, biometric and health data in automated decisions and profiling
+    requirement: >
+      Law 190/2018 Art. 3 allows genetic, biometric or health data to be processed for
+      automated decision-making or profiling only with the person's explicit consent or
+      under express legal provisions, with appropriate safeguards; health data processed
+      for public health purposes cannot later be reused by third parties for other
+      purposes.
+    category: data-protection
+    severity: critical
+    fixability: code
+    when: { fact: dataCategories, in: [health, genetic-biometric] }
+    guidance: >
+      Identify features that use health, genetic or biometric data in automated decisions
+      or profiles: risk scores, AI health insights, personalised recommendations from
+      DNA or symptom data, biometric login or matching. Check that a separate explicit
+      consent naming the profiling or automated decision is collected and stored before
+      the feature runs, that the feature is disabled without it, and that safeguards
+      exist (human review, explanation, ability to contest, no reuse for marketing).
+    evidence:
+      - Explicit consent specific to profiling or automated decisions on sensitive data
+      - Feature gating on that consent
+      - Safeguards documented in the DPIA
+    checks: [pii-in-logs]
+    artifacts: [dpia]
+    crosswalk: ["gdpr:Art.9", "gdpr:Art.22"]
+
+  - ref: "L190-Art.4"
+    title: National identification number (CNP) processing safeguards
+    requirement: >
+      Law 190/2018 Art. 4 allows processing of the national identification number (CNP),
+      including collecting or disclosing documents that contain it, under a GDPR Art. 6
+      basis; when relying on legitimate interests the controller must apply safeguards:
+      minimisation and security measures, a DPO, set retention and review deadlines, and
+      periodic staff training.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Search the schema, forms and APIs for CNP fields (cnp, personalNumericCode,
+      nationalId, buletin, carte de identitate uploads, ID scans). Check the CNP is
+      collected only where needed (invoicing to individuals usually does not need it;
+      KYC, medical or legal obligations may), is validated, encrypted at the field level,
+      masked in UIs and excluded from logs and analytics, has a retention period, and
+      that ID document images are deleted after verification. If the basis is
+      legitimate interests, confirm a DPO is designated and staff training is recorded.
+    evidence:
+      - Justification and lawful basis for each CNP use
+      - Field-level encryption, masking and log redaction for CNP
+      - Retention rule and DPO designation where legitimate interests apply
+    checks: [pii-in-logs]
+    artifacts: [processing-records]
+    crosswalk: ["gdpr:Art.6", "gdpr:Art.37", "gdpr:Art.5(1)(c)"]
+
+  - ref: "L190-Art.5"
+    title: Employee monitoring by electronic communications or video
+    requirement: >
+      Law 190/2018 Art. 5 allows employers to monitor employees through electronic
+      communications or video surveillance only if legitimate interests clearly
+      outweigh employees' rights, employees were informed fully and explicitly in
+      advance, the union or employee representatives were consulted, less intrusive
+      means proved ineffective, and data is kept no longer than 30 days unless the law
+      provides otherwise or a case is duly justified.
+    category: data-protection
+    severity: high
+    fixability: code
+    when:
+      any:
+        - { fact: sector, in: [employment-hr] }
+        - { fact: audience, in: [employees-internal] }
+        - { fact: aiRiskAreas, in: [employment] }
+    guidance: >
+      Relevant for products that monitor workers (email or chat monitoring, screen or
+      keystroke capture, productivity tracking, GPS of staff vehicles, CCTV analytics).
+      Check that monitoring features are off by default, show employees a clear in-product
+      notice, store evidence of prior information and consultation, have a configurable
+      retention defaulting to 30 days or less with automatic deletion, and avoid covert
+      modes. Flag indefinite retention of recordings or activity logs and hidden
+      monitoring options.
+    evidence:
+      - Default retention of 30 days or less with purge job
+      - Employee-facing monitoring notice
+      - Customer documentation on the Art. 5 conditions
+    checks: []
+    artifacts: [dpia, user-documentation]
+    crosswalk: ["gdpr:Art.35", "eu-ai-act:Art.26"]
+
+  - ref: "L506-Art.4(5)"
+    title: Cookies and device access under Law 506/2004
+    requirement: >
+      Law 506/2004 Art. 4(5) allows storing or accessing information on a user's device
+      only after the user agreed and received clear, complete information about the
+      purpose, including about third parties; Art. 4(6) exempts storage strictly needed
+      to transmit a communication or provide a service the user expressly requested.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Apply the ePrivacy Art. 5(3) checks for Romanian users. ANSPDCP regularly fines
+      Romanian websites for non-essential cookies set before consent and for incomplete
+      cookie information. Check the banner and cookie policy are available in Romanian,
+      list third-party cookies and their purposes, and that analytics and advertising
+      cookies are not set before consent.
+    evidence:
+      - Romanian-language banner and cookie policy listing third parties
+      - Non-essential cookies blocked until consent
+    checks: [analytics-tracking-sdk]
+    artifacts: [cookie-consent]
+    crosswalk: ["eprivacy:Art.5(3)", "eprivacy:Art.5(3)-exemptions"]
+
+  - ref: "L506-Art.12"
+    title: Unsolicited commercial communications under Law 506/2004
+    requirement: >
+      Law 506/2004 Art. 12 requires prior express consent for commercial communications
+      by email, automated calls, fax or similar electronic means, allows marketing of
+      similar products to existing customers if they can object simply and free of charge
+      at collection and in each message, and bans hidden sender identity and messages
+      without a valid opt-out address; it also covers legal-entity subscribers.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Apply the ePrivacy Art. 13 checks. Note that the Romanian rule also protects
+      business subscribers, so B2B cold email to company addresses needs care. Check
+      SMS and WhatsApp marketing flows as well as email, and that opt-outs are honoured
+      across channels.
+    evidence:
+      - Prior express consent records for marketing
+      - Opt-out in every message honoured across channels
+    checks: []
+    artifacts: [privacy-policy]
+    crosswalk: ["eprivacy:Art.13(1)", "eprivacy:Art.13(2)", "gdpr:Art.21"]
+
+  - ref: "ANSPDCP-breach"
+    title: Breach notification to ANSPDCP
+    requirement: >
+      Controllers whose lead authority is ANSPDCP notify personal data breaches using the
+      ANSPDCP notification form (approved by ANSPDCP Decision 128/2018) within the GDPR
+      72-hour window; providers of electronic communications services also notify under
+      Law 506/2004 using its separate procedure.
+    category: logging-monitoring
+    severity: high
+    fixability: process
+    when: { fact: dataCategories, in: [personal, health, genetic-biometric, payment-cards, financial, children, location, vehicle, credentials, other-sensitive] }
+    guidance: >
+      Check the incident response plan names ANSPDCP as the authority for Romanian
+      establishments (or the correct lead authority under the one-stop-shop), links the
+      current notification form and online submission channel on dataprotection.ro, has
+      Romanian-language templates for notifying affected people, and keeps an internal
+      breach register. Telecom providers need the separate Law 506/2004 notification path.
+    evidence:
+      - Incident plan with ANSPDCP notification steps and form link
+      - Romanian-language notification templates
+      - Breach register
+    checks: []
+    artifacts: [incident-response-plan]
+    crosswalk: ["gdpr:Art.33", "eprivacy:Art.4"]
+
+  - ref: "OUG34-information"
+    title: Pre-contractual information for distance contracts
+    requirement: >
+      Under OUG 34/2014, before a consumer is bound by a distance contract the trader must
+      give clear information including its identity and contact details, main
+      characteristics, total price with taxes and extra charges, payment and delivery
+      terms, the right of withdrawal with the model form, duration and renewal terms,
+      digital content functionality and interoperability, and the legal guarantee.
+    category: consumer-protection
+    severity: high
+    fixability: code
+    when: { fact: audience, in: [consumers] }
+    guidance: >
+      Check checkout, subscription and paywall screens (web and in-app) show the total
+      price including VAT and fees before purchase, renewal period and price, how to
+      cancel, delivery or access terms, and a link to terms that include the withdrawal
+      information and model withdrawal form. Terms of service should be in Romanian for
+      Romanian consumers. Check confirmation emails deliver the contract terms on a
+      durable medium (email or PDF), not only a web link.
+    evidence:
+      - Checkout screens showing total price, renewal and cancellation terms
+      - Romanian terms with withdrawal information and model form
+      - Order confirmation on a durable medium
+    checks: []
+    artifacts: [terms-of-service]
+    crosswalk: []
+
+  - ref: "OUG34-order-button"
+    title: Order button and confirmation for online contracts
+    requirement: >
+      For online orders that oblige the consumer to pay, the trader must show the key
+      information directly before the order and label the order button unambiguously
+      (in Romanian, for example "comandă cu obligație de plată"), otherwise the consumer
+      is not bound; the contract must then be confirmed on a durable medium.
+    category: consumer-protection
+    severity: high
+    fixability: code
+    when: { fact: audience, in: [consumers] }
+    guidance: >
+      Inspect the final checkout or subscribe button labels in web templates and app
+      string resources (strings.xml, Localizable.strings, i18n JSON for ro). Labels such
+      as "Continuă" or "Trimite" are insufficient; the button must make the payment
+      obligation explicit. Check the order summary is directly above the button and that
+      a confirmation email with terms is sent.
+    evidence:
+      - Order button label stating the payment obligation in Romanian
+      - Order summary immediately before the button
+    checks: []
+    artifacts: [terms-of-service]
+    crosswalk: []
+
+  - ref: "OUG34-withdrawal"
+    title: 14-day right of withdrawal, refunds and the withdrawal function
+    requirement: >
+      Consumers may withdraw from distance contracts within 14 days without giving
+      reasons; the trader must refund all payments, including standard delivery, within
+      14 days of being informed. From 19 June 2026 traders selling online must also offer
+      an easy online withdrawal function available throughout the withdrawal period.
+      Digital content and services have specific rules where the consumer expressly
+      agreed to immediate performance and acknowledged losing the right.
+    category: consumer-protection
+    severity: high
+    fixability: code
+    when: { fact: audience, in: [consumers] }
+    guidance: >
+      Check for an in-account or website withdrawal function (a clearly labelled
+      "Retragere din contract" button or form, accessible without hurdles during the 14
+      days) that sends an acknowledgement on a durable medium, a refund workflow that
+      completes within 14 days through the original payment method, and, for
+      subscriptions or digital content that start immediately, an explicit request and
+      acknowledgement checkbox recorded with timestamp. Check in-app purchases through
+      app stores are explained, since refunds then run through the store.
+    evidence:
+      - Online withdrawal function and acknowledgement
+      - Refund workflow with 14-day tracking
+      - Recorded consent to immediate performance for digital services
+    checks: []
+    artifacts: [terms-of-service]
+    crosswalk: []
+
+  - ref: "ANPC-SAL"
+    title: ANPC alternative dispute resolution (SAL) information
+    requirement: >
+      ANPC Order 449/2022, as amended, requires traders selling online to consumers to
+      display the ANPC SAL pictogram linking to ANPC's alternative dispute resolution
+      information; the former link to the EU ODR (SOL) platform is no longer required
+      after the platform closed on 20 July 2025.
+    category: consumer-protection
+    severity: medium
+    fixability: code
+    when: { fact: audience, in: [consumers] }
+    guidance: >
+      Check the website footer or home page displays the official ANPC SAL pictogram
+      (250 by 50 pixels) linking to the ANPC SAL page, and that terms of service mention
+      the competent ADR entity. Remove or update any remaining links to the
+      ec.europa.eu/consumers/odr platform, which no longer works. Sectors with their
+      own ADR bodies (banking, non-banking finance) follow their sector rules.
+    evidence:
+      - SAL pictogram and link on the website
+      - No stale links to the discontinued ODR platform
+    checks: []
+    artifacts: [terms-of-service]
+    crosswalk: []
+
+  - ref: "L365-OG21-identity"
+    title: Trader identity and consumer information in Romanian
+    requirement: >
+      Law 365/2002 on electronic commerce requires online service providers to make
+      their identity easily accessible (name, address, contact details including email,
+      trade register number, fiscal code, supervisory authority where relevant), and
+      OG 21/1992 requires consumer information to be provided in Romanian, complete and
+      accurate.
+    category: consumer-protection
+    severity: medium
+    fixability: code
+    when: { fact: audience, in: [consumers] }
+    guidance: >
+      Check the website and app (About, Contact, footer or legal notice page) show the
+      company name, registered address, trade register number (J number), CUI, email and
+      phone, and that consumer-facing terms, prices, product information and support are
+      available in Romanian. Check app store listings for Romania link to these details.
+    evidence:
+      - Legal notice page with full trader identity
+      - Romanian-language consumer information and terms
+    checks: []
+    artifacts: [terms-of-service, privacy-policy]
+    crosswalk: []
+
+  - ref: "OUG155-2024"
+    title: Romanian NIS2 framework (OUG 155/2024) registration and reporting to DNSC
+    requirement: >
+      OUG 155/2024 transposes NIS2 in Romania: essential and important entities must
+      register with the National Cyber Security Directorate (DNSC), implement the
+      risk-management measures and report significant incidents to DNSC within the NIS2
+      deadlines; Law 58/2023 on cybersecurity and cyber defence sets parallel duties for
+      some public and critical bodies.
+    category: governance
+    severity: high
+    fixability: process
+    when: { fact: regulatedEntity, in: [nis2-essential, nis2-important, public-body] }
+    guidance: >
+      Check the organisation (or its customer, if the product is supplied to one)
+      completed DNSC registration under DNSC Order 1/2025, applied the risk assessment
+      methodology of DNSC Order 2/2025, and that the incident response plan routes
+      significant incidents to DNSC (early warning, notification and final report) and
+      personal data breaches separately to ANSPDCP. Suppliers should expect contractual
+      security and notification clauses from Romanian NIS2 customers.
+    evidence:
+      - DNSC registration confirmation
+      - Incident plan with DNSC reporting path
+      - Risk assessment following the DNSC methodology
+    checks: []
+    artifacts: [incident-response-plan, risk-management-file]
+    crosswalk: ["nis2:Art.23", "nis2:Art.27", "nis2:Art.21(2)(a)"]

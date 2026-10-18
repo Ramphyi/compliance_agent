@@ -1,0 +1,267 @@
+id: nist-ir-8259
+title: NIST IoT Cybersecurity Baseline (NIST IR 8259 series and IR 8425 Consumer IoT Profile)
+shortTitle: NIST IR 8259 / 8425
+version: IR 8259 Rev. 1 (April 2026), IR 8259A (May 2020), IR 8259B (August 2021), IR 8425 (September 2022)
+authority: NIST
+kind: guideline
+jurisdictions: [US]
+url: https://csrc.nist.gov/pubs/ir/8425/final
+textPolicy: open
+summary: >
+  NIST IR 8259 (revised as Rev. 1 in April 2026) describes the foundational activities IoT
+  product manufacturers should perform before and after market. IR 8259A defines the
+  technical device capability core baseline (device identification, device configuration,
+  data protection, logical access to interfaces, software update, cybersecurity state
+  awareness) and IR 8259B the non-technical baseline (documentation, information and query
+  reception, information dissemination, education and awareness). IR 8425 profiles both
+  for consumer IoT products, applying the outcomes to the whole product (device, app,
+  cloud backend), and is the technical basis of the FCC US Cyber Trust Mark.
+applicability:
+  any:
+    - all:
+        - { fact: markets, in: [US] }
+        - { fact: productTypes, in: [iot-device] }
+    - { fact: certificationsTarget, in: [cyber-trust-mark] }
+applicabilityNote: >
+  Voluntary guidance for IoT products sold in the US, and the expected criteria for the
+  FCC US Cyber Trust Mark labelling programme (Report and Order adopted March 2024). Status
+  as verified for this registry: UL Solutions, selected as Lead Administrator in December
+  2024, withdrew on 2025-12-19; the FCC selected the ioXt Alliance as the new Lead
+  Administrator on 2026-04-13; as of October 2026 the FCC had not yet opened the programme
+  to product applications, no products carried the mark, and the programme standards
+  (based on IR 8425) were still under FCC review. Federal agency IoT procurement
+  references the related SP 800-213 and the IoT Cybersecurity Improvement Act of 2020.
+keyDates:
+  - { date: "2024-03-14", note: FCC adopts the Report and Order creating the IoT cybersecurity labelling programme (US Cyber Trust Mark) }
+  - { date: "2025-01-07", note: White House announces the launch of the US Cyber Trust Mark }
+  - { date: "2025-12-19", note: UL Solutions withdraws as Lead Administrator }
+  - { date: "2026-04-13", note: FCC selects ioXt Alliance as Lead Administrator }
+  - { date: "2026-04-20", note: NIST IR 8259 Rev. 1 published; the 2020 IR 8259 is withdrawn }
+controls:
+  - ref: 8259A-1
+    title: Device and product identification
+    requirement: >
+      The IoT product can be uniquely identified, logically and physically, by customers
+      and authorised entities, and an inventory of its components is maintained (IR 8425
+      Asset Identification).
+    category: transparency-documentation
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for a unique device identifier provisioned per unit (serial number in OTP or
+      eFuse, device certificate CN, cloud device ID), a way for users to read it in the app
+      or UI, model and version reporting over the API, and an inventory of product
+      components (device firmware, app, cloud services, third-party libraries).
+    evidence:
+      - Unique per-device identifier available to users and the backend
+      - Inventory of product components and software versions
+    artifacts: [sbom]
+    crosswalk: ["eu-cra:AnnexII", "eu-cra:AnnexI.II.1"]
+
+  - ref: 8259A-2
+    title: Secure product configuration
+    requirement: >
+      Authorised entities can change the product's software configuration, restore a
+      secure default, and only authorised entities can do so (IR 8425 Product
+      Configuration).
+    category: secure-development
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that configuration changes require authentication, that a factory reset
+      restores a secure default (not an open setup mode with default credentials), and that
+      default settings are secure (debug off, remote access off until enabled).
+    evidence:
+      - Authenticated configuration changes
+      - Reset to a secure default
+    checks: [default-credentials, debug-enabled]
+    crosswalk: ["eu-cra:AnnexI.I.2(b)", "etsi-en-303-645:5.5-5"]
+
+  - ref: 8259A-3
+    title: Data protection at rest and in transit
+    requirement: >
+      The product protects stored and transmitted data from unauthorised access and
+      modification, using appropriate cryptography, and lets users delete data (IR 8425
+      Data Protection).
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Check TLS with certificate validation for all device-cloud and app-cloud traffic,
+      encrypted storage of credentials and personal data on the device (flash encryption,
+      NVS encryption, secure element), and a data deletion path on device and backend. Flag
+      cleartext MQTT or HTTP, disabled verification, weak ciphers and hard-coded keys.
+    evidence:
+      - Encrypted, authenticated communications
+      - Encrypted storage of sensitive data
+      - Data deletion on device and backend
+    checks: [cleartext-transport, tls-verification-disabled, weak-cipher, hardcoded-crypto-key]
+    crosswalk: ["eu-cra:AnnexI.I.2(e)", "etsi-en-303-645:5.5-1", "etsi-en-303-645:5.4-1"]
+
+  - ref: 8259A-4
+    title: Logical access to interfaces
+    requirement: >
+      The product restricts logical access to its local and network interfaces, and to the
+      protocols and services behind them, to authorised entities, and disables
+      unnecessary interfaces (IR 8425 Interface Access Control).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Enumerate local and network interfaces (web UI, local APIs, BLE GATT, UART, debug
+      ports, cloud APIs) and check each requires authentication, has no universal default
+      password, limits failed attempts, and that unused or debug interfaces are disabled in
+      release builds.
+    evidence:
+      - Authentication on every interface
+      - Debug and unused interfaces disabled
+    checks: [default-credentials, debug-interface-enabled, missing-rate-limiting]
+    crosswalk: ["etsi-en-303-645:5.1-1", "etsi-en-303-645:5.6-1", "iec-62443-4-2:CR 1.1"]
+
+  - ref: 8259A-5
+    title: Secure software update
+    requirement: >
+      The product's software can be updated by authorised entities using a secure and
+      configurable mechanism that verifies update integrity and authenticity (IR 8425
+      Software Update).
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Check the OTA mechanism verifies signatures before installing (MCUboot, ESP-IDF
+      secure boot v2, SWUpdate or RAUC signed bundles), protects against rollback, covers
+      device firmware and app, and lets users enable automatic updates. Flag update code
+      without signature checks or downloaded over cleartext.
+    evidence:
+      - Signed updates verified on device
+      - Automatic update option
+    checks: [firmware-update-unsigned, cleartext-transport]
+    artifacts: [update-policy]
+    crosswalk: ["etsi-en-303-645:5.3-10", "eu-cra:AnnexI.I.2(c)", "iec-62443-4-2:EDR 3.10"]
+
+  - ref: 8259A-6
+    title: Cybersecurity state awareness
+    requirement: >
+      The product can report and capture information about its cybersecurity state, such
+      as security events and integrity failures, to support detection of incidents (IR 8425
+      Cybersecurity State Awareness).
+    category: logging-monitoring
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for security event logging on the device or backend (failed logins, update
+      failures, integrity check failures, configuration changes), secure transmission of
+      these events to the backend, and monitoring rules. Check that logs exclude secrets.
+    evidence:
+      - Security event logging and reporting
+    checks: [pii-in-logs]
+    crosswalk: ["eu-cra:AnnexI.I.2(l)", "iec-62443-4-2:CR 2.8"]
+
+  - ref: 8259B-1
+    title: Product cybersecurity documentation
+    requirement: >
+      The manufacturer creates and maintains documentation of the product's security
+      design, assumptions, risks, components, support and end-of-life plans, available to
+      customers as relevant (IR 8425 Documentation).
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for architecture and threat model documents, an SBOM, documented secure
+      configuration, and a public security page that summarises support and end-of-life
+      plans.
+    evidence:
+      - Security architecture and risk documentation
+      - Customer-facing security documentation
+    artifacts: [threat-model, architecture-doc, sbom, user-documentation]
+    crosswalk: ["eu-cra:Art.13(2)", "iec-62443-4-1:SR-2"]
+
+  - ref: 8259B-2
+    title: Information and query reception
+    requirement: >
+      The manufacturer can receive cybersecurity information and questions from customers
+      and others, including vulnerability reports (IR 8425 Information and Query
+      Reception).
+    category: vulnerability-management
+    severity: high
+    fixability: document
+    guidance: >
+      Look for SECURITY.md, a vulnerability disclosure policy and a reachable reporting
+      contact such as security.txt or a web form.
+    evidence:
+      - Published vulnerability reporting channel
+    artifacts: [security-policy]
+    crosswalk: ["etsi-en-303-645:5.2-1", "uk-psti:Sch1.2", "eu-cra:AnnexI.II.6"]
+
+  - ref: 8259B-3
+    title: Information dissemination
+    requirement: >
+      The manufacturer tells customers about updates, vulnerabilities, the support period
+      and end of support, through clear channels (IR 8425 Information Dissemination).
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a published support period, security advisories, release notes that flag
+      security fixes, and in-app or email notifications for updates and end of support.
+    evidence:
+      - Published support period and advisories
+      - Update notifications to users
+    artifacts: [update-policy, changelog]
+    crosswalk: ["etsi-en-303-645:5.3-13", "eu-cra:AnnexI.II.4"]
+
+  - ref: 8259B-4
+    title: Product education and awareness
+    requirement: >
+      The manufacturer educates customers on secure setup, use, maintenance and disposal of
+      the product (IR 8425 Product Education and Awareness).
+    category: transparency-documentation
+    severity: low
+    fixability: document
+    guidance: >
+      Look for setup and security guidance in the user documentation: changing
+      credentials, enabling updates, checking the security state, factory reset and data
+      removal before resale or disposal.
+    evidence:
+      - Security guidance in user documentation
+    artifacts: [user-documentation]
+    crosswalk: ["etsi-en-303-645:5.11-1"]
+
+  - ref: 8425-Scope
+    title: Outcomes cover the whole IoT product
+    requirement: >
+      IR 8425 applies the baseline to the IoT product as a whole: the device and the
+      product components needed to use it, such as the companion app, hub and cloud
+      backend, not only the device firmware.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Check that the security evidence in the repository covers each product component:
+      if the repository contains or calls a companion app and cloud API, verify their
+      authentication, update, data protection and logging too. Flag product components
+      that bypass device protections, such as a cloud API that sends commands to devices
+      without authenticating the user.
+    evidence:
+      - Security analysis covering device, app and backend
+    artifacts: [architecture-doc, threat-model]
+    crosswalk: ["eu-cra:Art.3(2)"]
+
+  - ref: 8259r1-A6
+    title: Ongoing support through end of life
+    requirement: >
+      The manufacturer supports product cybersecurity throughout the lifecycle and through
+      end of life, with an active vulnerability remediation programme and planned
+      end-of-support communication (IR 8259 Rev. 1 Activity 6).
+    category: vulnerability-management
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for a vulnerability handling process, dependency and SBOM monitoring, a
+      published support period, and an end-of-life plan that tells users what happens to
+      cloud services and updates when support ends.
+    evidence:
+      - Vulnerability remediation process
+      - End-of-support plan and communication
+    artifacts: [security-policy, update-policy, vulnerability-scanning]
+    crosswalk: ["eu-cra:Art.13(8)", "nist-ssdf:RV.2.2"]

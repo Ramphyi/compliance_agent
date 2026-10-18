@@ -1,0 +1,398 @@
+id: nist-ai-rmf
+title: Artificial Intelligence Risk Management Framework (AI RMF 1.0) with the Generative AI Profile
+shortTitle: NIST AI RMF
+version: AI RMF 1.0 (NIST AI 100-1, January 2023) and Generative AI Profile (NIST AI 600-1, July 2024)
+authority: National Institute of Standards and Technology (NIST)
+kind: guideline
+jurisdictions: [US, global]
+url: https://www.nist.gov/itl/ai-risk-management-framework
+textPolicy: open
+summary: >
+  The NIST AI RMF is a voluntary framework for managing risks of AI systems, organised in
+  four functions: GOVERN (culture, policy and accountability), MAP (context and risk
+  identification), MEASURE (testing, evaluation and tracking) and MANAGE (prioritising,
+  responding and monitoring). The Generative AI Profile (AI 600-1) adds twelve risks
+  specific to generative AI and suggested actions for each subcategory.
+applicability:
+  all:
+    - { not: { fact: aiUsage, in: [none] } }
+    - { fact: markets, in: [US] }
+applicabilityNote: >
+  Voluntary in the US, but widely referenced by federal procurement, state AI laws and
+  enterprise customers as the expected AI risk practice. Included by default for AI
+  products sold in the US; teams elsewhere can include it through a preset as a
+  practical risk method that maps well to ISO/IEC 42001 and the EU AI Act. Refs use the
+  AI RMF subcategory ids (for example MEASURE 2.7) and, for generative AI risks, the
+  section of AI 600-1 that describes the risk (for example GAI 2.9 Information
+  Security); suggested action ids such as MS-2.7-007 are cited in guidance. NIST had not
+  published a revision of AI 100-1 when this file was written; check the AI Resource
+  Center for newer profiles.
+keyDates:
+  - { date: "2023-01-26", note: "AI RMF 1.0 (NIST AI 100-1) released" }
+  - { date: "2024-07-26", note: "Generative AI Profile (NIST AI 600-1) released" }
+controls:
+  - ref: GOVERN 1.1
+    title: Legal and regulatory requirements for AI are known and documented
+    requirement: >
+      The organisation understands, manages and documents the legal and regulatory
+      requirements that apply to its AI systems.
+    category: ai-governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a register of AI-relevant obligations per AI feature (privacy law, sector
+      rules, AI-specific laws such as the EU AI Act, Colorado or other state AI laws,
+      consumer protection, copyright and provider terms of use) with an owner and review
+      date. Check that provider terms that restrict use cases (for example prohibited
+      uses in OpenAI, Anthropic or Google usage policies) are recorded and reflected in
+      product limits.
+    evidence:
+      - Register of legal requirements per AI system with owners
+      - Record of model provider usage policies and how the product complies
+    artifacts: [ai-documentation]
+    crosswalk: ["iso-iec-42001:4.3", "eu-ai-act:Art.6"]
+
+  - ref: GOVERN 1.6
+    title: Inventory of AI systems
+    requirement: >
+      Mechanisms are in place to inventory AI systems, resourced according to risk.
+    category: ai-governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Compare a documented AI inventory (AI register, model cards, docs/ai/) with what the
+      code shows: every place an AI SDK is called (openai, anthropic, @google/genai,
+      bedrock-runtime, transformers, langchain), every model id in configuration, every
+      self-hosted model and every AI feature flag. Each entry should state purpose, owner,
+      model and version, data processed, risk tier and status. Undocumented model calls
+      found in code are a finding.
+    evidence:
+      - AI system inventory reconciled with model calls found in code
+    artifacts: [ai-documentation]
+    crosswalk: ["iso-iec-42001:A.4.2", "eu-ai-act:Art.6"]
+
+  - ref: GOVERN 6.1
+    title: Third-party AI risk policies
+    requirement: >
+      Policies and procedures address AI risks from third parties, including risks of
+      infringing a third party's intellectual property or other rights.
+    category: supply-chain
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for a supplier review of model providers and AI tools (data retention, training
+      use of customer data, security attestations, regional hosting, terms), a list of
+      approved models and providers (AI 600-1 action GV-6.1-007), and contracts or DPAs
+      with providers. In code, check that only approved providers and models are called
+      and that new providers cannot be introduced without review (centralised AI client,
+      configuration allowlist).
+    evidence:
+      - Approved AI provider and model list with supplier assessments
+      - Data processing agreements with model providers
+    artifacts: [processing-records]
+    crosswalk: ["iso-iec-42001:A.10.3", "soc2:CC9.2", "iso-iec-27001:A.5.23"]
+
+  - ref: MAP 1.1
+    title: Intended purpose and context documented
+    requirement: >
+      Intended purposes, beneficial uses, context-specific laws and norms, deployment
+      settings, users and potential positive and negative impacts are understood and
+      documented.
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a system card or design document per AI feature that states intended use
+      and explicit out-of-scope uses, target users, deployment setting, and assumptions.
+      Check that the product enforces out-of-scope boundaries where it can (system prompt
+      scope limits, topic classifiers, refusal behaviour tested in evals).
+    evidence:
+      - System card with intended and out-of-scope uses
+      - Tests showing out-of-scope requests are refused or redirected
+    artifacts: [ai-documentation]
+    crosswalk: ["iso-iec-42001:A.9.4", "eu-ai-act:Art.13"]
+
+  - ref: MAP 4.1
+    title: Risks of AI components and third-party data mapped
+    requirement: >
+      Approaches to map technology and legal risks of AI components, including third-party
+      data and software and intellectual property risks, are in place and documented.
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a threat model or risk analysis that covers each AI component: model
+      provider, embeddings, vector store, tools and plugins, training or retrieval data
+      sources, and licences of models and datasets. Check that model and dataset licences
+      in the inventory permit the actual use (commercial, fine-tuning, redistribution).
+    evidence:
+      - Component-level AI threat model and risk analysis
+      - Licence review for models and datasets
+    artifacts: [threat-model, third-party-notices]
+    crosswalk: ["owasp-llm-top10:LLM03", "iso-iec-42001:6.1.2"]
+
+  - ref: MAP 5.1
+    title: Likelihood and magnitude of impacts identified
+    requirement: >
+      The likelihood and magnitude of each identified beneficial and harmful impact is
+      identified and documented, using expected use, past incidents and external feedback.
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for an impact assessment that rates harms to users and affected people (wrong
+      advice, discrimination, privacy loss, manipulation, unsafe content) with likelihood
+      and severity, and references to public AI incident sources. Check that ratings drive
+      controls in code (higher-risk outputs routed to review, stricter filters for minors).
+    evidence:
+      - AI impact assessment with likelihood and severity ratings
+    artifacts: [risk-management-file, dpia]
+    crosswalk: ["iso-iec-42001:6.1.4", "eu-ai-act:Art.9"]
+
+  - ref: MEASURE 2.3
+    title: Performance measured in deployment-like conditions
+    requirement: >
+      AI system performance or assurance criteria are measured qualitatively or
+      quantitatively, demonstrated for conditions similar to deployment, and documented.
+    category: testing-verification
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for an evaluation suite with a representative dataset and thresholds (promptfoo,
+      deepeval, ragas, OpenAI evals, lm-eval-harness, pytest with golden sets) that runs in
+      CI on prompt or model changes and blocks regressions. Check that evaluation data
+      reflects real usage (anonymised production samples, languages and user groups served)
+      and that results are stored per model and prompt version.
+    evidence:
+      - Evaluation suite with thresholds run in CI
+      - Evaluation results recorded per model and prompt version
+    artifacts: [automated-tests, ci-pipeline]
+    crosswalk: ["iso-iec-42001:A.6.2.4", "eu-ai-act:Art.15"]
+
+  - ref: MEASURE 2.7
+    title: Security and resilience evaluated
+    requirement: >
+      AI system security and resilience are evaluated and documented.
+    category: ai-security
+    severity: high
+    fixability: code
+    guidance: >
+      Look for AI red-teaming and adversarial testing (AI 600-1 action MS-2.7-007): prompt
+      injection, jailbreaks, data exfiltration through tools, model extraction and data
+      poisoning. Tools include garak, PyRIT, promptfoo redteam and manual test logs.
+      Check that findings feed back into guardrails and regression tests. Also check
+      classic security controls around the AI stack: secrets for provider keys, network
+      egress limits for tools, and dependency scanning of AI libraries.
+    evidence:
+      - Red-team or adversarial test reports with remediation tracking
+      - Regression tests for previously found AI vulnerabilities
+    checks: [llm-prompt-injection-risk, llm-output-execution, hardcoded-secret]
+    artifacts: [automated-tests, threat-model]
+    crosswalk: ["owasp-llm-top10:LLM01", "eu-ai-act:Art.15", "iso-iec-42001:A.6.2.4"]
+
+  - ref: MEASURE 2.11
+    title: Fairness and bias evaluated
+    requirement: >
+      Fairness and bias are evaluated and results documented.
+    category: testing-verification
+    severity: medium
+    fixability: code
+    guidance: >
+      Where outputs affect people (ranking, eligibility, moderation, recommendations), look
+      for subgroup performance analysis (fairlearn MetricFrame, AIF360, per-language or
+      per-dialect evaluation for LLM features) and documented acceptable disparity
+      thresholds. Check that sensitive attributes used for testing are protected and not
+      used as model features unless justified.
+    evidence:
+      - Subgroup evaluation results and thresholds
+    artifacts: [automated-tests, ai-documentation]
+    crosswalk: ["eu-ai-act:Art.10", "iso-iec-42001:A.7.5"]
+
+  - ref: MANAGE 2.4
+    title: Ability to disengage or deactivate AI
+    requirement: >
+      Mechanisms and assigned responsibilities exist to supersede, disengage or deactivate
+      AI systems whose performance or outcomes are inconsistent with intended use.
+    category: resilience-availability
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a kill switch per AI feature (feature flags in LaunchDarkly, Unleash,
+      ConfigCat or a config table), a fallback path when the AI is disabled (manual
+      workflow, static response, previous model version), and a runbook naming who can
+      flip it. Check that the switch takes effect without a redeploy and that model or
+      prompt versions can be rolled back.
+    evidence:
+      - Feature flag or kill switch for each AI feature with documented fallback
+      - Rollback procedure for models and prompts
+    crosswalk: ["eu-ai-act:Art.14", "iso-iec-42001:A.6.2.6"]
+
+  - ref: MANAGE 4.1
+    title: Post-deployment monitoring
+    requirement: >
+      Post-deployment monitoring plans are implemented, including capture and evaluation of
+      user input, appeal and override, decommissioning, incident response, recovery and
+      change management.
+    category: logging-monitoring
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for production telemetry on AI features (Langfuse, LangSmith, Helicone,
+      OpenTelemetry GenAI semantic conventions, custom metrics) covering latency, error
+      rates, refusal rates, safety filter hits, user feedback and cost, with alerts on
+      anomalies. Check that users can report a bad answer or appeal an AI decision and
+      that these reports are triaged.
+    evidence:
+      - Monitoring dashboards and alerts for AI features
+      - User feedback and appeal channel with triage records
+    artifacts: [incident-response-plan]
+    crosswalk: ["eu-ai-act:Art.72", "iso-iec-42001:A.6.2.6", "soc2:CC7.2"]
+
+  - ref: MANAGE 4.3
+    title: AI incidents communicated and tracked
+    requirement: >
+      Incidents and errors are communicated to relevant AI actors, including affected
+      communities, and tracking, response and recovery processes are followed and
+      documented.
+    category: logging-monitoring
+    severity: medium
+    fixability: process
+    guidance: >
+      Check that the incident response plan covers AI-specific incidents (harmful output,
+      data leak through the model, prompt injection exploitation, provider outage or
+      model deprecation) with severity criteria, owners and communication templates, and
+      that legal reporting duties are mapped (AI 600-1 actions MG-4.3-001 and MG-4.3-003).
+    evidence:
+      - Incident response plan with AI incident categories and communication steps
+    artifacts: [incident-response-plan]
+    crosswalk: ["iso-iec-42001:A.8.4", "eu-ai-act:Art.72", "iso-iec-27001:A.5.24"]
+
+  - ref: GAI 2.2
+    title: Confabulation (Generative AI Profile)
+    requirement: >
+      Generative systems can confidently produce false or fabricated content. Organisations
+      should measure confabulation, ground outputs where accuracy matters and inform users
+      of limitations.
+    category: ai-governance
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for retrieval grounding with citations, groundedness checks on answers (for
+      example ragas faithfulness or a verifier model), abstention when sources are missing,
+      and user-facing notices about possible errors. In regulated domains check that
+      generated advice is reviewed or constrained to vetted content.
+    evidence:
+      - Groundedness evaluations and citations in answers
+      - User notice of possible inaccuracies
+    checks: [ai-disclosure-missing]
+    artifacts: [automated-tests]
+    crosswalk: ["owasp-llm-top10:LLM09"]
+
+  - ref: GAI 2.8
+    title: Information integrity and content provenance (Generative AI Profile)
+    requirement: >
+      Generative AI can produce content that is hard to distinguish from authentic content.
+      Organisations should apply and test content provenance techniques and disclose
+      AI-generated content in relevant contexts.
+    category: transparency-documentation
+    severity: medium
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [synthetic-content, chatbot] }
+    guidance: >
+      Check for content credentials (C2PA manifests), watermarks or metadata on generated
+      images, audio and video, and labels on generated content shown to the public (AI 600-1
+      actions MS-2.7-005 and MP-5.1-003). Check that the product's own processing does not
+      strip provenance data and that robustness of marks is tested.
+    evidence:
+      - Provenance marking on generated media and tests of its robustness
+      - Disclosure labels on AI-generated content
+    checks: [ai-disclosure-missing]
+    crosswalk: ["eu-ai-act:Art.50(2)", "eu-ai-act:Art.50(4)"]
+
+  - ref: GAI 2.9
+    title: Information security of generative AI (Generative AI Profile)
+    requirement: >
+      Generative AI lowers barriers for attacks and is itself exposed to prompt injection,
+      data poisoning and model extraction. Organisations should red-team, harden and
+      monitor generative AI components.
+    category: ai-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check the same areas as the OWASP LLM Top 10: separation of instructions and
+      untrusted content, least-privilege tools, output validation, rate limits and
+      monitoring for abuse. Check that red-team results (MS-2.7-007) and incident
+      procedures for third-party models (GV-6.2-003) exist.
+    evidence:
+      - AI red-team results and remediations
+      - Hardening measures for prompts, tools and outputs
+    checks: [llm-prompt-injection-risk, llm-output-execution]
+    artifacts: [threat-model]
+    crosswalk: ["owasp-llm-top10:LLM01", "owasp-llm-top10:LLM05", "owasp-llm-top10:LLM06"]
+
+  - ref: GAI 2.11
+    title: Obscene, degrading or abusive content (Generative AI Profile)
+    requirement: >
+      Generative AI can produce non-consensual intimate imagery and child sexual abuse
+      material. Organisations should implement content filters and incident processes to
+      prevent and respond to such output.
+    category: ai-security
+    severity: high
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [synthetic-content] }
+    guidance: >
+      Check for input and output filters for sexual content and minors on every generation
+      path (AI 600-1 action MG-3.2-005), hash matching against known abuse material where
+      images are uploaded, blocks on intimate edits of real people, and a reporting and
+      takedown process. Check that provider safety settings are not lowered.
+    evidence:
+      - Content filters on prompts and outputs for sexual content and minors
+      - Reporting and takedown procedure
+    artifacts: [incident-response-plan]
+    crosswalk: ["eu-ai-act:Art.5(1)(ba-bb)"]
+
+  - ref: GAI 2.4
+    title: Data privacy in generative AI (Generative AI Profile)
+    requirement: >
+      Generative AI can leak, infer or memorise personal data. Organisations should limit
+      personal data in training and prompts and test for leakage.
+    category: data-protection
+    severity: medium
+    fixability: code
+    when:
+      { not: { fact: dataCategories, in: [none] } }
+    guidance: >
+      Check data minimisation before prompting, provider retention and training opt-out
+      settings, redaction in prompt logs, and tests for training data extraction or
+      cross-user leakage where the organisation fine-tunes models on user data (AI 600-1
+      action MS-2.10-001).
+    evidence:
+      - Minimised prompts and redacted prompt logs
+      - Provider retention and training settings documented
+    checks: [pii-in-logs]
+    artifacts: [processing-records]
+    crosswalk: ["owasp-llm-top10:LLM02", "gdpr:Art.25"]
+
+  - ref: GAI 2.10
+    title: Intellectual property (Generative AI Profile)
+    requirement: >
+      Generative AI can reproduce copyrighted or licensed content and training can raise
+      intellectual property issues. Organisations should document data rights and manage
+      infringement risk.
+    category: governance
+    severity: low
+    fixability: document
+    when:
+      { fact: aiUsage, in: [own-models, general-purpose-model] }
+    guidance: >
+      For own training, check that dataset licences and sources are recorded and that
+      crawlers honour robots.txt and opt-outs. For generation features, check terms of
+      service on output ownership and any output filters for verbatim reproduction of
+      licensed content.
+    evidence:
+      - Dataset licence and source records
+      - Terms covering ownership and use of generated output
+    artifacts: [third-party-notices, terms-of-service]
+    crosswalk: ["eu-ai-act:Art.53(1)(c-d)"]

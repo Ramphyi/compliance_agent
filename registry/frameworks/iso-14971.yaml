@@ -1,0 +1,317 @@
+id: iso-14971
+title: Medical devices - Application of risk management to medical devices
+shortTitle: ISO 14971
+version: ISO 14971:2019 (third edition), with ISO/TR 24971:2020 guidance
+authority: ISO / IEC (ISO/TC 210 and IEC/SC 62A)
+kind: standard
+jurisdictions: [global, EU, US]
+url: https://www.iso.org/standard/72704.html
+textPolicy: paraphrased
+summary: >
+  ISO 14971 is the risk management process for medical devices, including software as a
+  medical device: plan, analyse (intended use, hazards, hazardous situations, risk
+  estimation), evaluate, control, judge overall residual risk, review, and keep
+  collecting production and post-production information. ISO/TR 24971 gives guidance on
+  applying it, including security-related risks. IEC 62304 relies on it for software risk
+  management.
+applicability:
+  any:
+    - { fact: medicalClass, in: [class-I, class-IIa, class-IIb, class-III] }
+    - { fact: productTypes, in: [medical-device] }
+applicabilityNote: >
+  Applies to every medical device manufacturer, whatever the class, and to software that
+  is or drives a medical device. In the EU, EN ISO 14971:2019/A11:2021 is a harmonised
+  standard under the MDR, so conformity gives a presumption of conformity with the risk
+  related GSPRs covered by its Annex Z. The FDA also expects ISO 14971 style risk
+  management in premarket submissions. ISO confirmed the 2019 edition at its 2025
+  systematic review. ISO lists a technical specification series (ISO TS 24971-1) under
+  development to replace ISO/TR 24971:2020. For code audits the useful questions are
+  whether software hazards (wrong output, corrupted or mismatched data, unavailability,
+  cybersecurity compromise) are in the risk file, and whether each software risk control
+  is implemented and verified in the repository. Requirement text is paraphrased; consult
+  the licensed standard for exact wording.
+keyDates:
+  - { date: "2022-05-11", note: "Implementing Decision (EU) 2022/757 adds EN ISO 14971:2019/A11:2021 to the MDR harmonised standards" }
+controls:
+  - ref: "4.4"
+    title: Risk management plan
+    requirement: >
+      Plan risk management for the specific device: scope and life cycle phases covered,
+      responsibilities, criteria for risk acceptability (including when probability
+      cannot be estimated), verification of risk controls, the method for judging
+      overall residual risk, and how production and post-production information is
+      collected and reviewed.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a risk management plan in the repository or design history file
+      (docs/risk/risk-management-plan.md, RMP.pdf). Check that it defines severity and
+      probability scales and an acceptability matrix, says how software failures are
+      handled when their probability cannot be estimated (a common approach, consistent
+      with IEC 62304 safety classification, is to assume the failure occurs and judge
+      the risk on severity and on the external controls), covers cybersecurity risk, and
+      names the post-market data sources. Flag a plan copied from
+      a template with no device-specific scope or criteria.
+    evidence:
+      - Device-specific risk management plan with acceptability criteria
+      - Defined approach for software and cybersecurity risk
+      - Assigned responsibilities and review points
+    artifacts: [risk-management-file]
+    crosswalk: ["iec-62304:7.1", "eu-mdr:GSPR17.2", "iec-81001-5-1:7.2"]
+
+  - ref: "4.5"
+    title: Risk management file with traceability
+    requirement: >
+      Keep a risk management file that, for each identified hazard, traces the risk
+      analysis, the risk evaluation, the risk control measures with their implementation
+      and verification, and the evaluation of residual risk.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a hazard log or risk table (risk-register.csv, hazards.yaml, an export from
+      a QMS tool) with stable IDs such as HAZ-007 and RC-012. Check that each risk control
+      ID appears as a software requirement and that a test or review record verifies it;
+      grep the code and tests for the RC IDs to see the trace end to end. Good looks like a
+      generated traceability report (hazard to risk control to requirement to test) that
+      CI rebuilds. Flag risk controls with no requirement, no test, or no owner.
+    evidence:
+      - Hazard log with stable IDs
+      - Trace from hazards to risk controls, requirements and verification
+      - Residual risk recorded per hazard
+    artifacts: [risk-management-file, requirements-traceability]
+    crosswalk: ["iec-62304:5.2.2", "eu-mdr:AnnexII"]
+
+  - ref: "5.2"
+    title: Intended use and reasonably foreseeable misuse
+    requirement: >
+      Document the intended use (medical indication, patient population, users, use
+      environment, operating principle) and the reasonably foreseeable misuse of the
+      device.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for an intended use or intended purpose statement (docs/intended-use.md, the
+      IFU, the regulatory section of README) and check that the software behaves
+      consistently with it: user roles in the code match the intended users, input ranges
+      and units match the intended population, and features outside the intended purpose
+      (for example unvalidated diagnostic suggestions) are absent or disabled. Foreseeable
+      misuse for software includes use on unsupported devices or OS versions, use by lay
+      users where clinicians are intended, copying results into other systems, ignoring
+      warnings, and shared accounts. Flag UI text or marketing in the repository that
+      claims a broader purpose than the documented intended use.
+    evidence:
+      - Intended use statement consistent with UI, labelling and code
+      - List of foreseeable misuse scenarios considered in the hazard analysis
+    artifacts: [user-documentation, risk-management-file]
+    crosswalk: ["eu-mdr:Art.2(1)", "eu-mdr:Rule11"]
+
+  - ref: "5.3"
+    title: Characteristics related to safety, including data and connectivity
+    requirement: >
+      Identify the qualitative and quantitative characteristics that could affect safety,
+      such as measurement ranges and accuracy, data inputs and outputs, interfaces,
+      connectivity, interoperability, and dependence on other systems.
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    guidance: >
+      Compare the documented characteristics with what the code shows: external
+      interfaces (HL7 v2, FHIR, DICOM, BLE, serial protocols, REST APIs), data stores,
+      calculation libraries, AI models, network dependencies, and supported platforms.
+      Each interface and dependency in the code should appear in the risk analysis as a
+      characteristic that can fail or be misused. Flag interfaces found in code (for
+      example an undocumented FHIR endpoint or a Bluetooth service) that are absent from
+      the risk analysis.
+    evidence:
+      - List of safety-related characteristics covering all interfaces and data flows
+      - Interface inventory consistent with the code
+    artifacts: [architecture-doc, risk-management-file]
+    crosswalk: ["eu-mdr:GSPR14.2(d)", "fda-cybersecurity:V.A.3"]
+
+  - ref: "5.4"
+    title: Hazards and hazardous situations, including software and security sources
+    requirement: >
+      Identify known and foreseeable hazards and the sequences of events, including
+      software failures and security compromise, that could lead to hazardous
+      situations, in both normal and fault conditions.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Check that the hazard analysis covers software-specific causes: wrong or delayed
+      output (calculation error, unit mix-up, rounding, time zone), data corruption or
+      loss, results attached to the wrong patient (identifier mismatch, caching across
+      sessions), missed or suppressed alarms, unavailability or degraded performance,
+      incorrect display on small screens, AI or algorithm error and drift, and
+      cybersecurity compromise (unauthorised modification of therapy settings, tampered
+      updates, ransomware making data unavailable, data exfiltration). ISO/TR 24971 treats
+      security vulnerabilities as a source of hazards, so look for a link between the
+      security risk assessment or threat model and the safety hazard log. Flag a hazard
+      analysis that only lists hardware or clinical hazards for a software product.
+    evidence:
+      - Hazard analysis with software failure modes and security-related hazard sources
+      - Link between the threat model and safety hazards
+      - Sequences of events from cause to harm for each hazardous situation
+    artifacts: [risk-management-file, threat-model]
+    crosswalk: ["iec-62304:7.1", "fda-cybersecurity:V.A.2", "iec-81001-5-1:7.2", "eu-mdr:GSPR17.2"]
+
+  - ref: "5.5"
+    title: Risk estimation
+    requirement: >
+      For each hazardous situation, estimate the risk from the severity of the possible
+      harm and the probability of its occurrence, using the method in the plan; where
+      probability cannot be estimated, document the possible consequences.
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    guidance: >
+      Check that each hazardous situation has a severity and probability (or a documented
+      reason why probability is not estimated for software failures) consistent with the
+      scales in the plan. For security-related hazards, look for an exploitability-based
+      estimate (for example CVSS or an attack-feasibility rating) feeding the safety
+      severity, rather than a probability guessed from nothing. Flag missing or
+      inconsistent ratings.
+    evidence:
+      - Severity and probability or justification for each hazardous situation
+      - Exploitability-based assessment for security-related hazards
+    artifacts: [risk-management-file]
+    crosswalk: ["fda-cybersecurity:V.A.2", "iec-81001-5-1:7.2"]
+
+  - ref: "6"
+    title: Risk evaluation against acceptability criteria
+    requirement: >
+      Evaluate each estimated risk against the acceptability criteria in the plan and
+      decide whether risk control is needed.
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    guidance: >
+      Check that every hazardous situation has an acceptability decision that follows the
+      plan's matrix and that unacceptable risks lead to risk control measures. Flag risks
+      marked acceptable that the matrix would reject, or decisions with no rationale.
+    evidence:
+      - Acceptability decision per risk following the plan's criteria
+    artifacts: [risk-management-file]
+    crosswalk: ["iec-62304:7.1"]
+
+  - ref: "7.1"
+    title: Risk control option analysis in priority order
+    requirement: >
+      Select risk control measures in priority order: first inherently safe design, then
+      protective measures in the device or its manufacture, then information for safety
+      and, where appropriate, training. Information for safety alone is not acceptable
+      when a design or protective measure is practicable.
+    category: functional-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look in the code for design-level controls before accepting warnings in the IFU:
+      input validation and plausibility checks on clinical values (range checks,
+      unit-safe types), double entry or confirmation for high-risk actions, checksums or
+      CRCs on stored and transmitted clinical data, patient identity cross-checks before
+      displaying results, timeouts and watchdogs, safe defaults and fail-safe states,
+      alarm escalation, authentication and authorisation on settings that affect therapy,
+      and signed updates. Check that risk controls implemented in software are documented
+      as requirements and verified (IEC 62304 5.2.3 and 7.3). Flag high-severity hazards
+      controlled only by a warning label or IFU sentence.
+    evidence:
+      - Rationale for the chosen control option per hazard
+      - Design and protective controls implemented in code with requirement IDs
+      - Information for safety used only where design controls are impracticable
+    checks: [sql-injection-risk, unsafe-deserialization, jwt-unverified]
+    artifacts: [risk-management-file, requirements-traceability]
+    crosswalk: ["iec-62304:5.2.2", "fda-cybersecurity:V.B.1", "eu-mdr:GSPR17.1"]
+
+  - ref: "7.2"
+    title: Implementation and verification of risk control measures
+    requirement: >
+      Implement the selected risk control measures and verify both that each is
+      implemented and that it is effective in reducing the risk; record the results in
+      the risk management file.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Search tests for risk control IDs (RC-xxx tags, test names, markers) and check there
+      is at least one test that demonstrates effectiveness: for example a test that feeds
+      an out-of-range value and checks it is rejected, a test that corrupts a stored
+      record and checks it is detected, a test that a session cannot display another
+      patient's data, or a security test that an unauthenticated request cannot change a
+      therapy parameter. Flag risk controls verified only by inspection when a test is
+      practicable, and controls whose tests are skipped or disabled.
+    evidence:
+      - Tests or review records for each risk control, tagged with its ID
+      - Effectiveness evidence, not only implementation evidence
+    artifacts: [automated-tests, requirements-traceability, risk-management-file]
+    crosswalk: ["iec-62304:7.1", "iec-81001-5-1:5.7.3"]
+
+  - ref: "8"
+    title: Overall residual risk and disclosure
+    requirement: >
+      After all controls are in place, evaluate the overall residual risk against the
+      benefits of the intended use using the method in the plan, and inform users of
+      significant residual risks in the accompanying documentation.
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for an overall residual risk evaluation and a benefit-risk conclusion in the
+      risk management report, and check that significant residual risks (for example
+      dependence on network availability, limits of algorithm accuracy, need for
+      clinician confirmation, known residual anomalies) are disclosed in the IFU, in-app
+      help or release notes. Flag residual risks that appear in the risk file but not in
+      user-facing documentation.
+    evidence:
+      - Overall residual risk evaluation with benefit-risk rationale
+      - Disclosure of significant residual risks in user documentation
+    artifacts: [risk-management-file, user-documentation]
+    crosswalk: ["iec-62304:5.8.2", "eu-mdr:GSPR23"]
+
+  - ref: "9"
+    title: Risk management review and report
+    requirement: >
+      Before commercial release, review that the plan was carried out, the overall
+      residual risk is acceptable, and methods are in place to collect production and
+      post-production information, and record the result in a risk management report.
+    category: governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a risk management report per release or major version, signed off before
+      the release tag. Check that the report references the software version and that
+      a new report or an addendum exists when significant changes are released. Flag
+      releases made after significant changes with no updated report.
+    evidence:
+      - Risk management report referencing the released version
+      - Sign-off before release
+    artifacts: [risk-management-file, changelog]
+    crosswalk: ["iec-62304:5.8.2"]
+
+  - ref: "10"
+    title: Production and post-production information
+    requirement: >
+      Actively collect and review information about the device in use (complaints,
+      field data, incidents, state of the art, published vulnerabilities), decide
+      whether it affects safety or previously estimated risks, and act on it, including
+      updating the risk management file.
+    category: logging-monitoring
+    severity: high
+    fixability: process
+    guidance: >
+      Look for the data sources wired into the product and process: crash and error
+      reporting (Sentry, Crashlytics), product telemetry for safety-relevant events
+      (alarm failures, rejected inputs, integrity check failures), support ticket
+      integration, and vulnerability feeds for SOUP (Dependabot, OSV, CISA KEV). Check
+      that there is a documented review cadence and that findings flow into the risk file
+      and problem resolution. Make sure telemetry does not leak health data
+      unnecessarily. Flag products with no field feedback mechanism.
+    evidence:
+      - Post-production information sources and review cadence
+      - Records of risk file updates triggered by field data
+      - Vulnerability monitoring for third-party components
+    checks: [pii-in-logs]
+    artifacts: [vulnerability-scanning, risk-management-file]
+    crosswalk: ["iec-62304:6.2.1", "eu-mdr:Art.83", "fda-cybersecurity:524B(b)(1)"]

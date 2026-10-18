@@ -1,0 +1,403 @@
+{
+  "name": "assay-vscode",
+  "displayName": "Assay Compliance",
+  "description": "Self-hosted compliance audits in the editor: findings in the Problems panel, human review actions, the Assay dashboard, and an MCP server for agent mode.",
+  "version": "0.1.0",
+  "publisher": "assay-internal",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "compliance",
+    "audit",
+    "security",
+    "mcp",
+    "regulation"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "workspaceContains:**/*",
+    "onStartupFinished",
+    "onView:assay.findings",
+    "onView:assay.status",
+    "onCommand:assay.openDashboard",
+    "onCommand:assay.runAudit",
+    "onCommand:assay.runAgentAudit",
+    "onCommand:assay.setApiKey"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Assay starts a local server that reads the workspace and its audit state, and can run approved build and test commands. It only runs in trusted workspaces."
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "assay",
+          "title": "Assay",
+          "icon": "media/assay.svg"
+        }
+      ]
+    },
+    "views": {
+      "assay": [
+        {
+          "id": "assay.findings",
+          "name": "Findings",
+          "icon": "media/assay.svg",
+          "contextualTitle": "Assay"
+        },
+        {
+          "id": "assay.status",
+          "name": "Overview",
+          "icon": "media/assay.svg",
+          "contextualTitle": "Assay"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "assay.findings",
+        "contents": "Open a folder to audit it with Assay.\n[Open Folder](command:vscode.openFolder)",
+        "when": "!assay.hasFolder"
+      },
+      {
+        "view": "assay.findings",
+        "contents": "Starting the Assay server\u2026",
+        "when": "assay.hasFolder && assay.serverState == starting"
+      },
+      {
+        "view": "assay.findings",
+        "contents": "The Assay server is not running. The Assay output channel has the details.\n[Restart Server](command:assay.restartServer)",
+        "when": "assay.hasFolder && assay.serverState == error"
+      },
+      {
+        "view": "assay.findings",
+        "contents": "No audit yet for this folder.\n[Run Audit (Detectors)](command:assay.runAudit)\n[Run Agent Audit](command:assay.runAgentAudit)\nDetectors run locally. An agent audit needs a model: [set an Anthropic API key](command:assay.setApiKey) or ask Copilot Chat in agent mode to \"audit this project with Assay\".",
+        "when": "assay.hasFolder && assay.serverState == running && !assay.hasAudit"
+      },
+      {
+        "view": "assay.findings",
+        "contents": "The latest audit has no findings.\n[Run Audit Again](command:assay.runAudit)\n[Open Dashboard](command:assay.openDashboard)",
+        "when": "assay.hasFolder && assay.serverState == running && assay.hasAudit"
+      }
+    ],
+    "commands": [
+      {
+        "command": "assay.openDashboard",
+        "title": "Open Dashboard",
+        "category": "Assay",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "assay.openDashboardExternal",
+        "title": "Open Dashboard in Browser",
+        "category": "Assay",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "assay.runAudit",
+        "title": "Run Audit (Detectors)",
+        "category": "Assay",
+        "icon": "$(play)"
+      },
+      {
+        "command": "assay.runAgentAudit",
+        "title": "Run Agent Audit",
+        "category": "Assay",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "assay.refresh",
+        "title": "Refresh",
+        "category": "Assay",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "assay.confirmFinding",
+        "title": "Confirm Finding",
+        "category": "Assay",
+        "icon": "$(check)"
+      },
+      {
+        "command": "assay.rejectFinding",
+        "title": "Reject Finding\u2026",
+        "category": "Assay",
+        "icon": "$(close)"
+      },
+      {
+        "command": "assay.reinvestigateFinding",
+        "title": "Re-investigate Finding\u2026",
+        "category": "Assay",
+        "icon": "$(search)"
+      },
+      {
+        "command": "assay.modifyFinding",
+        "title": "Modify Finding in Dashboard",
+        "category": "Assay",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "assay.openFindingLocation",
+        "title": "Go to Finding Location",
+        "category": "Assay",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "assay.fixConfirmed",
+        "title": "Fix Confirmed Findings",
+        "category": "Assay",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "assay.acceptFix",
+        "title": "Accept Fix",
+        "category": "Assay",
+        "icon": "$(pass)"
+      },
+      {
+        "command": "assay.revertFix",
+        "title": "Revert Fix",
+        "category": "Assay",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "assay.setApiKey",
+        "title": "Set Anthropic API Key",
+        "category": "Assay",
+        "icon": "$(key)"
+      },
+      {
+        "command": "assay.setOpenAIKey",
+        "title": "Set OpenAI API Key",
+        "category": "Assay",
+        "icon": "$(key)"
+      },
+      {
+        "command": "assay.clearApiKey",
+        "title": "Clear API Keys",
+        "category": "Assay"
+      },
+      {
+        "command": "assay.showReport",
+        "title": "Show Report",
+        "category": "Assay",
+        "icon": "$(output)"
+      },
+      {
+        "command": "assay.restartServer",
+        "title": "Restart Server",
+        "category": "Assay",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "assay.selectFolder",
+        "title": "Select Workspace Folder",
+        "category": "Assay",
+        "icon": "$(root-folder)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "assay.openDashboardExternal",
+          "when": "assay.serverState == running"
+        },
+        {
+          "command": "assay.selectFolder",
+          "when": "workspaceFolderCount > 1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "assay.runAudit",
+          "when": "view == assay.findings",
+          "group": "navigation@1"
+        },
+        {
+          "command": "assay.openDashboard",
+          "when": "view == assay.findings || view == assay.status",
+          "group": "navigation@2"
+        },
+        {
+          "command": "assay.refresh",
+          "when": "view == assay.findings || view == assay.status",
+          "group": "navigation@3"
+        },
+        {
+          "command": "assay.runAgentAudit",
+          "when": "view == assay.findings",
+          "group": "1_audit@1"
+        },
+        {
+          "command": "assay.fixConfirmed",
+          "when": "view == assay.findings",
+          "group": "1_audit@2"
+        },
+        {
+          "command": "assay.showReport",
+          "when": "view == assay.findings || view == assay.status",
+          "group": "1_audit@3"
+        },
+        {
+          "command": "assay.selectFolder",
+          "when": "(view == assay.findings || view == assay.status) && workspaceFolderCount > 1",
+          "group": "2_server@1"
+        },
+        {
+          "command": "assay.setApiKey",
+          "when": "view == assay.findings || view == assay.status",
+          "group": "2_server@2"
+        },
+        {
+          "command": "assay.restartServer",
+          "when": "view == assay.findings || view == assay.status",
+          "group": "2_server@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "assay.confirmFinding",
+          "when": "view == assay.findings && viewItem == finding.open",
+          "group": "inline@1"
+        },
+        {
+          "command": "assay.rejectFinding",
+          "when": "view == assay.findings && viewItem == finding.open",
+          "group": "inline@2"
+        },
+        {
+          "command": "assay.reinvestigateFinding",
+          "when": "view == assay.findings && viewItem == finding.open",
+          "group": "inline@3"
+        },
+        {
+          "command": "assay.acceptFix",
+          "when": "view == assay.findings && viewItem == finding.fix_ready",
+          "group": "inline@1"
+        },
+        {
+          "command": "assay.revertFix",
+          "when": "view == assay.findings && viewItem == finding.fix_ready",
+          "group": "inline@2"
+        },
+        {
+          "command": "assay.confirmFinding",
+          "when": "view == assay.findings && viewItem =~ /^finding\\.(open|withdrawn|fix_failed|reinvestigating)$/",
+          "group": "1_review@1"
+        },
+        {
+          "command": "assay.rejectFinding",
+          "when": "view == assay.findings && viewItem =~ /^finding\\.(open|confirmed|withdrawn|fix_failed|reinvestigating)$/",
+          "group": "1_review@2"
+        },
+        {
+          "command": "assay.reinvestigateFinding",
+          "when": "view == assay.findings && viewItem =~ /^finding\\.(open|confirmed|withdrawn|fix_failed|rejected)$/",
+          "group": "1_review@3"
+        },
+        {
+          "command": "assay.acceptFix",
+          "when": "view == assay.findings && viewItem == finding.fix_ready",
+          "group": "1_review@4"
+        },
+        {
+          "command": "assay.revertFix",
+          "when": "view == assay.findings && viewItem == finding.fix_ready",
+          "group": "1_review@5"
+        },
+        {
+          "command": "assay.openFindingLocation",
+          "when": "view == assay.findings && viewItem =~ /^finding\\./",
+          "group": "2_open@1"
+        },
+        {
+          "command": "assay.modifyFinding",
+          "when": "view == assay.findings && viewItem =~ /^finding\\./",
+          "group": "2_open@2"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "assay.openDashboardExternal",
+          "when": "activeWebviewPanelId == assay.dashboard",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Assay",
+      "properties": {
+        "assay.provider": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "anthropic",
+            "openai",
+            "openai-compatible",
+            "none"
+          ],
+          "enumDescriptions": [
+            "Anthropic when its key is set, else an OpenAI-compatible endpoint when a base URL is set, else OpenAI when its key is set, else none.",
+            "Claude through the Anthropic API (Assay: Set Anthropic API Key or ANTHROPIC_API_KEY).",
+            "OpenAI's API through the Responses API, with web search for research (Assay: Set OpenAI API Key or OPENAI_API_KEY).",
+            "An on-premise or self-hosted model behind an OpenAI-compatible API (set Assay: Openai Base Url and Assay: Model).",
+            "No model. Detectors run locally; agent mode in Copilot Chat can do the reasoning through MCP."
+          ],
+          "default": "auto",
+          "description": "Model provider for agent audits, re-investigations and fixes run by the Assay server."
+        },
+        "assay.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model id. Empty means the provider default (claude-opus-5-5 for Anthropic, gpt-5.5 for OpenAI). Required for openai-compatible."
+        },
+        "assay.openaiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Base URL of an OpenAI-compatible endpoint, for example http://gpu-box:8000/v1. Only settable in user settings, so a repository cannot redirect code excerpts."
+        },
+        "assay.stateDir": {
+          "type": "string",
+          "default": "",
+          "description": "Where audit state lives. Empty means <folder>/.assay. Relative paths resolve against the workspace folder."
+        },
+        "assay.diagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show findings that need attention in the Problems panel and as squiggles in the editor."
+        },
+        "assay.reviewerName": {
+          "type": "string",
+          "default": "",
+          "description": "Name recorded in the audit trail for your review decisions. Empty means your OS user name."
+        }
+      }
+    },
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "assay",
+        "label": "Assay compliance audit"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "package": "node build.mjs && vsce package --no-dependencies --allow-missing-repository --out ../../dist/assay-vscode.vsix"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.101.0",
+    "@vscode/vsce": "^4.0.0"
+  }
+}

@@ -1,0 +1,394 @@
+id: soc2
+title: SOC 2 - Trust Services Criteria for Security, Availability, Processing Integrity, Confidentiality and Privacy
+shortTitle: SOC 2
+version: 2017 Trust Services Criteria (with revised points of focus, 2022)
+authority: AICPA (American Institute of Certified Public Accountants)
+kind: contract
+jurisdictions: [US, global]
+url: https://www.aicpa-cima.com/resources/download/2017-trust-services-criteria-with-revised-points-of-focus-2022
+textPolicy: paraphrased
+summary: >
+  SOC 2 is an attestation report in which an independent CPA firm examines a service
+  organisation's controls against the AICPA Trust Services Criteria. The Security common
+  criteria (CC1 to CC9) are always in scope; Availability, Processing Integrity,
+  Confidentiality and Privacy are added as the organisation chooses. A Type 2 report covers
+  operating effectiveness over a period, typically 3 to 12 months.
+applicability:
+  any:
+    - { fact: certificationsTarget, in: [soc2] }
+    - all:
+        - { fact: productTypes, in: [saas, backend-api] }
+        - { fact: markets, in: [US] }
+        - { fact: audience, in: [businesses, healthcare-providers, public-sector] }
+applicabilityNote: >
+  Not a law: SOC 2 is demanded contractually, mainly by US business customers during
+  vendor security reviews. Included when the organisation targets SOC 2, and recommended
+  for hosted services or APIs sold to US businesses, where a SOC 2 Type 2 report is the
+  usual procurement expectation. The criteria are principles; the auditor tests the
+  organisation's own controls against them, so evidence must show controls operating over
+  time (tickets, logs, reviews), not only configuration. This file covers the common
+  criteria with emphasis on CC6 logical access, CC7 system operations, CC8 change
+  management and CC9 risk mitigation, plus Availability (A1) and Confidentiality (C1).
+  Criteria text is AICPA copyright and is paraphrased here.
+controls:
+  - ref: CC2.2
+    title: Internal communication of security responsibilities
+    requirement: >
+      The entity communicates information about its objectives, policies and
+      responsibilities for internal control, including security, to the people who need it.
+    category: governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for security policies in a known location (security policy, acceptable use,
+      access control, incident response, secure development), a SECURITY.md or engineering
+      handbook that tells developers their security duties, and evidence of acknowledgement
+      and training. Check that CODEOWNERS and on-call ownership are defined.
+    evidence:
+      - Published security policies with owners and review dates
+      - Developer-facing security responsibilities and training records
+    artifacts: [security-policy, coding-standard]
+    crosswalk: ["iso-iec-27001:4.3", "iso-iec-42001:A.3.2"]
+
+  - ref: CC3.2
+    title: Risk identification and analysis
+    requirement: >
+      The entity identifies risks to achieving its objectives across the organisation and
+      analyses them to decide how they should be managed, including risks from vendors and
+      business partners and potential for fraud (CC3.3).
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for an annual risk assessment and risk register covering the system in scope:
+      threats to the product (from a threat model), infrastructure, vendors, people and
+      fraud, with likelihood, impact, owner and mitigation linked to controls. Check that
+      significant changes (new data types, new regions, AI features) trigger reassessment
+      (CC3.4).
+    evidence:
+      - Risk assessment and register with mitigations mapped to controls
+      - Threat model for the in-scope system
+    artifacts: [risk-management-file, threat-model]
+    crosswalk: ["iso-iec-27001:6.1.2"]
+
+  - ref: CC4.1
+    title: Ongoing monitoring of controls
+    requirement: >
+      The entity selects, develops and performs ongoing or separate evaluations to confirm
+      that controls are present and functioning, and communicates deficiencies for
+      correction (CC4.2).
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for continuous control monitoring (compliance automation platforms, cloud
+      security posture tools, scheduled checks of branch protection, MFA and encryption
+      settings), periodic access reviews, internal audits or readiness assessments, and a
+      tracked remediation log for deficiencies.
+    evidence:
+      - Automated control monitoring or periodic control testing
+      - Deficiency tracking with remediation
+    crosswalk: ["iso-iec-27001:9.2"]
+
+  - ref: CC6.1
+    title: Logical access security architecture
+    requirement: >
+      The entity implements logical access controls over protected information assets:
+      asset inventory, identification and authentication of users and services, access
+      restricted by role, network segmentation, encryption of data at rest and protection
+      of keys.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check application authentication (SSO or strong passwords with MFA, brute-force
+      protection, secure sessions, verified tokens), authorisation (deny by default, role
+      and object-level checks, tenant isolation), service credentials held in a secret
+      manager, encryption at rest flags on databases, buckets and volumes in infrastructure
+      as code, and key management through KMS. Flag hardcoded secrets, default credentials,
+      unverified JWTs and wildcard IAM policies.
+    evidence:
+      - MFA and SSO for workforce access; strong authentication for customers
+      - Deny-by-default authorisation and encryption at rest with managed keys
+    checks: [hardcoded-secret, default-credentials, jwt-unverified, weak-password-hash, missing-rate-limiting]
+    crosswalk: ["iso-iec-27001:A.8.5", "iso-iec-27001:A.8.3", "owasp-asvs:V8.2.1", "owasp-asvs:V6.3.3"]
+
+  - ref: CC6.2
+    title: User registration and deprovisioning
+    requirement: >
+      Before issuing credentials, the entity registers and authorises new internal and
+      external users, and removes access when it is no longer authorised.
+    category: authentication-access
+    severity: high
+    fixability: process
+    guidance: >
+      For workforce access, look for joiner and leaver procedures tied to HR events, SSO
+      with SCIM provisioning to production tools and cloud consoles, and deprovisioning
+      evidence. For customer-facing admin features, check that disabling a user terminates
+      their sessions and tokens, and that invitations expire.
+    evidence:
+      - Provisioning and deprovisioning records linked to HR events
+      - Session and token revocation on account disable
+    crosswalk: ["owasp-asvs:V7.4.1", "iso-iec-27001:A.8.2"]
+
+  - ref: CC6.3
+    title: Role-based access and least privilege
+    requirement: >
+      The entity authorises, modifies or removes access to data, software and functions
+      based on roles and responsibilities, applying least privilege and segregation of
+      duties, with periodic access reviews.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check IAM roles in infrastructure as code for least privilege (no wildcard actions,
+      separate deploy and admin roles, no long-lived admin keys), production database
+      access limited to break-glass with approval, CI deploy credentials scoped per
+      environment, and in-application roles that separate admin, support and user
+      functions. Look for quarterly access review records.
+    evidence:
+      - Least-privilege IAM and application roles
+      - Periodic access review records
+    crosswalk: ["iso-iec-27001:A.8.2", "owasp-asvs:V8.2.1"]
+
+  - ref: CC6.6
+    title: Protection against threats from outside the system boundary
+    requirement: >
+      The entity implements logical access controls to protect against threats from
+      sources outside its system boundaries, such as restricting connections, encrypting
+      remote access and filtering traffic.
+    category: communications-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check that only intended services are internet-facing (load balancers, API gateway),
+      administrative and database ports are not open to 0.0.0.0/0, a WAF protects public
+      web endpoints, remote administration uses SSO-backed access (SSM Session Manager,
+      IAP, bastion with MFA) rather than open SSH, CORS is restrictive, and security
+      headers are set on web responses.
+    evidence:
+      - Restricted ingress rules and WAF on public endpoints
+      - Secure remote administration path
+    checks: [cors-wildcard, missing-security-headers]
+    crosswalk: ["iso-iec-27001:A.8.20", "iso-iec-27001:A.8.22", "owasp-asvs:V3.4.2"]
+
+  - ref: CC6.7
+    title: Protection of data in transmission and movement
+    requirement: >
+      The entity restricts the transmission, movement and removal of information to
+      authorised parties and protects it during transmission, typically with encryption.
+    category: communications-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check TLS 1.2 or newer on all external and internal connections, HSTS for web
+      endpoints, certificate verification left enabled in all clients, encrypted
+      connections to databases and brokers, and controls on data export features
+      (authorisation, logging, rate limits).
+    evidence:
+      - TLS everywhere with verification enabled
+      - Controlled and logged data exports
+    checks: [cleartext-transport, tls-verification-disabled, weak-cipher]
+    crosswalk: ["iso-iec-27001:A.8.24", "owasp-asvs:V12.2.1", "owasp-asvs:V12.3.2"]
+
+  - ref: CC6.8
+    title: Prevention and detection of unauthorised or malicious software
+    requirement: >
+      The entity implements controls to prevent or detect the introduction of unauthorised
+      or malicious software.
+    category: supply-chain
+    severity: medium
+    fixability: code
+    guidance: >
+      Check dependency pinning and lockfiles, dependency and container image scanning,
+      restricted package sources, signed or provenance-attested build artefacts, CI
+      actions pinned to commit SHAs, and malware scanning of user uploads. Check that only
+      CI can deploy to production.
+    evidence:
+      - Locked, scanned dependencies and images
+      - Pinned CI actions and controlled deployment path
+    checks: [unpinned-dependencies, docker-root-user]
+    artifacts: [dependency-lockfile, vulnerability-scanning, sbom]
+    crosswalk: ["iso-iec-27001:A.8.7", "nist-ssdf:PS.2.1"]
+
+  - ref: CC7.1
+    title: Vulnerability and configuration monitoring
+    requirement: >
+      The entity uses detection and monitoring procedures to identify configuration changes
+      that introduce vulnerabilities and newly discovered vulnerabilities.
+    category: vulnerability-management
+    severity: high
+    fixability: code
+    guidance: >
+      Look for SAST, dependency, container and infrastructure-as-code scanning in CI,
+      periodic external vulnerability scans or penetration tests, cloud configuration
+      monitoring, and remediation SLAs with evidence of fixes. Check that debug settings
+      and insecure defaults are not present in production configuration.
+    evidence:
+      - Scanning in CI and periodic penetration tests
+      - Remediation tracked against SLAs
+    checks: [debug-enabled]
+    artifacts: [vulnerability-scanning, static-analysis-config, dependency-update-automation]
+    crosswalk: ["iso-iec-27001:A.8.8", "iso-iec-27001:A.8.9", "owasp-asvs:V15.2.1"]
+
+  - ref: CC7.2
+    title: Monitoring for anomalies and security events
+    requirement: >
+      The entity monitors system components and their operation for anomalies indicating
+      malicious acts, natural disasters or errors, and analyses them to determine whether
+      they are security events.
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Check structured logging of security events (authentication, authorisation failures,
+      admin actions), central log aggregation with retention, cloud audit logs enabled,
+      alerting rules on suspicious activity and availability, and that logs exclude secrets
+      and unnecessary personal data.
+    evidence:
+      - Central security logging with alerting
+      - Cloud audit logs enabled with retention
+    checks: [pii-in-logs]
+    crosswalk: ["iso-iec-27001:A.8.15", "iso-iec-27001:A.8.16", "owasp-asvs:V16.3.1"]
+
+  - ref: CC7.4
+    title: Incident response
+    requirement: >
+      The entity responds to identified security incidents through a defined programme to
+      understand, contain, remediate and communicate them, evaluates events to decide
+      whether they are incidents (CC7.3) and recovers from incidents (CC7.5).
+    category: logging-monitoring
+    severity: high
+    fixability: document
+    guidance: >
+      Look for an incident response plan with roles, severity levels, communication to
+      customers and regulators, containment and recovery steps, tabletop exercise records
+      and post-incident reviews. Check that alerts route to an on-call rotation.
+    evidence:
+      - Incident response plan and on-call routing
+      - Exercise and post-incident review records
+    artifacts: [incident-response-plan]
+    crosswalk: ["iso-iec-27001:A.5.24", "nis2:Art.23"]
+
+  - ref: CC8.1
+    title: Change management
+    requirement: >
+      The entity authorises, designs, develops or acquires, configures, documents, tests,
+      approves and implements changes to infrastructure, data, software and procedures.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Check branch protection with required peer review and status checks, no direct
+      pushes to the default branch, CI that runs tests and security scans, deployments to
+      production only through the pipeline with environment approvals, infrastructure
+      changes via reviewed code, versioned database migrations, and emergency change
+      procedures. The auditor samples changes, so PR history must show approval before
+      deployment.
+    evidence:
+      - Branch protection and required reviews
+      - CI and CD pipeline with tests and approval gates
+    artifacts: [code-review-process, ci-pipeline, automated-tests, changelog]
+    crosswalk: ["iso-iec-27001:A.8.32", "iso-iec-27001:A.8.25", "nist-ssdf:PS.1.1"]
+
+  - ref: CC9.2
+    title: Vendor and business partner risk management
+    requirement: >
+      The entity assesses and manages risks from vendors and business partners, including
+      security requirements in agreements and periodic review of their performance and
+      attestations.
+    category: supply-chain
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for a vendor inventory covering subprocessors and critical providers (cloud,
+      email, payments, analytics, AI model providers), due diligence records (SOC 2 or ISO
+      reports reviewed annually), DPAs and security clauses, and a published subprocessor
+      list. Compare with SDKs and services found in code.
+    evidence:
+      - Vendor inventory with risk ratings and attestation reviews
+      - Agreements with security and confidentiality terms
+    artifacts: [processing-records, third-party-notices]
+    crosswalk: ["iso-iec-27001:A.5.23", "nist-ai-rmf:GOVERN 6.1", "iso-iec-42001:A.10.3"]
+
+  - ref: A1.1
+    title: Capacity management
+    requirement: >
+      The entity maintains, monitors and evaluates current processing capacity and use of
+      system components to manage capacity demand and enable additional capacity to meet
+      its availability objectives.
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    when:
+      { fact: productTypes, in: [saas, backend-api, web-app] }
+    guidance: >
+      Check autoscaling configuration (Kubernetes HPA, cloud autoscaling groups, serverless
+      concurrency limits), resource requests and limits, capacity and saturation alerts,
+      rate limits and quotas that protect shared capacity, and load-test results for
+      critical paths.
+    evidence:
+      - Autoscaling and resource limits defined in code
+      - Capacity alerts and load-test results
+    checks: [missing-rate-limiting]
+    crosswalk: ["owasp-asvs:V2.4.1", "owasp-llm-top10:LLM10"]
+
+  - ref: A1.2
+    title: Backup and recovery infrastructure
+    requirement: >
+      The entity designs, implements and maintains environmental protections, backups and
+      recovery infrastructure to meet availability objectives, and tests recovery plans
+      (A1.3).
+    category: resilience-availability
+    severity: high
+    fixability: code
+    when:
+      { fact: productTypes, in: [saas, backend-api, web-app] }
+    guidance: >
+      Check automated database backups and point-in-time recovery in infrastructure as code,
+      multi-AZ or multi-region deployment for critical components, backup encryption and
+      separation, a documented disaster recovery plan with RPO and RTO, and records of
+      restore and failover tests.
+    evidence:
+      - Automated backups with multi-AZ deployment
+      - Disaster recovery plan and restore test records
+    artifacts: [backup-restore]
+    crosswalk: ["iso-iec-27001:A.8.13", "dora:Art.12"]
+
+  - ref: C1.1
+    title: Identification and protection of confidential information
+    requirement: >
+      The entity identifies and maintains confidential information to meet its
+      confidentiality commitments, protecting it from unauthorised access throughout its
+      life.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a data classification scheme and its application in code (annotations or
+      schema tags for sensitive fields), field-level encryption or tokenisation for highly
+      sensitive data, access restricted to need to know, masking in logs and support tools,
+      and no customer data in non-production environments.
+    evidence:
+      - Data classification applied to stores and fields
+      - Encryption and access restrictions for confidential data
+    checks: [pii-in-logs, hardcoded-secret]
+    crosswalk: ["iso-iec-27001:A.8.11", "iso-iec-27001:A.5.34", "owasp-asvs:V16.2.5"]
+
+  - ref: C1.2
+    title: Disposal of confidential information
+    requirement: >
+      The entity disposes of confidential information to meet its confidentiality
+      commitments, including at the end of retention periods and contract termination.
+    category: data-protection
+    severity: medium
+    fixability: code
+    guidance: >
+      Check retention and deletion implementation: scheduled purge jobs, TTLs, storage
+      lifecycle rules, tenant offboarding scripts that delete customer data across
+      databases, object storage, search indexes, caches and backups within the committed
+      period, and records of deletion.
+    evidence:
+      - Retention and tenant deletion procedures implemented in code
+      - Deletion records for offboarded customers
+    crosswalk: ["iso-iec-27001:A.8.10", "gdpr:Art.17"]

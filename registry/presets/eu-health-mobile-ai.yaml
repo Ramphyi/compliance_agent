@@ -1,0 +1,31 @@
+id: eu-health-mobile-ai
+title: Consumer health mobile app with AI (EU)
+description: >
+  A consumer mobile health app for iOS and Android, sold in the EU including
+  Romania, that processes health and genetic data and includes an AI chat
+  assistant, with a backend in our own cloud. Brings GDPR special-category
+  processing (Art. 9 health and genetic data, Art. 35 DPIA), the EU AI Act
+  transparency duty for the assistant, Apple App Store and Google Play privacy
+  and data-safety rules, and mobile client-security controls (MASVS).
+examples: []
+answers:
+  productTypes: [mobile-app, backend-api, ai-system]
+  sector: [healthcare]
+  markets: [EU, RO]
+  audience: [consumers]
+  orgRole: manufacturer
+  orgSize: small
+  dataCategories: [personal, health, genetic-biometric, credentials]
+  aiUsage: third-party-models
+  aiRiskAreas: [chatbot]
+  medicalClass: wellness
+  safetyCritical: "no"
+  connectivity: [internet]
+  updates: app-store
+  distribution: [apple-app-store, google-play]
+  regulatedEntity: [none]
+  certificationsTarget: [none]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify: []

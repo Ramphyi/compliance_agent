@@ -1,0 +1,273 @@
+id: wa-mhmda
+title: Washington My Health My Data Act (chapter 19.373 RCW)
+shortTitle: WA My Health My Data Act
+version: Chapter 19.373 RCW (2023 c 191)
+authority: Washington State Legislature; enforced by the Washington Attorney General and private actions under the Consumer Protection Act
+kind: regulation
+jurisdictions: [US-WA]
+url: https://app.leg.wa.gov/RCW/default.aspx?cite=19.373
+textPolicy: open
+summary: >
+  Washington's My Health My Data Act protects "consumer health data", a broad category
+  that covers health conditions, symptoms, reproductive and gender-affirming care,
+  biometric and genetic data, precise location that could indicate seeking health
+  services, and health inferences derived from non-health data. It requires a separate
+  consumer health data privacy policy, opt-in consent to collect and separate consent to
+  share, a signed authorisation to sell, access, withdrawal and deletion rights, access
+  restriction and security, and it bans geofencing around health care facilities.
+applicability:
+  all:
+    - { fact: markets, in: [US-WA] }
+    - { fact: dataCategories, in: [health, genetic-biometric] }
+applicabilityNote: >
+  Applies to legal entities that do business in Washington or target Washington
+  consumers and determine the purposes and means of processing consumer health data, and
+  covers consumers who are Washington residents or whose data is collected in Washington.
+  There is no revenue threshold; small businesses had a later start date. The definition
+  is much broader than HIPAA PHI: fitness, wellness, period tracking, mental health,
+  biometric and inferred health data are covered. Data already protected as PHI under
+  HIPAA and certain other regulated data are exempt (RCW 19.373.100), so HIPAA-covered
+  products need to map which data falls under which regime. Violations are enforceable
+  under the Consumer Protection Act, including private lawsuits. Confirm scope with
+  counsel.
+keyDates:
+  - { date: "2023-07-23", note: "Geofencing ban (RCW 19.373.080) in effect for all persons" }
+  - { date: "2024-03-31", note: "Sections on privacy policy, consent, rights, security, processors and sale apply to regulated entities" }
+  - { date: "2024-06-30", note: Same sections apply to small businesses }
+controls:
+  - ref: "RCW19.373.020"
+    title: Separate consumer health data privacy policy linked from the homepage
+    requirement: >
+      Maintain a consumer health data privacy policy that discloses the categories of
+      consumer health data collected and why, their sources, the categories shared, the
+      categories of third parties and the specific affiliates receiving them, and how to
+      exercise rights; link it prominently from the homepage. Collecting, using or
+      sharing data categories or purposes not in the policy needs prior disclosure and
+      affirmative consent.
+    category: privacy-rights
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a dedicated consumer health data privacy policy page (for example
+      /privacy/consumer-health-data or a WA health privacy section that stands on its
+      own) and a prominent link to it in the site footer or homepage component and in the
+      app settings. Compare its disclosures with the code: data models and forms that
+      capture health data, SDKs and APIs that receive it (analytics, advertising, CRM,
+      LLM providers), and affiliates. Flag health data categories collected in code but
+      missing from the policy, and a policy that is only a paragraph inside the general
+      privacy policy with no homepage link.
+    evidence:
+      - Standalone consumer health data privacy policy with the required disclosures
+      - Homepage and in-app links to it
+      - Disclosures consistent with data collected and shared in code
+    checks: [analytics-tracking-sdk]
+    artifacts: [privacy-policy, processing-records]
+    crosswalk: ["gdpr:Art.13", "ccpa-cpra:1798.130(a)(5)"]
+
+  - ref: "RCW19.373.030(1)(a)"
+    title: Consent before collecting consumer health data
+    requirement: >
+      Collect consumer health data only with the consumer's consent for a specified
+      purpose, or to the extent necessary to provide a product or service the consumer
+      requested, and obtain consent before collection.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Identify every point where health data enters the system: onboarding questionnaires,
+      symptom trackers, wearable and HealthKit or Health Connect integrations, uploads,
+      chat with AI assistants, and inferences computed server side. For each, check
+      whether the data is strictly necessary for the feature the user requested; if not,
+      check that collection is gated behind an opt-in consent captured before the data is
+      requested (not after), with the consent state checked in code before reading or
+      storing the data. Flag background collection (sensor or location data, behavioural
+      signals used for health inferences) without prior consent.
+    evidence:
+      - Inventory of health data collection points with legal basis per point
+      - Consent gate checked in code before optional collection
+    checks: [analytics-tracking-sdk]
+    artifacts: [processing-records, privacy-policy]
+    crosswalk: ["gdpr:Art.9", "gdpr:Art.7"]
+
+  - ref: "RCW19.373.030(1)(b)"
+    title: Separate consent before sharing consumer health data
+    requirement: >
+      Share consumer health data only with consent that is separate and distinct from the
+      collection consent, or where necessary to provide the requested product or service.
+    category: privacy-rights
+    severity: critical
+    fixability: code
+    guidance: >
+      Trace outbound flows of health data: analytics and advertising SDKs and pixels
+      (Meta Pixel, Google Analytics or Tag Manager, TikTok, Segment, Mixpanel, Amplitude),
+      event names or properties that reveal health information (for example
+      "pregnancy_test_ordered" or a URL path containing a condition), server-side
+      conversion APIs, CRM and marketing tools, data brokers, and affiliates. Check that
+      such sharing is blocked until a separate sharing consent is recorded, and that
+      tags do not fire on health pages by default. Sharing with processors under contract
+      is not "sharing" for this purpose, but third-party SDKs that use data for their own
+      purposes are. Flag tracking SDKs on health-related screens without a separate
+      consent check; this is the most litigated pattern.
+    evidence:
+      - Separate sharing consent recorded before any third-party disclosure
+      - Tag manager or SDK configuration that blocks health events without consent
+      - Inventory of recipients matching the privacy policy
+    checks: [analytics-tracking-sdk, pii-in-logs]
+    artifacts: [cookie-consent, processing-records]
+    crosswalk: ["gdpr:Art.9", "eprivacy:Art.5(3)", "ccpa-cpra:1798.121"]
+
+  - ref: "RCW19.373.030(1)(c)"
+    title: Valid consent requests and consent records
+    requirement: >
+      Consent requests must clearly and conspicuously state the data categories, the
+      purpose and specific uses, the categories of recipients, and how to withdraw
+      consent. Consent must be a clear affirmative act; acceptance of general terms,
+      hovering, closing content, or agreement obtained through deceptive design does not
+      count.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Review consent UI components: unticked checkboxes or explicit toggles per purpose,
+      separate controls for collection and for sharing, the four required disclosures on
+      or next to the request, no pre-selected options, no consent bundled into terms of
+      service acceptance, equal prominence for decline, and a visible withdrawal path in
+      settings. Check the consent record schema: user or device ID, consent type
+      (collection or sharing), purpose, text or version shown, timestamp, method, and
+      withdrawal timestamp, stored durably and checked by the code paths that use the
+      data. Flag consent inferred from continued use and banners with no decline option.
+    evidence:
+      - Consent UI with the required disclosures and separate choices
+      - Consent records with version, purpose, timestamp and withdrawal
+      - Settings screen to withdraw consent
+    artifacts: [cookie-consent, privacy-policy]
+    crosswalk: ["gdpr:Art.7", "ccpa-cpra:7004"]
+
+  - ref: "RCW19.373.040"
+    title: Access, withdrawal and deletion rights, including backups
+    requirement: >
+      Let consumers confirm and access their consumer health data, including a list of
+      all third parties and affiliates it was shared with or sold to and how to contact
+      them; withdraw consent; and have their data deleted from all systems, including
+      archives and backups (deferred up to six months for backups), with deletion passed
+      on to processors and third parties. Respond within 45 days (one 45-day extension
+      with notice), free of charge up to twice a year, and offer an appeal.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a data subject request flow: an in-app or web form or a privacy request
+      endpoint, identity verification that does not force account creation, export of
+      the user's health data with the list of recipients, and a deletion job that
+      covers every store in the data inventory (primary database, search indexes, caches,
+      object storage, analytics, data warehouse, logs where feasible) and calls deletion
+      APIs of processors and SDK vendors. Check backup handling: retention no longer than
+      six months, or a documented process to purge on restore. Look for request tracking
+      with due dates and an appeal path. Flag soft-delete only, deletion that skips
+      analytics or third parties, and no recipient list.
+    evidence:
+      - Request intake, verification, export and deletion implementation
+      - Deletion propagation to processors and third parties
+      - Request log with 45-day deadlines and appeal handling
+    artifacts: [privacy-policy, backup-restore, processing-records]
+    crosswalk: ["gdpr:Art.15", "gdpr:Art.17", "ccpa-cpra:1798.105"]
+
+  - ref: "RCW19.373.050"
+    title: Need-to-know access and reasonable data security
+    requirement: >
+      Restrict access to consumer health data to employees, processors and contractors who
+      need it for the consented purposes or the requested service, and maintain
+      administrative, technical and physical security practices meeting a reasonable
+      standard of care for the industry, proportionate to the volume and nature of the
+      data.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Check role-based access to health data in admin tools and internal dashboards,
+      separation of support roles from data access, logging of staff access, encryption
+      in transit and at rest (field-level encryption for the most sensitive categories
+      such as reproductive health), secrets management, and removal of health data from
+      logs and error reports. Flag internal tools that expose all users' health data to
+      any employee, health data in logs, and unencrypted storage.
+    evidence:
+      - Role-based access with logging for staff and processors
+      - Encryption and secure configuration for health data stores
+    checks: [pii-in-logs, hardcoded-secret, cleartext-transport, weak-cipher, tls-verification-disabled]
+    artifacts: [security-policy, incident-response-plan]
+    crosswalk: ["hipaa-security:164.312(a)(2)(iv)", "gdpr:Art.32", "hipaa-security:164.308(a)(4)"]
+
+  - ref: "RCW19.373.060"
+    title: Processor contracts and instructions
+    requirement: >
+      Processors may handle consumer health data only under a binding contract that sets
+      the processing instructions and limits; a processor that goes beyond the
+      instructions is treated as a regulated entity.
+    category: supply-chain
+    severity: medium
+    fixability: process
+    guidance: >
+      Inventory vendors receiving health data from the code (cloud, email, support, AI
+      APIs, analytics) and check that each has a data processing agreement limiting use
+      to your instructions, with no secondary use, model training or resale. Prefer vendor
+      configurations that disable data retention or training. Flag vendors whose terms
+      allow their own use of the data; they are third parties, which triggers the sharing
+      consent rule.
+    evidence:
+      - Processor agreements for every recipient of health data
+      - Vendor settings that disable secondary use
+    checks: [analytics-tracking-sdk]
+    artifacts: [processing-records]
+    crosswalk: ["gdpr:Art.28", "hipaa-security:164.308(b)(1)"]
+
+  - ref: "RCW19.373.070"
+    title: Signed authorisation before selling consumer health data
+    requirement: >
+      Selling or offering to sell consumer health data requires a valid authorisation
+      signed by the consumer, separate from consent, stating the specific data, seller and
+      buyer contacts, purpose, the right to revoke, and expiring after one year; a copy
+      goes to the consumer, and seller and buyer keep it for six years.
+    category: privacy-rights
+    severity: critical
+    fixability: code
+    guidance: >
+      Determine whether any data flow is a sale: exchanges of health data for money or
+      other valuable consideration, including ad-tech data sharing, data partnerships,
+      and some SDK integrations paid in kind. If none, document that conclusion and check
+      that SDK and partner configurations do not create one. If sales exist, look for an
+      authorisation flow with the required content, e-signature capture, expiry
+      enforcement in code, revocation handling, and six-year retention of signed
+      authorisations. Flag data monetisation code paths with no authorisation check.
+    evidence:
+      - Documented determination of whether any flow is a sale
+      - Authorisation capture, expiry and revocation where sales occur
+      - Retention of signed authorisations for six years
+    checks: [analytics-tracking-sdk]
+    artifacts: [processing-records]
+    crosswalk: ["ccpa-cpra:1798.120"]
+
+  - ref: "RCW19.373.080"
+    title: No geofencing around health care facilities
+    requirement: >
+      Do not implement a virtual boundary within 2,000 feet of a facility providing
+      in-person health care services in order to identify or track consumers seeking
+      care, collect consumer health data, or send notifications, messages or ads related
+      to health data or health care services.
+    category: privacy-rights
+    severity: critical
+    fixability: code
+    when: { fact: dataCategories, in: [location] }
+    guidance: >
+      Search for geofencing and location-trigger code: Android GeofencingClient, iOS
+      CLLocationManager region monitoring or CLMonitor, Radar, Foursquare or similar
+      location SDKs, ad-tech audience segments built from visits to clinics, pharmacies or
+      hospitals, and server-side point-in-polygon checks against facility lists. Check
+      that no feature or marketing campaign targets or tracks people near health care
+      facilities. Flag any geofence around health facilities, regardless of consent,
+      since the ban applies to any person.
+    evidence:
+      - Inventory of location features with confirmation none target health facilities
+      - Ad and marketing configuration without health-facility geofences
+    checks: [analytics-tracking-sdk]
+    artifacts: []
+    crosswalk: ["ccpa-cpra:1798.121"]

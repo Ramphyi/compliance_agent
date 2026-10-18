@@ -1,0 +1,632 @@
+id: gdpr
+title: Regulation (EU) 2016/679 - General Data Protection Regulation
+shortTitle: EU GDPR
+version: Regulation (EU) 2016/679, OJ L 119 of 4 May 2016 (with corrigenda)
+authority: European Parliament and Council of the European Union
+kind: regulation
+jurisdictions: [EU, EEA]
+url: https://eur-lex.europa.eu/eli/reg/2016/679/oj
+textPolicy: paraphrased
+summary: >
+  The EU's general data protection law. It sets the principles, lawful bases, data
+  subject rights, security, breach notification, accountability and international
+  transfer rules for any organisation that processes personal data of people in the
+  EU/EEA, including non-EU businesses that offer goods or services to them or monitor
+  their behaviour.
+applicability:
+  all:
+    - { fact: markets, in: [EU] }
+    - { fact: dataCategories, in: [personal, health, genetic-biometric, payment-cards, financial, children, location, vehicle, credentials, other-sensitive] }
+applicabilityNote: >
+  Applies when the product processes personal data and the organisation is established
+  in the EU/EEA, or offers goods or services to people in the EU/EEA, or monitors their
+  behaviour there (Art. 3). Pseudonymised data (hashed emails, device IDs, IP addresses)
+  is still personal data. Confirm with counsel whether you act as controller or as
+  processor for each processing activity: processors carry fewer direct duties (mainly
+  Art. 28, 29, 30(2), 32, 33(2) and 44-49) and support the controller for the rest.
+keyDates:
+  - { date: "2016-05-24", note: Regulation entered into force }
+  - { date: "2018-05-25", note: Regulation applies in all Member States }
+  - { date: "2021-06-04", note: "Commission Implementing Decision (EU) 2021/914 adopted the current Standard Contractual Clauses" }
+  - { date: "2023-07-10", note: Adequacy decision for the EU-US Data Privacy Framework adopted }
+controls:
+  - ref: "Art.5(1)(c)"
+    title: Data minimisation
+    requirement: >
+      Personal data must be adequate, relevant and limited to what is necessary for the
+      purposes for which it is processed.
+    category: data-protection
+    severity: medium
+    fixability: code
+    guidance: >
+      Compare what the product collects with what each feature needs. Inspect signup and
+      profile forms, API request DTOs and database schemas (migrations, ORM models such as
+      Prisma schema, TypeORM entities, Django models) for fields with no clear purpose
+      (date of birth, gender, phone, full address) or that are required when they could be
+      optional. Check analytics and telemetry payloads (track(), logEvent(), Sentry/Datadog
+      context) for emails, names, free text or precise location that are not needed.
+      Check logs for full request bodies or user objects. Good looks like: optional fields
+      marked as optional in UI and API validation, coarse data where precise data is not
+      needed (city instead of GPS, year instead of birth date), IP truncation in
+      analytics, and log redaction middleware.
+    evidence:
+      - Data inventory mapping each stored field to a purpose
+      - Request validation schemas that reject or ignore unneeded fields
+      - Log and telemetry redaction configuration
+    checks: [pii-in-logs]
+    artifacts: [processing-records]
+    crosswalk: ["ccpa-cpra:1798.100(a)(3)", "coppa:312.7", "apple-app-review:5.1.1", "owasp-masvs:MASVS-PRIVACY-1"]
+
+  - ref: "Art.5(1)(e)"
+    title: Storage limitation and retention enforcement
+    requirement: >
+      Personal data may be kept in identifiable form only as long as necessary for its
+      purposes; retention periods must be defined and applied.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a documented retention schedule and for code that enforces it: scheduled
+      jobs (cron, Celery beat, Sidekiq, Kubernetes CronJob, AWS EventBridge), database TTL
+      indexes (MongoDB expireAfterSeconds, DynamoDB TTL, Redis EXPIRE), S3 lifecycle
+      rules, log retention settings (CloudWatch retention days, Loki/Elasticsearch ILM),
+      and purge or anonymisation of inactive accounts, soft-deleted rows, old sessions,
+      uploads and backups. Flag tables with deleted_at columns that are never hard
+      deleted, and logs or analytics exports with no retention limit. Good looks like: a
+      retention table per data category, jobs that implement it with tests, and backups
+      that expire on a defined cycle.
+    evidence:
+      - Retention schedule per data category in the privacy notice or records of processing
+      - Purge or anonymisation jobs with tests
+      - TTL or lifecycle configuration for logs, object storage and backups
+    checks: []
+    artifacts: [processing-records, backup-restore]
+    crosswalk: ["ccpa-cpra:1798.100(a)(3)", "coppa:312.10", "iso-iec-27001:A.8.10"]
+
+  - ref: "Art.6"
+    title: Lawful basis for each processing purpose
+    requirement: >
+      Each processing purpose needs one lawful basis (consent, contract, legal obligation,
+      vital interests, public task or legitimate interests), identified before processing
+      starts and recorded.
+    category: privacy-rights
+    severity: high
+    fixability: document
+    guidance: >
+      Check that the privacy notice and records of processing name a lawful basis for
+      each purpose (account, payments, support, analytics, marketing, product
+      improvement, AI features, fraud prevention). Then check the code is consistent with
+      the declared basis: purposes declared as consent-based must be gated on a stored
+      consent flag; features declared as contract-based must be necessary to deliver the
+      service the user asked for; legitimate-interest purposes need a balancing test and
+      an opt-out path. Flag analytics, advertising or model training on user content that
+      run unconditionally while the notice claims consent, and bundled "accept terms and
+      privacy policy" checkboxes used as the only basis for everything.
+    evidence:
+      - Purpose-to-lawful-basis table in the records of processing
+      - Legitimate interests assessments for purposes relying on Art. 6(1)(f)
+      - Code paths gated on consent where consent is the declared basis
+    checks: [analytics-tracking-sdk]
+    artifacts: [privacy-policy, processing-records]
+    crosswalk: ["uk-gdpr:Art.6(1)(ea)", "eprivacy:Art.5(3)", "ro-national:L190-Art.4"]
+
+  - ref: "Art.7"
+    title: Valid, recorded and withdrawable consent
+    requirement: >
+      Where processing relies on consent, the controller must be able to show that
+      consent was given, the request must be distinct and in plain language, consent must
+      not be a condition of an unrelated service, and withdrawing it must be as easy as
+      giving it.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Find the consent UI (signup screens, settings, cookie banner, marketing checkboxes)
+      and the consent storage. Good looks like: unticked, granular checkboxes per purpose;
+      a consent record table or service storing user or device id, purpose, policy or
+      text version, timestamp, method and withdrawal timestamp; a settings screen or
+      endpoint (for example PATCH /me/consents) that withdraws consent in the same number
+      of steps; and downstream code that reads the current consent state before
+      processing (SDK initialisation, email sending, model training). Flag pre-ticked
+      boxes, consent implied by scrolling or continued use, consent bundled with terms of
+      service, missing withdrawal paths, and consent stored only in localStorage with no
+      server-side proof where proof is needed.
+    evidence:
+      - Consent records with purpose, version and timestamp
+      - Withdrawal UI and API with tests
+      - Processing gated on current consent state
+    checks: [analytics-tracking-sdk]
+    artifacts: [cookie-consent, privacy-policy]
+    crosswalk: ["eprivacy:Art.5(3)-withdrawal", "apple-app-review:5.1.2", "google-play-policy:Prominent Disclosure", "ccpa-cpra:7004"]
+
+  - ref: "Art.8"
+    title: Children's consent for information society services
+    requirement: >
+      When an online service offered directly to a child relies on consent, a child under
+      16 (or the lower national age, not below 13) needs consent given or authorised by
+      the holder of parental responsibility, verified with reasonable effort.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    when: { any: [ { fact: audience, in: [children] }, { fact: dataCategories, in: [children] } ] }
+    guidance: >
+      Look for an age gate at signup (neutral date-of-birth or age input, not a "I am
+      over 16" pre-ticked box) and for a parental consent flow when the user is under the
+      applicable national age (13 to 16, for example 16 in Germany and the Netherlands,
+      13 in Belgium and Denmark, 16 in Romania by default since Law 190/2018 does not
+      lower it). Check that consent-based processing (analytics, marketing, profiling)
+      stays disabled until parental consent is verified, that the parent's identity
+      and consent are recorded, and that under-age accounts default to the most
+      protective settings. Flag apps targeted at children that load advertising or
+      tracking SDKs.
+    evidence:
+      - Age gate implementation and the per-country age table
+      - Parental consent flow and records
+      - Feature flags that disable consent-based processing for minors
+    checks: [analytics-tracking-sdk]
+    artifacts: [privacy-policy, dpia]
+    crosswalk: ["coppa:312.5", "uk-gdpr:AADC", "apple-app-review:5.1.4", "google-play-policy:Families"]
+
+  - ref: "Art.9"
+    title: Special category data has an Art. 9(2) condition
+    requirement: >
+      Processing health, genetic, biometric (for identification), racial or ethnic,
+      political, religious, trade union, sex life or sexual orientation data is prohibited
+      unless an Art. 9(2) condition applies, typically explicit consent for consumer
+      products.
+    category: data-protection
+    severity: critical
+    fixability: code
+    when: { fact: dataCategories, in: [health, genetic-biometric, other-sensitive] }
+    guidance: >
+      Identify where special category data is collected (symptom, medication, cycle,
+      mood, diagnosis, DNA or genotype files, face templates, fingerprints, voice prints,
+      HealthKit or Health Connect reads, religion or sexuality fields) and check for a
+      separate explicit consent step that names the data and the purpose, stored as a
+      consent record and checked before processing. Verify the data is encrypted at rest
+      with field- or column-level encryption where practical, is excluded from logs,
+      analytics, crash reports and third-party AI prompts unless separately consented,
+      and access is restricted by role. Flag special category data sent to advertising
+      or analytics SDKs, inferred health or sexuality attributes, and missing explicit
+      consent.
+    evidence:
+      - Explicit consent screen and stored consent records for special category data
+      - Field-level encryption and access controls for sensitive fields
+      - Logging and analytics redaction covering sensitive fields
+    checks: [pii-in-logs, analytics-tracking-sdk]
+    artifacts: [dpia, privacy-policy]
+    crosswalk: ["ro-national:L190-Art.3", "uk-gdpr:DPA2018-Sch1", "ccpa-cpra:1798.121", "apple-app-review:5.1.3", "google-play-policy:Health Apps", "wa-mhmda:RCW19.373.030(1)(a)"]
+
+  - ref: "Art.12"
+    title: Rights requests handled within one month, free and verified
+    requirement: >
+      The controller must make rights easy to exercise, answer requests without undue
+      delay and within one month (extendable by two months for complex cases), free of
+      charge, and verify identity proportionately.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for a rights request channel that users can find: an in-app privacy or
+      account settings section, a web form or a dedicated endpoint, plus an operator
+      back-office or ticket workflow that records the request date, deadline, identity
+      verification step and outcome. Identity verification should reuse the
+      authenticated session where possible rather than demanding ID documents. Flag
+      requests routed only to a generic support mailbox with no tracking, and paid or
+      overly burdensome flows.
+    evidence:
+      - Rights request intake (in-app, web form or endpoint)
+      - Request log with timestamps and deadlines
+      - Documented verification procedure
+    checks: []
+    artifacts: [privacy-policy, user-documentation]
+    crosswalk: ["ccpa-cpra:1798.110", "uk-gdpr:Art.15", "uk-gdpr:DPA2018-s164A"]
+
+  - ref: "Art.13"
+    title: Transparent privacy notice (Art. 13 and 14)
+    requirement: >
+      At collection (or within one month when data comes from other sources) people must
+      receive the controller identity and contact, DPO contact, purposes and lawful
+      bases, legitimate interests, recipients, transfers and safeguards, retention
+      periods, rights, the right to withdraw consent and complain, whether provision is
+      required, and the existence and logic of automated decision-making.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Find the privacy policy (privacy.md, /privacy route, app store listing link) and
+      check every required element is present and matches the code: list of recipients
+      and processors should match the SDKs and services actually integrated (package.json,
+      Podfile, build.gradle, server env vars for third-party APIs including AI
+      providers); retention should match purge jobs; transfers should name the
+      safeguard. Check the notice is linked at points of collection (signup, forms, app
+      onboarding) and in app settings, and that it is versioned with a changelog.
+    evidence:
+      - Privacy policy containing all Art. 13 elements
+      - Links to the notice at each collection point
+      - Recipient list consistent with integrated SDKs and APIs
+    checks: [analytics-tracking-sdk]
+    artifacts: [privacy-policy]
+    crosswalk: ["ccpa-cpra:1798.100(a)", "coppa:312.4", "apple-app-review:5.1.1(i)", "google-play-policy:User Data", "uk-gdpr:Art.27", "owasp-masvs:MASVS-PRIVACY-3"]
+
+  - ref: "Art.15"
+    title: Right of access and data export
+    requirement: >
+      People can obtain confirmation of processing, a copy of their personal data and
+      information on purposes, recipients, retention, source and rights.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a data export feature (for example GET /me/export, a "Download my data"
+      button, or an operator script) that assembles all personal data held about the
+      user across services: profile, content, messages, uploads, orders, consents,
+      device records, support tickets, analytics stored server-side and AI conversation
+      history. Check it is authenticated, rate-limited, delivered through a short-lived
+      signed URL, and covered by tests that fail when a new table with a user_id column
+      is not included. Flag exports that omit secondary stores (object storage, search
+      indexes, data warehouse).
+    evidence:
+      - Export endpoint or job and its tests
+      - Mapping of all data stores keyed by user
+    checks: []
+    artifacts: []
+    crosswalk: ["ccpa-cpra:1798.110", "uk-gdpr:Art.15", "coppa:312.6"]
+
+  - ref: "Art.16"
+    title: Right to rectification
+    requirement: >
+      People can have inaccurate personal data corrected and incomplete data completed
+      without undue delay.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that profile and account data can be edited in-app or via an API (PATCH
+      /me) and that data the user cannot edit directly (KYC data, derived attributes,
+      health records imported from devices) has a correction request path. Verify
+      corrections propagate to replicas, caches, search indexes and processors where data
+      was shared (Art. 19).
+    evidence:
+      - Profile edit UI and API
+      - Correction request procedure for non-editable data
+    checks: []
+    artifacts: []
+    crosswalk: ["ccpa-cpra:1798.106"]
+
+  - ref: "Art.17"
+    title: Right to erasure and account deletion
+    requirement: >
+      People can have their personal data erased without undue delay when it is no
+      longer needed, consent is withdrawn, they object, or processing is unlawful,
+      subject to legal retention exceptions.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Look for an account deletion feature (DELETE /me, "Delete account" in settings) and
+      trace what it actually removes. Good looks like: hard deletion or irreversible
+      anonymisation across the primary database, object storage (avatars, uploads),
+      search indexes, caches, analytics user profiles (for example the deletion APIs of
+      the analytics vendor), email marketing lists, push tokens and processor systems,
+      with only legally required records retained (invoices, fraud logs) and documented.
+      Backups should expire on a defined cycle. Flag soft deletes that never purge,
+      deletion that only disables login, and orphaned data in secondary stores. Tests
+      should cover the cascade.
+    evidence:
+      - Deletion endpoint and cascade implementation with tests
+      - List of retained records with legal basis
+      - Processor deletion calls or tickets
+    checks: []
+    artifacts: [backup-restore]
+    crosswalk: ["ccpa-cpra:1798.105", "apple-app-review:5.1.1(v)", "google-play-policy:Account Deletion", "coppa:312.6", "iso-iec-27001:A.8.10", "owasp-masvs:MASVS-PRIVACY-4"]
+
+  - ref: "Art.18"
+    title: Right to restriction and notification of recipients
+    requirement: >
+      People can require that processing be restricted (stored but not otherwise used)
+      while accuracy or an objection is checked, and recipients must be told of
+      rectification, erasure or restriction unless impossible (Art. 19).
+    category: privacy-rights
+    severity: low
+    fixability: code
+    guidance: >
+      Check whether the data model supports a restriction flag (for example
+      processing_restricted on the user) that excludes the record from analytics,
+      marketing, model training and automated decisions while keeping it stored. Check
+      there is a way to notify processors and third parties that received the data about
+      corrections and deletions (webhooks, vendor deletion APIs, documented manual
+      steps).
+    evidence:
+      - Restriction flag honoured by downstream jobs
+      - Procedure or integration to notify recipients
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "Art.20"
+    title: Right to data portability
+    requirement: >
+      For data provided by the person and processed by automated means on the basis of
+      consent or contract, the person can receive it in a structured, commonly used,
+      machine-readable format and have it sent to another controller where feasible.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that the data export (see Art. 15) produces machine-readable formats such as
+      JSON or CSV (not only PDF or screenshots) with documented field names, covering
+      data the user provided and data generated by their use (activity logs, sensor
+      readings, uploaded files). Interoperable formats are a plus (FHIR for health data,
+      iCalendar, vCard).
+    evidence:
+      - Export in JSON or CSV with a documented schema
+    checks: []
+    artifacts: [user-documentation]
+    crosswalk: ["ccpa-cpra:1798.110"]
+
+  - ref: "Art.21"
+    title: Right to object, including to direct marketing
+    requirement: >
+      People can object to processing based on legitimate interests or public task, and
+      can always object to direct marketing and related profiling, after which that
+      processing must stop.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Check that every marketing email and push notification has a working unsubscribe
+      (List-Unsubscribe header, one-click unsubscribe link, notification settings), that
+      the opt-out is stored server-side and checked before every send including by the
+      email service provider, and that marketing profiling stops too. For
+      legitimate-interest processing (product analytics, personalisation) check there is
+      an opt-out toggle and that it is honoured.
+    evidence:
+      - Unsubscribe handling and suppression list checks before send
+      - Settings toggles for legitimate-interest processing
+    checks: []
+    artifacts: []
+    crosswalk: ["eprivacy:Art.13(2)", "ccpa-cpra:1798.120", "ro-national:L506-Art.12"]
+
+  - ref: "Art.22"
+    title: Safeguards for solely automated decisions
+    requirement: >
+      People have the right not to be subject to decisions based solely on automated
+      processing that produce legal or similarly significant effects, unless necessary for
+      a contract, authorised by law or based on explicit consent, and then with the right
+      to human intervention, to express their view and to contest the decision.
+    category: ai-governance
+    severity: high
+    fixability: code
+    guidance: >
+      Identify automated decisions with significant effect: account bans by fraud
+      models, credit or eligibility scoring, automatic rejection of applications, pricing
+      by profile, health triage or risk scores, AI moderation that removes access. Check
+      for a human review path (appeal button, review queue, admin override), an
+      explanation shown to the user of the main factors, and logging of the inputs and
+      model version used for each decision so it can be contested. Flag model outputs
+      wired directly to adverse actions with no review or appeal. If the product makes no
+      such decisions, record that conclusion.
+    evidence:
+      - Inventory of automated decisions and their effects
+      - Appeal or human review workflow
+      - Decision logs with model version and inputs
+    checks: []
+    artifacts: [dpia, ai-documentation]
+    crosswalk: ["uk-gdpr:Art.22A-22D", "ccpa-cpra:7200", "ro-national:L190-Art.3", "eu-ai-act:Art.14"]
+
+  - ref: "Art.25"
+    title: Data protection by design and by default
+    requirement: >
+      The controller must build data protection principles into the design of processing
+      and ensure that by default only data necessary for each purpose is processed,
+      including limits on amount, retention and accessibility.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Check default settings: profiles private by default, optional sharing features
+      off by default, location and contacts access requested only when the feature is
+      used, analytics and personalisation off until consent, minimal default retention.
+      Look for pseudonymisation (internal user ids instead of emails as keys, separate
+      identity store), encryption, privacy review steps in the PR template or design
+      docs, and privacy test cases. On mobile check android:allowBackup and iCloud backup
+      exclusions for sensitive files. Flag public-by-default content, data shared with
+      third parties by default, and broad permissions requested at first launch.
+    evidence:
+      - Privacy-protective defaults in configuration and code
+      - Privacy review in design or PR templates
+      - Pseudonymisation and encryption of identifiers
+    checks: [analytics-tracking-sdk, mobile-backup-allowed]
+    artifacts: [threat-model, code-review-process]
+    crosswalk: ["uk-gdpr:AADC", "apple-app-review:5.1.1", "google-play-policy:Permissions", "owasp-masvs:MASVS-PRIVACY-1", "iso-iec-27001:A.5.34"]
+
+  - ref: "Art.28"
+    title: Processor contracts and sub-processor control
+    requirement: >
+      Controllers may use only processors that give sufficient guarantees, bound by a
+      contract (DPA) covering instructions, confidentiality, security, sub-processors,
+      assistance, deletion or return and audits; processors need authorisation for
+      sub-processors.
+    category: supply-chain
+    severity: high
+    fixability: document
+    guidance: >
+      Build the list of processors from the code: cloud and hosting, databases as a
+      service, email and SMS providers, analytics, crash reporting, customer support
+      tools, payment providers, AI model APIs (OpenAI, Anthropic, Google, Azure), and
+      check each has a DPA and appears in the privacy notice or sub-processor list. For
+      AI APIs check the data-use terms (no training on customer data, retention, zero
+      data retention options) and region settings. If the product itself is a processor
+      for customers, check for a published DPA and sub-processor list with change
+      notification.
+    evidence:
+      - Processor inventory matching integrated services
+      - Signed DPAs or accepted vendor DPA terms
+      - Published sub-processor list if acting as processor
+    checks: [analytics-tracking-sdk]
+    artifacts: [processing-records, third-party-notices]
+    crosswalk: ["ccpa-cpra:1798.100(d)", "nis2:Art.21(2)(d)", "iso-iec-27001:A.5.23", "owasp-llm-top10:LLM02", "hipaa-security:164.308(b)(1)"]
+
+  - ref: "Art.30"
+    title: Records of processing activities
+    requirement: >
+      Controllers and processors must keep written records of processing: purposes,
+      categories of data and data subjects, recipients, transfers, retention and a
+      description of security measures.
+    category: governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a records of processing document (ROPA) in the repository or a linked
+      compliance space, for example docs/privacy/ropa.md or a spreadsheet. Check it
+      covers every purpose found in the code (accounts, payments, analytics, marketing,
+      support, AI features, logs) and is kept current, for example via a PR checklist
+      item when new personal data fields or vendors are added. The exemption for
+      organisations under 250 staff rarely applies because it excludes regular or
+      special-category processing.
+    evidence:
+      - ROPA covering all purposes and vendors
+      - Change process that updates it
+    checks: []
+    artifacts: [processing-records]
+    crosswalk: ["iso-iec-27001:A.5.34"]
+
+  - ref: "Art.32"
+    title: Security of processing
+    requirement: >
+      Controllers and processors must implement security appropriate to the risk,
+      including as appropriate pseudonymisation and encryption, ongoing confidentiality,
+      integrity, availability and resilience, timely restoration, and regular testing.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Check transport security (TLS everywhere, certificate verification never
+      disabled, HSTS), encryption at rest for databases, object storage and backups,
+      field-level encryption for sensitive data, password hashing with argon2id, scrypt or
+      bcrypt, secrets in a secret manager instead of source, least-privilege access
+      controls with authorisation checks on every object (no IDOR), rate limiting on
+      authentication, MFA for admin access, security headers, dependency scanning,
+      audit logging of access to personal data without logging the data itself, tested
+      backups and restores, and periodic penetration or security testing. Each
+      deterministic check hit is a concrete gap.
+    evidence:
+      - Encryption in transit and at rest configuration
+      - Password hashing and secret management
+      - Access control and audit logging
+      - Backup restore tests and security testing reports
+    checks: [tls-verification-disabled, cleartext-transport, weak-hash, weak-password-hash, weak-cipher, pii-in-logs, hardcoded-secret, insecure-cookie, mobile-cleartext-allowed, missing-rate-limiting, missing-security-headers, jwt-unverified]
+    artifacts: [security-policy, backup-restore, vulnerability-scanning]
+    crosswalk: ["ccpa-cpra:1798.100(e)", "coppa:312.8", "nis2:Art.21(2)(h)", "iso-iec-27001:A.8.24", "owasp-asvs:V12.2.1", "owasp-asvs:V11.4.2", "owasp-asvs:V16.2.5", "owasp-masvs:MASVS-STORAGE-1", "hipaa-security:164.312(a)(2)(i)"]
+
+  - ref: "Art.33"
+    title: Personal data breach notification (Art. 33 and 34)
+    requirement: >
+      A personal data breach must be notified to the supervisory authority without undue
+      delay and where feasible within 72 hours of awareness unless unlikely to result in
+      risk, documented internally, and communicated to affected people without undue delay
+      when it is likely to result in high risk. Processors must notify the controller
+      without undue delay.
+    category: logging-monitoring
+    severity: high
+    fixability: process
+    guidance: >
+      Look for an incident response plan or runbook that covers personal data breaches:
+      detection sources (alerting on unusual data access, failed logins, exfiltration
+      volume), a severity and risk assessment step, the 72-hour clock, who notifies the
+      lead supervisory authority, templates for user notification, and a breach register.
+      Check that logging is sufficient to determine what data and which users were
+      affected (access logs with user and record ids, retained long enough). Processors
+      should have a contractual commitment and contact path to notify customers.
+    evidence:
+      - Incident response plan with breach notification steps and 72-hour timeline
+      - Breach register
+      - Access logging sufficient to scope a breach
+    checks: []
+    artifacts: [incident-response-plan]
+    crosswalk: ["nis2:Art.23", "ro-national:ANSPDCP-breach", "eprivacy:Art.4", "hipaa-security:164.308(a)(6)"]
+
+  - ref: "Art.35"
+    title: Data protection impact assessment
+    requirement: >
+      Before processing likely to result in high risk (large-scale special category data,
+      systematic monitoring, innovative technology such as AI, profiling with significant
+      effects, children's data), the controller must carry out a DPIA, and consult the
+      supervisory authority if residual risk stays high (Art. 36).
+    category: risk-assessment
+    severity: high
+    fixability: document
+    when:
+      any:
+        - { fact: dataCategories, in: [health, genetic-biometric, other-sensitive, children, location] }
+        - { fact: aiUsage, in: [third-party-models, own-models, general-purpose-model] }
+        - { fact: audience, in: [children, employees-internal] }
+    guidance: >
+      Look for a DPIA document (docs/dpia.md or similar) that describes the processing,
+      assesses necessity and proportionality, identifies risks to people and lists
+      mitigations that map to real controls in the code. Check it covers the features
+      that trigger it (health tracking, AI analysis of user content, location tracking,
+      employee monitoring, children's accounts) and is updated when those features
+      change. National authority lists of processing requiring a DPIA (for example
+      ANSPDCP Decision 174/2018 in Romania) should be checked.
+    evidence:
+      - DPIA covering high-risk features
+      - Mitigations traced to implemented controls
+    checks: []
+    artifacts: [dpia, risk-management-file]
+    crosswalk: ["ccpa-cpra:7150", "eu-ai-act:Art.26", "uk-gdpr:AADC"]
+
+  - ref: "Art.37"
+    title: Data protection officer where required
+    requirement: >
+      A DPO must be designated when core activities involve large-scale regular and
+      systematic monitoring or large-scale processing of special category or criminal
+      data, or when the controller is a public body; the DPO's contact details must be
+      published and given to the supervisory authority.
+    category: governance
+    severity: medium
+    fixability: process
+    when:
+      any:
+        - { fact: dataCategories, in: [health, genetic-biometric, other-sensitive, location] }
+        - { fact: regulatedEntity, in: [public-body] }
+    guidance: >
+      Decide and document whether the DPO trigger applies (a health, genetic or
+      biometric product whose core activity is processing such data at scale usually
+      needs one). If a DPO is designated, check the privacy notice publishes a contact
+      (for example dpo@ address) and that the DPO is listed in the incident response
+      plan and DPIA sign-off. If not designated, keep the reasoning on file.
+    evidence:
+      - Documented DPO decision
+      - Published DPO contact details
+    checks: []
+    artifacts: [privacy-policy]
+    crosswalk: ["ro-national:L190-Art.4"]
+
+  - ref: "Art.44"
+    title: International transfers have a valid mechanism (Art. 44 to 49)
+    requirement: >
+      Personal data may be transferred outside the EEA only on the basis of an adequacy
+      decision, appropriate safeguards such as Standard Contractual Clauses or binding
+      corporate rules (with a transfer impact assessment where needed), or a narrow
+      Art. 49 derogation.
+    category: data-protection
+    severity: high
+    fixability: document
+    guidance: >
+      Identify where personal data flows outside the EEA: hosting regions (AWS, GCP and
+      Azure region settings in Terraform, serverless config), SaaS vendors and SDKs
+      headquartered abroad, AI model APIs, support tools and offshore staff access. For
+      each, check the mechanism: an adequacy decision (for US recipients, active
+      certification under the EU-US Data Privacy Framework), SCCs (2021/914 module) plus
+      a transfer impact assessment, or BCRs. Prefer EU regions and EU data residency
+      options for AI APIs where available. Check the privacy notice names transfers and
+      safeguards.
+    evidence:
+      - Transfer map with mechanism per recipient
+      - SCCs or DPF certification evidence and transfer impact assessments
+      - Region configuration in infrastructure code
+    checks: [analytics-tracking-sdk]
+    artifacts: [processing-records, privacy-policy]
+    crosswalk: ["uk-gdpr:Art.44"]

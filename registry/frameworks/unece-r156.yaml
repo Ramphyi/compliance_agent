@@ -1,0 +1,289 @@
+id: unece-r156
+title: UN Regulation No. 156 - Uniform provisions concerning the approval of vehicles with regards to software update and software update management system
+shortTitle: UN R156 (SUMS)
+version: Original version (00 series) with its supplements; adopted text ECE/TRANS/WP.29/2020/80
+authority: UNECE WP.29 (World Forum for Harmonization of Vehicle Regulations)
+kind: regulation
+jurisdictions: [UNECE, EU, JP]
+url: https://unece.org/transport/documents/2021/03/standards/un-regulation-no-156-software-update-and-software-update
+textPolicy: open
+summary: >
+  UN R156 requires the vehicle manufacturer to operate a certified Software Update Management
+  System (SUMS) and requires the vehicle type to protect update authenticity and integrity, expose
+  its RX Software Identification Numbers (RXSWIN) or software versions, and, for over-the-air
+  updates, recover from failed updates, execute updates safely and inform the user. ECU suppliers
+  implement much of the vehicle-side behaviour (bootloader, version reporting, preconditions,
+  rollback) and supply the records the OEM needs.
+applicability:
+  all:
+    - { fact: productTypes, in: [automotive-ecu] }
+    - { fact: markets, in: [UNECE, EU] }
+    - { not: { fact: updates, equals: none } }
+applicabilityNote: >
+  R156 applies to vehicles that permit software updates. The approval holder is the vehicle
+  manufacturer; suppliers receive the requirements through the OEM's update specification and
+  contract. The EU applies R156 through the General Safety Regulation (EU) 2019/2144 and Japan
+  applies it to vehicles with updates affecting type approval; confirm the application dates for
+  your vehicle categories with the OEM, as they differ from R155 in some markets. OTA-specific
+  controls apply only when the ECU can be updated over the air (directly or via a vehicle update
+  master).
+keyDates:
+  - { date: "2021-01-22", note: UN R156 entered into force under the 1958 Agreement }
+controls:
+  - ref: "7.1.1"
+    title: Software identification and update management processes
+    requirement: >
+      The SUMS must include processes to document update information securely, uniquely identify
+      initial and updated software versions with integrity validation data and the related
+      hardware, manage RXSWIN information before and after updates, verify that installed
+      versions match the RXSWIN, identify interdependencies with other systems and identify the
+      target vehicles for each update (7.1.1.1 to 7.1.1.6).
+    category: updates-maintenance
+    severity: high
+    fixability: process
+    guidance: >
+      On the supplier side look for a release manifest per software build that lists the ECU
+      hardware part number, software part number and version (as reported in UDS DIDs 0xF187,
+      0xF188, 0xF189, 0xF191, 0xF195), the hash or signature of each flashable block (integrity
+      validation data), the bootloader version, and dependencies on other ECUs or on calibration
+      data sets. Check that the build pipeline generates this manifest automatically and archives
+      it with the binary (.hex, .s19, .vbf, .odx-f container), and that the version strings in
+      the code come from the build and not from hand-edited constants that can drift.
+    evidence:
+      - Machine-generated release manifest with versions, hardware compatibility and hashes
+      - Dependency and interdependency list for each release
+    artifacts: [changelog, update-policy, ci-pipeline]
+    crosswalk: ["iso-24089:6.3.2", "iso-24089:8.3.2", "iso-26262:8-7", "automotive-spice:SUP.8"]
+  - ref: "7.1.1.7"
+    title: Compatibility check before an update is issued
+    requirement: >
+      Before an update is issued the manufacturer must confirm it is compatible with the target
+      vehicles' configuration, including an assessment of their last known software and hardware
+      configuration.
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Look for compatibility rules in the update package metadata (allowed hardware revisions,
+      required bootloader version, required versions of dependent ECUs) and for an on-ECU check
+      that rejects incompatible images: the bootloader or update agent compares the hardware ID
+      and the compatibility list in the signed header against values in OTP or EEPROM before
+      erasing flash. UDS RoutineControl 0x31 checkProgrammingDependencies (0xFF01) or an OEM
+      routine should verify cross-block and cross-ECU consistency after download. Flag updaters
+      that only check a version number or that erase memory before validating compatibility.
+    evidence:
+      - Signed package header with compatibility constraints
+      - Bootloader or update agent code that enforces them before erasing
+      - Tests with images for the wrong hardware revision
+    checks: [firmware-update-unsigned]
+    crosswalk: ["iso-24089:8.3.2", "iso-24089:7.3.2"]
+  - ref: "7.1.2"
+    title: Records for every update
+    requirement: >
+      For each update the manufacturer must record the process documentation, configuration
+      before and after the update, an auditable register per RXSWIN with software versions and
+      integrity data, target vehicles with compatibility confirmation, and per update its purpose,
+      affected systems, type-approval impact, execution conditions, and confirmation that it is
+      safe, secure, verified and validated.
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Check for release notes or a changelog per ECU software version that state the purpose
+      (bug fix, security fix, recall, feature), affected functions, whether type-approval
+      relevant functions changed (for example braking, steering, lighting or emissions
+      functions), installation conditions, and links to the verification and validation reports.
+      Good looks like a structured release record (YAML or JSON) produced by CI, reviewed and
+      archived with the build artefacts, that the OEM can import into its SUMS register.
+    evidence:
+      - Release records with purpose, affected systems, type-approval impact and V&V references
+      - Archive of manifests and hashes per released version
+    artifacts: [changelog, update-policy]
+    crosswalk: ["iso-24089:9.3.2", "iso-24089:8.3.2"]
+  - ref: "7.1.3"
+    title: Security of the update process and the delivery system
+    requirement: >
+      The manufacturer must show how updates are protected against manipulation before the update
+      starts, how the update processes including the delivery system are protected against
+      compromise, and how the software's functionality and code are verified and validated.
+    category: supply-chain
+    severity: high
+    fixability: process
+    guidance: >
+      Look at the signing pipeline: signing performed in a backend HSM or a signing service (not
+      with a private key file in the repository or a CI variable), separation between build and
+      signing roles, reproducible builds with a pinned toolchain, protected release branches and
+      mandatory review, and verification that the signed artefact matches the reviewed source
+      (provenance, for example SLSA-style attestations). Check CI configuration for secrets in
+      plain text and for unpinned build dependencies.
+    evidence:
+      - Signing process description with key custody and access control
+      - CI configuration with pinned toolchain and protected release flow
+      - Verification and validation reports referenced per release
+    checks: [hardcoded-secret, hardcoded-crypto-key, unpinned-dependencies]
+    artifacts: [ci-pipeline, code-review-process, dependency-lockfile]
+    crosswalk: ["iso-sae-21434:5.4.5", "nist-ssdf:PS.2.1", "iec-62443-4-1:SM-8", "iso-24089:5.3.4", "unece-r155:Annex5.B.M16"]
+  - ref: "7.1.4"
+    title: Over-the-air process safeguards
+    requirement: >
+      For over-the-air updates the manufacturer must show how it assesses that an update will not
+      affect safety if conducted while driving, and how updates that need a skilled action (for
+      example sensor recalibration after programming) only proceed when a skilled person is
+      present or in control.
+    category: functional-safety
+    severity: high
+    fixability: process
+    when:
+      { fact: updates, equals: ota }
+    guidance: >
+      Check the update classification in release metadata: a flag for "install while driving
+      allowed" with a documented safety assessment (ISO 26262 impact analysis), and a flag for
+      post-programming actions such as ADAS camera or radar calibration, steering angle sensor
+      zeroing or immobiliser relearn. On the ECU, look for logic that blocks remote activation
+      when such actions are pending and reports the need for a workshop. Background download
+      while driving is acceptable; activation of safety-relevant software while driving is not
+      without an explicit assessment.
+    evidence:
+      - Per-update safety assessment and installation mode classification
+      - Workshop-required flag handling for updates needing calibration
+    artifacts: [update-policy]
+    crosswalk: ["iso-24089:7.3.1", "iso-26262:8-8"]
+  - ref: "7.2.1.1"
+    title: Authenticity and integrity of software updates
+    requirement: >
+      The vehicle must protect the authenticity and integrity of software updates to reasonably
+      prevent their compromise and prevent invalid updates.
+    category: updates-maintenance
+    severity: critical
+    fixability: code
+    guidance: >
+      The bootloader or update agent (FBL, AUTOSAR Adaptive UCM, Linux agents such as SWUpdate,
+      RAUC, Mender or Uptane-based clients) must verify an asymmetric signature over the image and
+      its metadata with a trusted key anchored in ROM, OTP or the HSM, before activation. CRC32,
+      checksums or a symmetric key shared across the fleet are not adequate. Check that
+      verification failure leaves the previous image active, that signature checks cannot be
+      skipped with a build flag in production, and that metadata (version, target hardware) is
+      covered by the signature. Uptane or a similar framework is good practice for OTA.
+    evidence:
+      - Signature verification in the update path before activation
+      - Trust anchor protected against modification
+      - Negative tests with tampered and unsigned packages
+    checks: [firmware-update-unsigned, secure-boot-disabled, hardcoded-crypto-key]
+    artifacts: [update-policy]
+    crosswalk: ["unece-r155:Annex5.B.M16", "iso-24089:7.3.4", "iso-sae-21434:13.4", "etsi-en-303-645:5.3-10", "iec-62443-4-2:CR 3.4"]
+  - ref: "7.2.1.2"
+    title: RXSWIN and software versions readable and protected
+    requirement: >
+      Where RXSWINs are used each one is uniquely identifiable and updated when type-approval
+      relevant software changes, is readable in a standardised way through an electronic interface
+      (at least the OBD port), and RXSWINs and software versions are protected against
+      unauthorised modification. Without on-vehicle RXSWINs the software versions must be
+      readable in the same way.
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Check the Dcm DID configuration for software identification DIDs (0xF189 ECU software
+      version, 0xF195 supplier software version, 0xF188 software number, and any OEM-specific
+      RXSWIN DID) readable with ReadDataByIdentifier (0x22) in the default session, with values
+      generated from the build and the flashed image rather than from writable NvM. Check that
+      WriteDataByIdentifier (0x2E) cannot alter these identifiers, or only after authentication
+      in the programming context, and that after an update the reported version matches the
+      active image (A/B slot aware).
+    evidence:
+      - DID definitions for software and RXSWIN identification
+      - Proof that identifiers are bound to the active image and write-protected
+    checks: [uds-weak-security-access]
+    crosswalk: ["iso-24089:7.3.2"]
+  - ref: "7.2.2.1.1"
+    title: Recovery from failed or interrupted updates
+    requirement: >
+      For OTA updates the vehicle must be able to restore systems to their previous version after
+      a failed or interrupted update, or place the vehicle in a safe state.
+    category: resilience-availability
+    severity: high
+    fixability: code
+    when:
+      { fact: updates, equals: ota }
+    guidance: >
+      Look for A/B (dual bank) partitions with an activation flag and boot counter, a fallback to
+      the last known good image after N failed boots, or a bootloader that stays resident and
+      accepts reprogramming when the application is invalid (application valid flag written only
+      after successful verification). On microcontrollers check the flash bank swap logic (for
+      example AURIX or S32 dual-bank swap), on Linux ECUs RAUC, SWUpdate or Mender A/B with
+      bootcount and altbootcmd. Check that a power loss at any step (erase, write, flag update)
+      is handled, and that the application validity flag write is atomic.
+    evidence:
+      - Dual-bank or resident bootloader design with fallback logic
+      - Power-loss and interruption test results
+    artifacts: [update-policy, automated-tests]
+    crosswalk: ["iso-24089:7.3.4", "etsi-en-303-645:5.3-2"]
+  - ref: "7.2.2.1.3"
+    title: Safe execution of updates
+    requirement: >
+      When executing an update may affect vehicle safety, technical means must ensure the vehicle
+      is in a state where the update can be executed safely; where updating while driving may be
+      unsafe the vehicle must not be drivable and safety-relevant functions must not be usable
+      during execution (7.2.2.3).
+    category: functional-safety
+    severity: high
+    fixability: code
+    when:
+      { fact: updates, equals: ota }
+    guidance: >
+      Look for a state machine in the update master or ECU that gates activation on vehicle state
+      signals (vehicle speed zero, gear in park, parking brake applied, ignition or power mode,
+      no charging session if relevant) read from authenticated and E2E-protected signals, and
+      that inhibits drive enable (for example via BswM mode, FiM or an interlock signal to the
+      powertrain) until the update completes. Check that the gating cannot be bypassed by a
+      single corrupted signal and that the reaction on violation is to abort or pause safely.
+    evidence:
+      - Update state machine with vehicle state preconditions and drive inhibition
+      - Tests showing activation is refused in unsafe vehicle states
+    checks: [can-unauthenticated]
+    crosswalk: ["iso-24089:7.3.1", "iso-26262:4-6.4.2"]
+  - ref: "7.2.2.5"
+    title: Preconditions including sufficient power
+    requirement: >
+      The vehicle must ensure that preconditions are met before an update is executed, including
+      enough electrical power to complete it and any recovery or transition to a safe state
+      (7.2.2.1.2).
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    when:
+      { fact: updates, equals: ota }
+    guidance: >
+      Check for explicit precondition checks before erase or activation: battery state of charge
+      or voltage thresholds (12 V and, for EVs, HV availability for DC/DC), estimated duration
+      versus available energy, network wake-up and keep-alive handling, and that ECUs refuse a
+      programming session (0x10 0x02) with NRC 0x22 conditionsNotCorrect when preconditions are
+      not met. Thresholds should be configurable and tested.
+    evidence:
+      - Precondition checks with power and state thresholds
+      - Test results for low-voltage and missing-precondition cases
+    artifacts: [automated-tests]
+    crosswalk: ["iso-24089:7.3.1"]
+  - ref: "7.2.2.2"
+    title: User information before and after an update
+    requirement: >
+      The user must be able to be informed before an update of its purpose (including criticality
+      and whether it is a recall, safety or security update), changes to functions, expected
+      duration, unavailable functions and safety instructions, and after it of success or failure
+      and the changes made (7.2.2.4).
+    category: transparency-documentation
+    severity: medium
+    fixability: code
+    when:
+      { fact: updates, equals: ota }
+    guidance: >
+      For head unit, telematics or update-master software, look for HMI strings and data models
+      carrying purpose, criticality, duration estimate, unavailable functions and post-update
+      result; check that failure reasons are surfaced. For a non-HMI ECU, check that it reports
+      progress, result and error codes to the update master (UDS responses, UCM status, DTCs) so
+      that the vehicle can inform the user.
+    evidence:
+      - Release-note content model and HMI flows for pre- and post-update information
+      - Result and error reporting from the ECU to the update master
+    artifacts: [user-documentation, changelog]
+    crosswalk: ["iso-24089:9.3.2"]

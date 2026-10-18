@@ -1,0 +1,29 @@
+id: fintech-payments-eu
+title: Consumer fintech payments app (EU, PSD2)
+description: >
+  A consumer fintech app in the EU that takes card payments through a tokenised
+  provider SDK (we never see the PAN) and acts as an ICT provider to banks.
+  Brings PSD2 / strong customer authentication, DORA ICT risk and third-party
+  duties, GDPR and financial-data protection, PCI DSS SAQ-A scope limited by the
+  tokenised SDK, and the OWASP ASVS and mobile MASVS controls.
+examples: []
+answers:
+  productTypes: [mobile-app, backend-api]
+  sector: [finance]
+  markets: [EU]
+  audience: [consumers]
+  orgRole: service-provider
+  orgSize: medium
+  dataCategories: [personal, payment-cards, financial, credentials]
+  paymentHandling: tokenized-sdk
+  aiUsage: none
+  safetyCritical: "no"
+  connectivity: [internet]
+  updates: app-store
+  distribution: [apple-app-store, google-play]
+  regulatedEntity: [dora-financial-entity, ict-provider-to-finance]
+  certificationsTarget: [none]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify: []

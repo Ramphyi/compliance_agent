@@ -1,0 +1,346 @@
+id: iec-61508
+title: Functional safety of electrical/electronic/programmable electronic safety-related systems - Part 3 Software requirements
+shortTitle: IEC 61508-3
+version: Edition 2.0 (2010-04)
+authority: IEC
+kind: standard
+jurisdictions: [global, EU]
+url: https://webstore.iec.ch/en/publication/5517
+textPolicy: paraphrased
+summary: >
+  IEC 61508-3 sets the software safety lifecycle for E/E/PE safety-related systems: safety
+  requirements, architecture and detailed design, coding, module and integration testing,
+  validation, modification, verification and assessment. Annex A and B tables rate
+  techniques and measures as recommended (R) or highly recommended (HR) per safety
+  integrity level (SIL1 to SIL4). It is the generic basis for sector standards such as
+  IEC 61511, IEC 62061 and ISO 26262.
+applicability:
+  any:
+    - { fact: sil, in: [SIL1, SIL2, SIL3, SIL4] }
+    - all:
+        - { fact: productTypes, in: [industrial-control] }
+        - { fact: safetyCritical, in: [injury-possible, life-critical] }
+applicabilityNote: >
+  Applies to software in safety functions of industrial or machinery systems with an
+  allocated SIL, and is the reference for products without a sector-specific standard.
+  If the product is industrial-control and a malfunction could injure people but no SIL is
+  stated, confirm the SIL allocation from the system hazard and risk analysis (IEC 61508-1
+  and -2) before the audit relies on these controls. Technique ratings below summarise
+  Annex A and B and are indicative; the licensed standard is authoritative. Edition 3 of
+  IEC 61508-3 reached the committee draft for vote stage in 2025 but is not published; the
+  2010 edition remains current until replaced.
+keyDates:
+  - { date: "2010-04-30", note: IEC 61508-3 Edition 2.0 published }
+controls:
+  - ref: "7.1"
+    title: Software safety lifecycle and planning
+    requirement: >
+      Software for safety functions must be developed under a defined software safety
+      lifecycle with planned phases, inputs, outputs and verification activities, under a
+      quality management system and functional safety plan.
+    category: functional-safety
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a software safety plan or software development plan (docs/safety/,
+      SDP.md, a V-model description) that names the lifecycle phases, the SIL, the
+      techniques chosen from Annex A for that SIL with justification, and the roles and
+      independence of verifiers and assessors. Check that the repository structure mirrors
+      the plan: requirements, design, code, tests and review records.
+    evidence:
+      - Software safety plan with SIL and technique selection
+      - Lifecycle phase outputs present in the repository
+    artifacts: [safety-case, requirements-traceability]
+    crosswalk: ["iso-26262:2-6.4.6", "iec-62304:5.1.1"]
+
+  - ref: "6.2.3"
+    title: Configuration management
+    requirement: >
+      Software configuration management must identify all safety-related items, control
+      changes, keep baselines that allow a release to be reproduced, and record the tools
+      and versions used.
+    category: functional-safety
+    severity: high
+    fixability: process
+    guidance: >
+      Check for version control of all items including requirements and test specs, tagged
+      release baselines, pinned compiler and tool versions (toolchain files, Docker build
+      images with fixed digests, CMake toolchain), and a release record listing the
+      configuration of each delivered build. Flag builds that depend on unpinned toolchains
+      or on files outside version control.
+    evidence:
+      - Tagged baselines for each release
+      - Pinned toolchain and dependency versions
+    checks: [unpinned-dependencies]
+    artifacts: [dependency-lockfile, changelog, ci-pipeline]
+    crosswalk: ["iso-26262:8-7"]
+
+  - ref: "7.2"
+    title: Software safety requirements specification
+    requirement: >
+      Software safety requirements must be derived from the system safety requirements,
+      be clear, verifiable and traceable, and cover safety functions, diagnostics, response
+      to faults and the target SIL. Semi-formal methods are highly recommended from SIL3.
+    category: functional-safety
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a software safety requirements specification with unique IDs, each linked to
+      a system safety requirement and to design elements and tests. Check that diagnostics
+      and fault reactions (safe state, timing) are specified. Traceability can be shown by
+      requirement IDs in code comments, test names or a traceability matrix generated in
+      CI.
+    evidence:
+      - Software safety requirements specification with unique IDs
+      - Bidirectional traceability matrix
+    artifacts: [requirements-traceability]
+    crosswalk: ["iso-26262:6-6", "iec-62304:5.2.2"]
+
+  - ref: "7.4.3"
+    title: Software architecture with fault detection
+    requirement: >
+      The software architecture must partition safety and non-safety parts or justify
+      their coexistence, and include fault detection and diagnostic measures appropriate
+      to the SIL (Table A.2), such as program sequence monitoring, graceful degradation and
+      static resource allocation.
+    category: functional-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for an architecture document showing safety and non-safety components and how
+      interference is prevented (MPU regions, separate cores, RTOS partitions). In code,
+      check for a hardware watchdog (STM32 IWDG or WWDG, MCU WDT) refreshed only after all
+      critical tasks report progress, program flow monitoring, plausibility and range checks
+      on sensor inputs, stack overflow detection (RTOS stack checking, MPU guard regions),
+      and static allocation of tasks and buffers. A watchdog kicked from a timer interrupt
+      regardless of task health is not adequate.
+    evidence:
+      - Architecture document with partitioning and diagnostics
+      - Watchdog supervising task liveness
+      - Static resource allocation
+    checks: [missing-watchdog, dynamic-memory-embedded]
+    artifacts: [architecture-doc]
+    crosswalk: ["iso-26262:6-7", "iec-62443-4-2:CR 7.1"]
+
+  - ref: "7.4.4"
+    title: Support tools and translator qualification
+    requirement: >
+      Off-line support tools must be classified (T1 no effect on executable code, T2 can
+      miss defects, T3 can introduce defects), and T2 and T3 tools such as compilers,
+      code generators and static analysers must be justified by specification, proven in
+      use, certification or validation.
+    category: functional-safety
+    severity: high
+    fixability: document
+    guidance: >
+      Identify the toolchain from build files (compiler, linker, code generators, static
+      analysers, test frameworks) and look for a tool classification and qualification
+      record listing each tool, version, class and the evidence of confidence (TUV
+      certified compiler such as IAR or GHS functional safety editions, a qualification
+      kit, or a validation suite). Check that the versions in the record match the build.
+    evidence:
+      - Tool classification list (T1, T2, T3)
+      - Qualification evidence for T2 and T3 tools at the versions used
+    artifacts: [safety-case]
+    crosswalk: ["iso-26262:8-11"]
+
+  - ref: Table A.3
+    title: Suitable programming language and language subset
+    requirement: >
+      A suitable, strongly typed programming language must be used; from SIL3 a language
+      subset is highly recommended, and certified or proven-in-use translators are
+      recommended from SIL1 and highly recommended from SIL2.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      For C or C++, check that a defined subset (MISRA C:2012 or later, MISRA C++:2023,
+      AUTOSAR C++14, or an internal subset) is adopted and enforced by a checker in CI.
+      Check that the compiler version is fixed and documented and that non-standard
+      extensions are listed. Flag code using constructs the subset prohibits without a
+      deviation record.
+    evidence:
+      - Declared language subset and checker configuration
+      - Fixed, documented compiler version
+    artifacts: [coding-standard, static-analysis-config]
+    crosswalk: ["misra-c:GRP", "iso-26262:6-5.4.3"]
+
+  - ref: Table B.1
+    title: Design and coding standards
+    requirement: >
+      A coding standard is highly recommended at every SIL and must restrict error-prone
+      constructs: dynamic objects and variables, pointers, recursion, interrupts,
+      unstructured control flow and implicit type conversion, with stricter limits as the
+      SIL rises (most become highly recommended from SIL3).
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Check the coding standard covers each B.1 topic and that the code follows it: no
+      malloc or free after initialisation, bounded pointer use, no recursion (verify with
+      call graph analysis), minimal interrupt work with deferred processing, no goto, and
+      explicit casts. Flag malloc, calloc, realloc or free in safety tasks, goto, recursive
+      functions, and implicit narrowing conversions reported by -Wconversion.
+    evidence:
+      - Coding standard covering the Table B.1 topics
+      - Static analysis report showing compliance or approved deviations
+    checks: [dynamic-memory-embedded, goto-statement, unsafe-c-functions]
+    artifacts: [coding-standard, static-analysis-config]
+    crosswalk: ["misra-c:Rule 21.3", "misra-c:Rule 17.2", "misra-c:Rule 15.1", "misra-c:Rule 10.3", "iso-26262:6-5.4.3", "iso-26262:6-8"]
+
+  - ref: Table A.4
+    title: Detailed design with defensive programming
+    requirement: >
+      Detailed design and code must follow a structured, modular approach and, from SIL2,
+      apply defensive programming (described in IEC 61508-7 C.2.5): detect anomalous
+      control flow, data flow or data values during execution and react in a predetermined,
+      acceptable way. Defensive programming is recommended at SIL2 and highly recommended
+      at SIL3 and SIL4.
+    category: functional-safety
+    severity: high
+    fixability: code
+    when: { fact: sil, in: [SIL2, SIL3, SIL4] }
+    guidance: >
+      Look for range and plausibility checks on inputs and parameters at module
+      boundaries, checks of return values, default branches in switch statements that
+      enter a safe state, redundant storage or CRC of critical variables (inverted copies),
+      and assertions that remain active in release builds with a defined fault reaction.
+      Flag functions that dereference pointer parameters without null checks and switch
+      statements with no default.
+    evidence:
+      - Parameter and plausibility checks with defined fault reactions
+      - Protection of safety-critical data in memory
+    checks: [missing-watchdog]
+    crosswalk: ["misra-c:Rule 16.4", "cert-c:EXP34-C"]
+
+  - ref: "7.4.6"
+    title: Code implementation and code review
+    requirement: >
+      Source code must be readable, understandable and testable, satisfy the detailed
+      design and the coding standard, and be verified by code review or inspection
+      before testing.
+    category: functional-safety
+    severity: high
+    fixability: process
+    guidance: >
+      Check for mandatory review of every change (pull request approvals, CODEOWNERS,
+      review checklists that cover the coding standard and safety requirements) and for
+      records of reviews kept with the release. Independence of the reviewer increases
+      with SIL.
+    evidence:
+      - Code review records for safety-related modules
+      - Review checklist referencing the coding standard
+    artifacts: [code-review-process]
+
+  - ref: Table B.8
+    title: Static analysis
+    requirement: >
+      Static analysis (boundary value, control flow, data flow and similar analyses) is
+      recommended at SIL1 and highly recommended from SIL2 as part of software verification.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Check for static analysis in CI that covers control and data flow and undefined
+      behaviour (Polyspace, Astree, LDRA, PC-lint Plus, Coverity, CodeSonar, cppcheck with
+      MISRA addon, clang-tidy), with results archived per release and zero unjustified
+      findings. Check compiler warnings at -Wall -Wextra -Werror and a stack usage analysis
+      (-fstack-usage, worst-case stack reports).
+    evidence:
+      - Static analysis configuration and per-release reports
+      - Stack usage analysis
+    artifacts: [static-analysis-config, ci-pipeline]
+    crosswalk: ["misra-c:Dir 4.1", "iso-26262:6-9"]
+
+  - ref: "7.4.7"
+    title: Module testing and structural coverage
+    requirement: >
+      Each software module must be tested against its specification, including boundary
+      values. Structural coverage targets rise with SIL: entry points at all levels,
+      statement coverage highly recommended from SIL2, branch coverage from SIL3 and MC/DC
+      at SIL4.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for unit tests (Unity, CppUTest, GoogleTest, VectorCAST, Tessy) per module and a
+      coverage tool (gcov or lcov, Bullseye, VectorCAST, LDRA) with thresholds in CI that
+      match the SIL. Check boundary-value and fault-injection cases for safety functions.
+    evidence:
+      - Unit tests for each safety-related module
+      - Coverage reports meeting the SIL target
+    artifacts: [automated-tests, test-coverage-config]
+    crosswalk: ["iso-26262:6-9", "iec-62304:5.5.5", "iso-26262:6-9.4.4"]
+
+  - ref: "7.4.8"
+    title: Software integration testing
+    requirement: >
+      Integration tests must show that software modules interact correctly and that the
+      integrated software performs its intended functions, including timing and resource
+      behaviour, with results documented.
+    category: testing-verification
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for integration test suites, hardware-in-the-loop setups and test reports that
+      exercise inter-module interfaces, task timing and worst-case execution time, and
+      fault reaction across modules.
+    evidence:
+      - Integration test specification and results
+      - Timing and resource usage tests
+    artifacts: [automated-tests]
+    crosswalk: ["iso-26262:6-10"]
+
+  - ref: "7.7"
+    title: Software aspects of system safety validation
+    requirement: >
+      Validation must demonstrate that the integrated software meets the software safety
+      requirements at the intended SIL, using functional and black-box testing and, where
+      appropriate, simulation, with documented results.
+    category: functional-safety
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a validation plan and report linking each software safety requirement to a
+      validation test and verdict, with the exact software version and configuration
+      validated.
+    evidence:
+      - Validation report covering every software safety requirement
+    artifacts: [requirements-traceability, safety-case]
+    crosswalk: ["iso-26262:6-11"]
+
+  - ref: "7.8"
+    title: Software modification
+    requirement: >
+      Every modification must be authorised, preceded by an impact analysis, and followed
+      by re-verification and re-validation of the affected parts to the original SIL.
+    category: functional-safety
+    severity: high
+    fixability: process
+    guidance: >
+      Check that change requests or pull requests to safety-related code carry an impact
+      analysis section, that regression tests run on every change, and that the safety
+      case is updated for the release. Flag direct commits to release branches without
+      review.
+    evidence:
+      - Impact analysis records for changes
+      - Regression test results after each change
+    artifacts: [changelog, code-review-process, automated-tests]
+    crosswalk: ["iec-62443-4-1:SM-1", "iso-26262:8-8"]
+
+  - ref: "8"
+    title: Functional safety assessment
+    requirement: >
+      A functional safety assessment with independence appropriate to the SIL must judge
+      whether the software lifecycle achieved the required functional safety.
+    category: functional-safety
+    severity: medium
+    fixability: process
+    when: { fact: sil, in: [SIL2, SIL3, SIL4] }
+    guidance: >
+      Look for an assessment report or certificate (for example from an accredited body)
+      covering the current software version, and evidence that findings were closed.
+    evidence:
+      - Functional safety assessment report for the current release
+    artifacts: [safety-case]
+    crosswalk: ["iso-26262:2-6.4.12"]

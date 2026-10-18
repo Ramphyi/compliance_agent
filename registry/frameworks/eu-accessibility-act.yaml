@@ -1,0 +1,361 @@
+id: eu-accessibility-act
+title: Directive (EU) 2019/882 on the accessibility requirements for products and services (European Accessibility Act)
+shortTitle: European Accessibility Act
+version: "Directive (EU) 2019/882, applicable from 2025-06-28; technical means EN 301 549 (V3.2.1, V4.1.1 aligned to WCAG 2.2 AA)"
+authority: European Parliament and Council of the European Union
+kind: regulation
+jurisdictions: [EU, EEA]
+url: https://eur-lex.europa.eu/eli/dir/2019/882/oj
+textPolicy: paraphrased
+summary: >
+  The EU law that makes key consumer products and services accessible to persons with
+  disabilities. For services it covers e-commerce, consumer banking, e-books, electronic
+  communications, access to audiovisual media and passenger transport ticketing and
+  information, including their websites and mobile apps. Conformity is shown in practice
+  by meeting EN 301 549, which for web and app content maps to WCAG success criteria at
+  level AA.
+applicability:
+  all:
+    - { fact: markets, in: [EU] }
+    - { fact: audience, in: [consumers] }
+    - { fact: productTypes, in: [web-app, saas, mobile-app, desktop-app] }
+    - { not: { fact: orgSize, equals: micro } }
+applicabilityNote: >
+  Applies to services offered to consumers in the EU since 28 June 2025, notably
+  e-commerce (any website or app through which consumers conclude contracts, including
+  subscriptions), consumer banking, e-books, electronic communications, audiovisual media
+  access and passenger transport services. Microenterprises (fewer than 10 people and
+  turnover or balance sheet of at most 2 million EUR) providing services are exempt
+  (Art. 4(5)); manufacturers of covered products are not. Purely B2B services and
+  consumer apps that conclude no consumer contracts are generally out of scope. National
+  transpositions (for example Romanian Law 232/2022) set enforcement. Disproportionate
+  burden claims (Art. 14) need a documented assessment. Until a harmonised standard is
+  cited in the Official Journal, EN 301 549 and WCAG 2.2 AA are the practical benchmark.
+keyDates:
+  - { date: "2022-06-28", note: Transposition deadline for Member States }
+  - { date: "2025-06-28", note: Accessibility requirements apply to products placed on the market and services provided }
+  - { date: "2026-09-02", note: EN 301 549 V4.1.1 published by ETSI and CEN-CENELEC with WCAG 2.2 alignment and EAA mapping }
+  - { date: "2030-06-28", note: "End of the transitional period for services using products lawfully used before 2025-06-28 and for pre-existing service contracts" }
+controls:
+  - ref: "AnnexV"
+    title: Accessibility information and statement for services
+    requirement: >
+      Service providers must publish information on how the service meets the
+      accessibility requirements (description of the service in accessible formats,
+      the requirements met, and how), typically in the general terms or an
+      accessibility statement, and keep it available while the service is offered.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Look for an accessibility statement (accessibility.md, an /accessibility page,
+      or a section in the terms) that names the standard targeted (EN 301 549 and WCAG
+      2.2 AA), the conformance status, known limitations with planned fixes, the date of
+      the last evaluation, a feedback and contact mechanism, and the national
+      enforcement authority. Check it is linked from the footer and app settings and is
+      itself accessible.
+    evidence:
+      - Published accessibility statement with conformance status and contact
+      - Link from footer and app settings
+    checks: []
+    artifacts: [accessibility-statement]
+    crosswalk: []
+
+  - ref: "WCAG-1.1.1"
+    title: Text alternatives for non-text content
+    requirement: >
+      Images, icons, charts and controls that convey meaning need a text alternative;
+      decorative images must be hidden from assistive technology (EN 301 549 clause
+      9.1.1.1 for web, 11.1.1.1 for software).
+    category: accessibility
+    severity: high
+    fixability: code
+    guidance: >
+      Web: every img has a meaningful alt, or alt="" for decorative images; inline SVG
+      icons have role="img" with aria-label or aria-hidden="true" when decorative;
+      icon-only buttons and links have aria-label or visually hidden text; product
+      images in e-commerce describe the product. React Native: accessibilityLabel on
+      Image and touchables. iOS: accessibilityLabel, isAccessibilityElement. Android:
+      contentDescription (null for decorative) and Compose semantics contentDescription.
+      Flutter: Semantics(label:) and excludeFromSemantics. Linters such as
+      eslint-plugin-jsx-a11y (alt-text) catch many gaps.
+    evidence:
+      - Alt text and accessible labels on images and icon controls
+      - Accessibility lint rules enabled in CI
+    checks: []
+    artifacts: [static-analysis-config]
+    crosswalk: []
+
+  - ref: "WCAG-1.2.2"
+    title: Captions and audio description for media
+    requirement: >
+      Prerecorded video with audio needs captions and audio description or a media
+      alternative, and live video needs captions where the service provides it (WCAG
+      1.2.2, 1.2.4, 1.2.5).
+    category: accessibility
+    severity: medium
+    fixability: code
+    guidance: >
+      Check video elements and players for caption tracks (track kind="captions" with
+      WebVTT files, HLS subtitle renditions, platform player caption support), a
+      transcript for audio-only content, and audio description or a descriptive
+      transcript for video where visual information is essential. Autoplaying media
+      must be pausable (WCAG 1.4.2).
+    evidence:
+      - Caption files or tracks for prerecorded video
+      - Transcripts for audio content
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "WCAG-1.3.1"
+    title: Semantic structure, labels and input purpose
+    requirement: >
+      Structure and relationships must be programmatically determinable (headings,
+      lists, tables, landmarks, form labels), and input fields collecting user data
+      should identify their purpose (WCAG 1.3.1, 1.3.2, 1.3.5, 3.3.2).
+    category: accessibility
+    severity: high
+    fixability: code
+    guidance: >
+      Web: use native elements (button, a, nav, main, h1 to h6, ul, table with th) rather
+      than div with click handlers; every input has a label element with for/id or
+      aria-labelledby (placeholder alone is not a label); related controls grouped with
+      fieldset and legend; autocomplete attributes on personal data fields (name, email,
+      tel, street-address, cc-number). Mobile: accessibilityRole or traits, heading
+      roles, labels tied to text fields. Check checkout and signup forms first.
+    evidence:
+      - Semantic HTML and landmarks
+      - Programmatic labels and autocomplete on form fields
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "WCAG-1.4.3"
+    title: Colour contrast and use of colour
+    requirement: >
+      Text must have a contrast ratio of at least 4.5:1 (3:1 for large text), UI
+      components and graphical objects at least 3:1, and colour must not be the only
+      way to convey information (WCAG 1.4.1, 1.4.3, 1.4.11).
+    category: accessibility
+    severity: medium
+    fixability: code
+    guidance: >
+      Check design tokens and theme files (CSS variables, Tailwind config, theme.ts,
+      colors.xml, asset catalogs) for foreground and background pairs below the ratios,
+      including placeholder text, disabled-looking but active controls, focus rings and
+      input borders, and dark mode. Error states and required fields must not rely on
+      red colour alone; add text or icons.
+    evidence:
+      - Design tokens meeting contrast ratios
+      - Automated contrast checks (axe, Lighthouse) in CI
+    checks: []
+    artifacts: [automated-tests]
+    crosswalk: []
+
+  - ref: "WCAG-1.4.4"
+    title: Resize, reflow and text spacing
+    requirement: >
+      Content must remain usable when text is resized to 200 percent, reflow at a width
+      equivalent to 320 CSS pixels without two-dimensional scrolling, and tolerate
+      increased text spacing (WCAG 1.4.4, 1.4.10, 1.4.12).
+    category: accessibility
+    severity: medium
+    fixability: code
+    guidance: >
+      Web: the viewport meta must not disable zoom (no user-scalable=no or
+      maximum-scale=1); use relative units; avoid fixed heights that clip text. Mobile:
+      support Dynamic Type on iOS (preferredFont, UIFontMetrics, SwiftUI text styles)
+      and sp units with fontScale on Android; check allowFontScaling is not disabled in
+      React Native and textScaleFactor is not clamped in Flutter.
+    evidence:
+      - Zoom allowed and relative units used
+      - Dynamic type or font scaling supported in apps
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "WCAG-2.1.1"
+    title: Keyboard operability and no keyboard trap
+    requirement: >
+      All functionality must be operable through a keyboard or keyboard interface
+      without specific timings, and focus must never get trapped (WCAG 2.1.1, 2.1.2).
+    category: accessibility
+    severity: high
+    fixability: code
+    guidance: >
+      Flag onClick on non-interactive elements (div, span) without role, tabIndex=0 and
+      key handlers; custom dropdowns, carousels, date pickers and modals that are not
+      keyboard operable; positive tabindex values; and modals that do not trap focus
+      inside while open and return it on close. Check that payment and checkout widgets
+      (including third-party iframes) are keyboard operable. Mobile: external keyboard
+      and switch control support follow from proper native controls.
+    evidence:
+      - Interactive elements are native or have role, tabindex and key handlers
+      - Modal focus management
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "WCAG-2.4.7"
+    title: Visible focus, logical order and focus not obscured
+    requirement: >
+      Keyboard focus must be visible, follow a meaningful order, and not be entirely
+      hidden by author-created content such as sticky headers or cookie banners; users
+      must be able to bypass repeated blocks (WCAG 2.4.1, 2.4.3, 2.4.7, 2.4.11).
+    category: accessibility
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag CSS that removes outlines (outline: none or outline: 0 on :focus) without a
+      :focus-visible replacement, sticky footers, chat widgets or consent banners that
+      cover the focused element, and missing skip-to-content links. Check DOM order
+      matches visual order where CSS reorders content.
+    evidence:
+      - Visible focus styles via focus-visible
+      - Skip link and logical focus order
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "WCAG-2.5.8"
+    title: Target size, dragging and pointer alternatives
+    requirement: >
+      Pointer targets should be at least 24 by 24 CSS pixels or have sufficient spacing,
+      functionality using dragging must have a single-pointer alternative, and
+      path-based or multipoint gestures need simple alternatives (WCAG 2.5.1, 2.5.7,
+      2.5.8).
+    category: accessibility
+    severity: medium
+    fixability: code
+    guidance: >
+      Check small icon buttons, close buttons on banners and inline links in dense
+      lists. Sliders, sortable lists, swipe-to-delete, drag-and-drop uploads and map
+      interactions need buttons or tap alternatives. Mobile platform guidance suggests
+      44 by 44 points (iOS) and 48 by 48 dp (Android) touch targets.
+    evidence:
+      - Minimum target sizes in component styles
+      - Non-drag alternatives for drag interactions
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "WCAG-3.3.1"
+    title: Error identification, help and accessible authentication
+    requirement: >
+      Input errors must be identified and described in text with suggestions, users
+      must not be asked to re-enter information already provided in the same process,
+      and authentication must not rely on a cognitive function test without an
+      alternative such as paste, password managers or passkeys (WCAG 3.3.1, 3.3.3,
+      3.3.7, 3.3.8).
+    category: accessibility
+    severity: high
+    fixability: code
+    guidance: >
+      Check form validation renders text errors linked to fields (aria-describedby,
+      aria-invalid) and announced (live region or focus move), not only red borders.
+      Login and checkout must allow paste in password and code fields (flag
+      onPaste preventDefault), support autocomplete="current-password" and
+      "one-time-code", and avoid image CAPTCHAs without accessible alternatives. Check
+      billing and shipping address reuse in checkout.
+    evidence:
+      - Text error messages linked to fields
+      - Paste and password manager support in authentication
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "WCAG-4.1.2"
+    title: Name, role, value and status messages for custom components
+    requirement: >
+      Custom user interface components must expose name, role, state and value to
+      assistive technologies, and status messages must be announced without moving
+      focus (WCAG 4.1.2, 4.1.3).
+    category: accessibility
+    severity: high
+    fixability: code
+    guidance: >
+      Check custom widgets use correct ARIA patterns (role="dialog" with aria-modal and
+      a label, aria-expanded on disclosure buttons, aria-selected on tabs, aria-checked
+      on toggles) or, better, native elements; flag invalid or redundant ARIA and
+      aria-hidden on focusable elements. Cart updates, form submission results, and
+      search result counts should use role="status" or aria-live. Mobile: accessibility
+      state and value on toggles and sliders (accessibilityState, stateDescription,
+      accessibilityValue).
+    evidence:
+      - Correct roles and states on custom components
+      - Live regions for status messages
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "WCAG-3.1.1"
+    title: Page language, titles and consistent navigation
+    requirement: >
+      Pages must declare their language and changes of language, have descriptive
+      titles, and keep navigation and help mechanisms consistent across pages (WCAG
+      2.4.2, 3.1.1, 3.1.2, 3.2.3, 3.2.6).
+    category: accessibility
+    severity: low
+    fixability: code
+    guidance: >
+      Check the html element has a lang attribute matching the localisation (for
+      example lang="ro" for Romanian pages), lang on mixed-language fragments, unique
+      document titles per route (React Helmet, Next.js metadata), and that help or
+      contact links appear in the same place on every page.
+    evidence:
+      - Language attributes and per-route titles
+      - Consistent help location
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "AnnexI"
+    title: Compatibility with assistive technology and accessible support
+    requirement: >
+      Services must be provided in a way that is compatible with assistive technologies,
+      give accessible information about how the service works and its accessibility
+      features, and make support services (help desk, call centre) able to inform
+      about accessibility; e-commerce must also present accessibility information on
+      products sold when provided by the economic operator, and banking services must
+      make identification, signature and payment methods perceivable, operable,
+      understandable and robust.
+    category: accessibility
+    severity: medium
+    fixability: code
+    guidance: >
+      Check the app works with VoiceOver and TalkBack and the web with screen readers
+      (NVDA, VoiceOver), including login, search, product pages, cart, payment and
+      account deletion. Check help and FAQ content is accessible, the support channel
+      offers a non-voice option, and product pages display accessibility information
+      supplied by manufacturers. For banking or payment flows check 3-D Secure and
+      strong customer authentication screens are accessible.
+    evidence:
+      - Screen reader test results for key journeys
+      - Accessible help content and support channel
+    checks: []
+    artifacts: [user-documentation]
+    crosswalk: ["psd2-sca:RTS-Art.4"]
+
+  - ref: "Art.4-testing"
+    title: Accessibility testing in the development process
+    requirement: >
+      To keep services conformant as they change, accessibility should be verified
+      continuously against EN 301 549 and WCAG 2.2 AA with automated and manual testing.
+    category: testing-verification
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for automated accessibility checks in CI: axe-core via jest-axe,
+      @axe-core/playwright or cypress-axe, Lighthouse CI accessibility budgets,
+      eslint-plugin-jsx-a11y or eslint-plugin-vuejs-accessibility, Android Accessibility
+      Test Framework (Espresso AccessibilityChecks), XCUITest
+      performAccessibilityAudit, and Flutter accessibility guideline tests
+      (meetsGuideline). Automated tools catch only part of the issues, so look also for
+      a manual audit record with screen readers and keyboard.
+    evidence:
+      - Automated accessibility tests in CI
+      - Manual audit report with date
+    checks: []
+    artifacts: [automated-tests, ci-pipeline, static-analysis-config]
+    crosswalk: []

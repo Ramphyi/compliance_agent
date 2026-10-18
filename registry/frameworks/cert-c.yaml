@@ -1,0 +1,448 @@
+id: cert-c
+title: SEI CERT C Coding Standard - Rules for Developing Safe, Reliable, and Secure Systems
+shortTitle: SEI CERT C
+version: Current online edition (risk assessments as published in 2026)
+authority: Carnegie Mellon University Software Engineering Institute (SEI)
+kind: guideline
+jurisdictions: [global]
+url: https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/
+textPolicy: open
+summary: >
+  The SEI CERT C Coding Standard lists secure coding rules for C (ISO/IEC 9899) that
+  prevent undefined behaviour and exploitable defects such as buffer overflows,
+  use-after-free, integer overflow and format-string attacks. Each rule carries a risk
+  assessment (severity, likelihood, and whether violations are detectable and repairable)
+  that yields a priority and a level from L1 (highest) to L3. This registry selects the
+  highest-impact rules for audits of C and C-style C++ code.
+applicability:
+  all:
+    - { fact: productTypes, in: [embedded-firmware, iot-device, automotive-ecu, industrial-control, medical-device, desktop-app, library-sdk] }
+    - { fact: languages, in: [c, cpp] }
+applicabilityNote: >
+  Applies when the product contains C (or C-style C++) code; the languages fact (detected from the code and confirmed by a person) decides it. CERT C is not law but is widely
+  referenced by secure development requirements (IEC 62443-4-1 SI-2, NIST SSDF PW.5.1, the
+  EU CRA exploitation-mitigation duty, FDA premarket cybersecurity). Severity mapping:
+  CERT severity high becomes high here (medium when CERT likelihood is unlikely), raised
+  to critical for memory-corruption and format-string rules where exploitation is likely;
+  CERT medium maps to medium and low to low. The risk assessment in each requirement is
+  quoted as severity / likelihood / level from the current SEI pages, which replaced the
+  older remediation-cost model with detectable and repairable flags, so some levels
+  differ from the 2016 book edition.
+controls:
+  - ref: STR31-C
+    title: Guarantee storage for strings has room for the data and the null terminator
+    requirement: >
+      Every string copy or concatenation must fit the destination including the
+      terminating null character. CERT risk assessment high / likely / L2.
+    category: code-safety
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag strcpy, strcat, sprintf, vsprintf, gets and scanf("%s") into fixed-size
+      buffers, and loops that copy characters without checking the destination size.
+      Check length computations for off-by-one errors (buffer of strlen(s) bytes without +1).
+      Good looks like snprintf with sizeof(dest) and a truncation check, strlcpy or
+      strncpy followed by explicit termination, or length-checked memcpy.
+    evidence:
+      - No unbounded string functions on external or variable-length input
+      - Static analysis rule for buffer overflow enabled with zero open findings
+    checks: [unsafe-c-functions]
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 21.6", "iec-62443-4-2:CR 3.5", "owasp-top10:A05"]
+
+  - ref: STR32-C
+    title: Do not pass non-null-terminated character sequences to string functions
+    requirement: >
+      Character arrays passed to functions that expect a string must be null terminated.
+      CERT risk assessment high / probable / L1.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for strncpy(dest, src, sizeof(dest)) without a following dest[sizeof(dest)-1] =
+      '\0', buffers filled by recv, read or UART DMA and then passed to strlen, strcmp,
+      atoi or printf("%s") without termination, and fixed-length protocol fields treated as
+      C strings. Good looks like explicit termination or length-bounded functions such as
+      strnlen and memcmp.
+    evidence:
+      - Explicit termination after bounded copies and network reads
+    checks: [unsafe-c-functions]
+    artifacts: [static-analysis-config]
+
+  - ref: MEM30-C
+    title: Do not access freed memory
+    requirement: >
+      Memory must not be read, written or freed again after it has been deallocated.
+      CERT risk assessment high / likely / L2.
+    category: code-safety
+    severity: critical
+    fixability: code
+    guidance: >
+      Look for pointers used after free (including in error paths and callbacks), double
+      free in cleanup code with multiple goto labels, and objects freed while still
+      referenced from lists or queues. Good looks like setting pointers to NULL after free,
+      single ownership, and running AddressSanitizer or Valgrind in tests.
+    evidence:
+      - Sanitizer runs (ASan) in CI with no use-after-free reports
+      - Clear ownership rules for heap objects
+    artifacts: [static-analysis-config, automated-tests]
+    crosswalk: ["misra-c:Rule 22.2"]
+
+  - ref: MEM31-C
+    title: Free dynamically allocated memory when no longer needed
+    requirement: >
+      Allocated memory must be released when it is no longer needed to avoid leaks that
+      exhaust memory. CERT risk assessment medium / probable / L3.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Check every allocation path, especially early returns and error branches, for a
+      matching free. On long-running firmware even small leaks cause failure; prefer static
+      allocation or pools. Leak detection (LeakSanitizer, Valgrind, heap high-water marks
+      such as xPortGetMinimumEverFreeHeapSize) in tests is good evidence.
+    evidence:
+      - Leak-free test runs
+      - Heap usage monitoring in long-running tests
+    checks: [dynamic-memory-embedded]
+    artifacts: [automated-tests]
+    crosswalk: ["misra-c:Rule 22.1", "misra-c:Dir 4.12"]
+
+  - ref: MEM34-C
+    title: Only free memory allocated dynamically
+    requirement: >
+      free must only be called on pointers returned by the allocation functions and not on
+      stack, static or offset pointers. CERT risk assessment high / likely / L2.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for free on pointers that may point to static buffers or string literals
+      depending on a branch, free on pointers that were advanced (p++), and mixed allocators
+      (pvPortMalloc with free, new with free). Good looks like one allocator per object and
+      ownership flags when a pointer can refer to either static or heap memory.
+    evidence:
+      - Consistent allocator and deallocator pairs
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 22.2"]
+
+  - ref: MEM35-C
+    title: Allocate sufficient memory for an object
+    requirement: >
+      Allocation sizes must be large enough for the object, computed without overflow.
+      CERT risk assessment high / probable / L2.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Flag malloc(sizeof(ptr)) where sizeof(*ptr) was meant, malloc(n * size) without an
+      overflow check (use calloc or check n <= SIZE_MAX / size), and string allocations
+      without room for the terminator.
+    evidence:
+      - Overflow-checked allocation size computations
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:INT30-C"]
+
+  - ref: INT30-C
+    title: Ensure unsigned integer operations do not wrap
+    requirement: >
+      Unsigned arithmetic used for sizes, indexes or allocation must not wrap around.
+      CERT risk assessment high / likely / L2.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for length arithmetic on packet fields (len - header_size where len may be
+      smaller, offset + len compared to buffer size), multiplication for allocation sizes,
+      and counters used as indexes. Good looks like precondition checks before subtraction
+      and addition, or compiler builtins such as __builtin_add_overflow and
+      __builtin_mul_overflow.
+    evidence:
+      - Wrap checks on size and length arithmetic from external input
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 10.4"]
+
+  - ref: INT31-C
+    title: Ensure integer conversions do not lose or misinterpret data
+    requirement: >
+      Conversions between integer types must not truncate values or change their sign
+      unexpectedly. CERT risk assessment high / probable / L1.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Enable -Wconversion and -Wsign-conversion and review the warnings. Look for signed
+      lengths passed to memcpy (negative becoming huge size_t), uint32_t to uint16_t
+      truncation of lengths, and char used as an array index. Good looks like explicit
+      range checks before narrowing casts.
+    evidence:
+      - Conversion warnings enabled and resolved
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 10.3"]
+
+  - ref: INT32-C
+    title: Ensure signed integer operations do not overflow
+    requirement: >
+      Signed arithmetic must not overflow, because overflow is undefined behaviour that
+      compilers may exploit. CERT risk assessment high / likely / L1.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for signed additions and multiplications on external values, timers and
+      counters stored in int, and abs or negation of INT_MIN. Good looks like precondition
+      checks, wider types, overflow builtins, or UBSan (-fsanitize=signed-integer-overflow)
+      in tests. Do not rely on -fwrapv as a fix for security checks.
+    evidence:
+      - UBSan in test builds
+      - Overflow checks on externally influenced arithmetic
+    artifacts: [static-analysis-config, automated-tests]
+    crosswalk: ["misra-c:Rule 1.3"]
+
+  - ref: ARR30-C
+    title: Do not form or use out-of-bounds pointers or array subscripts
+    requirement: >
+      Array indexes and pointer arithmetic must stay within the bounds of the object.
+      CERT risk assessment high / likely / L2.
+    category: code-safety
+    severity: critical
+    fixability: code
+    guidance: >
+      Look for indexes taken from packets, registers or user input without range checks
+      (Modbus register addresses, command IDs used to index handler tables, BLE attribute
+      handles), loops with <= instead of <, and pointer arithmetic past the end of a
+      buffer. Good looks like explicit checks against the array length (ARRAY_SIZE macro)
+      before every externally controlled index.
+    evidence:
+      - Bounds checks on every externally controlled index
+      - Fuzz tests on parsers
+    artifacts: [static-analysis-config, automated-tests]
+    crosswalk: ["misra-c:Rule 18.1", "iec-62443-4-2:CR 3.5"]
+
+  - ref: ARR38-C
+    title: Guarantee library functions do not form invalid pointers
+    requirement: >
+      Size arguments to memcpy, memset, memmove, fread, strncpy and similar functions must
+      not exceed the bounds of the objects passed. CERT risk assessment high / likely / L2.
+    category: code-safety
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag memcpy(dst, src, len) where len comes from input and is not checked against
+      sizeof(dst) and the remaining source length, memset with sizeof(pointer), and
+      element-count versus byte-count confusion. Good looks like explicit len <= sizeof(dst)
+      checks next to the call.
+    evidence:
+      - Length checks before every memcpy with variable length
+    checks: [unsafe-c-functions]
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 21.17"]
+
+  - ref: EXP33-C
+    title: Do not read uninitialised memory
+    requirement: >
+      Variables and allocated memory must be initialised before they are read. CERT risk
+      assessment high / probable / L1.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for local structs sent over the network without memset (information leak of
+      stack bytes), variables set only in some branches, and malloc'd buffers read before
+      written. Enable -Wuninitialized and -Wmaybe-uninitialized and MemorySanitizer or
+      Valgrind in tests.
+    evidence:
+      - Uninitialised-read warnings enabled and clean
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 9.1"]
+
+  - ref: EXP34-C
+    title: Do not dereference null pointers
+    requirement: >
+      Pointers that can be null, including results of allocation and lookup functions,
+      must be checked before use. CERT risk assessment high / likely / L1.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Flag unchecked results of malloc, calloc, realloc, fopen, getenv, strchr and
+      lookup functions, and pointer parameters of public APIs used without validation.
+      Note that a check after dereference may be optimised away. On MCUs without an MMU, a
+      null dereference may silently read the vector table rather than crash.
+    evidence:
+      - Null checks on allocation and lookup results
+    artifacts: [static-analysis-config]
+    crosswalk: ["iec-61508:Table A.4"]
+
+  - ref: FIO30-C
+    title: Exclude user input from format strings
+    requirement: >
+      Format strings for printf-family functions must not contain or be built from
+      untrusted input. CERT risk assessment high / likely / L1.
+    category: code-safety
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag printf(buf), syslog(LOG_ERR, msg), snprintf(out, n, input) and logging macros
+      that pass a variable as the format argument. Good looks like printf("%s", buf) and
+      compiling with -Wformat -Wformat-security -Werror=format-security, plus
+      __attribute__((format(printf, ...))) on custom logging functions.
+    evidence:
+      - Constant format strings everywhere
+      - -Wformat-security enabled as an error
+    artifacts: [static-analysis-config]
+    crosswalk: ["owasp-top10:A05"]
+
+  - ref: FIO42-C
+    title: Close files when they are no longer needed
+    requirement: >
+      Files, sockets and similar handles must be closed when no longer needed, including
+      on error paths. CERT risk assessment medium / unlikely / L3.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that every fopen, open and socket call has a matching close on all paths,
+      including early returns. Handle leaks exhaust descriptors and can block services.
+    evidence:
+      - Matching close calls on all paths
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 22.1"]
+
+  - ref: FIO47-C
+    title: Use valid format strings
+    requirement: >
+      Format specifiers must match the number and types of the arguments. CERT risk
+      assessment high / unlikely / L2.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Enable -Wformat=2 and check for mismatches such as %d with size_t, %s with non-string
+      pointers, and missing arguments. Use PRIu32 and similar macros from inttypes.h for
+      fixed-width types.
+    evidence:
+      - Format warnings enabled and clean
+    artifacts: [static-analysis-config]
+
+  - ref: ENV33-C
+    title: Do not call system()
+    requirement: >
+      The system function must not be used, because it invokes a shell that can be
+      manipulated through input and environment. CERT risk assessment high / probable / L1.
+    category: input-validation
+    severity: high
+    fixability: code
+    guidance: >
+      Flag system and popen calls, especially with strings built by sprintf from
+      configuration, web UI or network input (common in router and camera firmware, for
+      example system("ping " + host)). Good looks like execve or posix_spawn with a fixed
+      path and argument vector, or a library call instead of a shell command.
+    evidence:
+      - No system or popen calls with variable input
+    checks: [command-injection-risk]
+    artifacts: [static-analysis-config]
+    crosswalk: ["owasp-top10:A05"]
+
+  - ref: MSC30-C
+    title: Do not use rand() for security
+    requirement: >
+      The rand function must not be used where unpredictability matters, because its output
+      is predictable. CERT risk assessment medium / unlikely / L3.
+    category: cryptography
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag rand, random, and srand used for session IDs, nonces, keys, challenge values or
+      default passwords. Good looks like getrandom, /dev/urandom, arc4random_buf, the
+      hardware TRNG (HAL_RNG_GenerateRandomNumber, esp_fill_random), or mbedtls_ctr_drbg
+      seeded from mbedtls_entropy.
+    evidence:
+      - Cryptographic RNG used for all security values
+    checks: [insecure-random]
+    crosswalk: ["en-18031:CRY-1"]
+
+  - ref: MSC32-C
+    title: Properly seed pseudorandom number generators
+    requirement: >
+      Pseudorandom number generators must be seeded with enough entropy that the sequence
+      differs on each run. CERT risk assessment medium / likely / L1.
+    category: cryptography
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag srand(time(NULL)), constant seeds, and DRBGs seeded from predictable values such
+      as the MAC address or uptime. On embedded targets check that the DRBG is seeded from
+      a hardware entropy source at boot, not from a fixed value written at manufacture.
+    evidence:
+      - DRBG seeded from a hardware or OS entropy source
+    checks: [insecure-random]
+
+  - ref: MSC33-C
+    title: Do not pass invalid data to asctime()
+    requirement: >
+      asctime must only receive a struct tm whose values are in range, because it can
+      overflow its internal buffer. CERT risk assessment high / likely / L2.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Flag asctime and ctime calls, especially on struct tm built from external timestamps.
+      Good looks like strftime with a bounded buffer.
+    evidence:
+      - strftime used instead of asctime
+    artifacts: [static-analysis-config]
+
+  - ref: MSC41-C
+    title: Never hard code sensitive information
+    requirement: >
+      Passwords, keys and other secrets must not be embedded in source code. CERT risk
+      assessment high / probable / L2.
+    category: secrets-management
+    severity: high
+    fixability: code
+    guidance: >
+      Look for literal passwords, API keys, private keys and AES key byte arrays in .c and .h
+      files, including test keys reused in production builds. Good looks like
+      per-device secrets provisioned at manufacture into protected storage or a secure
+      element and read at runtime.
+    evidence:
+      - No secrets in source code
+    checks: [hardcoded-secret, hardcoded-crypto-key, default-credentials]
+    crosswalk: ["etsi-en-303-645:5.4-3"]
+
+  - ref: ERR33-C
+    title: Detect and handle standard library errors
+    requirement: >
+      Return values of standard library functions that can fail must be checked and
+      handled. CERT risk assessment high / likely / L1.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for ignored results of malloc, fopen, fread, fwrite, snprintf (truncation),
+      strtol (with errno), and of platform calls such as HAL_* and mbedtls_* that return
+      status codes. Enable -Wunused-result and mark project functions with
+      __attribute__((warn_unused_result)).
+    evidence:
+      - Return values checked for all fallible calls
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 17.7", "iec-62443-4-2:CR 3.7"]
+
+  - ref: CON43-C
+    title: Do not allow data races in multithreaded code
+    requirement: >
+      Shared data accessed by multiple threads, tasks or interrupt handlers must be
+      protected by synchronisation. CERT risk assessment medium / probable / L3.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for globals written by ISRs and read by tasks without volatile plus critical
+      sections or atomics, shared buffers between RTOS tasks without a mutex or queue, and
+      check-then-act sequences. Good looks like C11 atomics, taskENTER_CRITICAL or mutexes,
+      and ThreadSanitizer for host builds.
+    evidence:
+      - Documented synchronisation for shared data
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Dir 5.1"]

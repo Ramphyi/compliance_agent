@@ -1,0 +1,31 @@
+id: automotive-ecu-asil-b
+title: Automotive ECU (ASIL B, EU and UNECE)
+description: >
+  Safety-related ECU application software from a Tier-1 supplier, delivered to
+  vehicle OEMs for EU and UNECE type-approved vehicles. CAN communication, UDS
+  diagnostics and bootloader flashing. Brings ISO 26262 functional safety at
+  ASIL B, the UNECE R155 / R156 cybersecurity and software-update duties, ISO
+  21434 and Automotive SPICE process expectations, and MISRA C coding rules.
+examples: [examples/apps/brake-ecu]
+answers:
+  productTypes: [embedded-firmware, automotive-ecu]
+  sector: [automotive]
+  markets: [EU, UNECE]
+  audience: [oem-integrators]
+  orgRole: tier1-supplier
+  orgSize: large
+  dataCategories: [none]
+  aiUsage: none
+  safetyCritical: injury-possible
+  asil: B
+  connectivity: [can-bus]
+  updates: manual
+  distribution: [oem-supply]
+  regulatedEntity: [none]
+  certificationsTarget: [aspice]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify:
+  - make all
+  - make test

@@ -1,0 +1,415 @@
+id: apple-app-review
+title: Apple App Review Guidelines and App Store privacy requirements
+shortTitle: Apple App Review
+version: App Review Guidelines (revision of 2025-11-13 or later), with App Privacy details and privacy manifest requirements
+authority: Apple Inc.
+kind: platform-policy
+jurisdictions: [global]
+url: https://developer.apple.com/app-store/review/guidelines/
+textPolicy: paraphrased
+summary: >
+  The rules Apple applies when reviewing apps for the App Store, plus the related App
+  Store Connect and Xcode requirements: App Privacy details (privacy nutrition labels),
+  privacy manifests with required-reason API declarations, App Tracking Transparency, in-app
+  account deletion, and the 2025 rule that sharing personal data with third-party AI needs
+  disclosure and explicit permission.
+applicability: { fact: distribution, in: [apple-app-store] }
+applicabilityNote: >
+  Applies to every app distributed through the Apple App Store (iOS, iPadOS, macOS,
+  watchOS, tvOS, visionOS), including apps built with React Native, Flutter, Capacitor or
+  other cross-platform tools. Guidelines change several times a year; check the current
+  revision and the Upcoming Requirements page before each submission.
+keyDates:
+  - { date: "2021-04-26", note: App Tracking Transparency enforced from iOS 14.5 }
+  - { date: "2022-06-30", note: Apps that support account creation must offer in-app account deletion }
+  - { date: "2024-05-01", note: Submissions must declare approved reasons for required-reason APIs in privacy manifests }
+  - { date: "2025-11-13", note: Guideline 5.1.2(i) revised to require disclosure and explicit permission before sharing personal data with third-party AI }
+  - { date: "2026-01-31", note: Deadline to answer the updated age rating questionnaire (new 13+ 16+ and 18+ tiers) in App Store Connect }
+controls:
+  - ref: "5.1.1(i)"
+    title: Privacy policy in App Store Connect and inside the app
+    requirement: >
+      Every app must link a privacy policy in App Store Connect and within the app in an
+      easily accessible place; it must state what data is collected and how, all uses,
+      that third parties provide equal protection, retention and deletion practices, and
+      how users revoke consent or request deletion.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Check the app has a reachable privacy policy link (settings screen, onboarding,
+      account screen) and that the policy lists every SDK and service in the Podfile,
+      Package.swift, package.json or pubspec.yaml that receives user data, including
+      third-party AI providers, plus retention and deletion instructions.
+    evidence:
+      - In-app privacy policy link
+      - Policy content consistent with integrated SDKs and AI services
+    checks: []
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.13", "google-play-policy:User Data"]
+
+  - ref: "5.1.1"
+    title: Permission requests, purpose strings and data minimisation
+    requirement: >
+      Apps must obtain consent to collect user data, explain each permission with an
+      accurate purpose string, request only data relevant to core functionality,
+      respect refusals without forcing or tricking users, and offer alternatives where
+      possible (5.1.1(ii) to (iv)).
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      Check Info.plist for each NS*UsageDescription key in use (NSCameraUsageDescription,
+      NSMicrophoneUsageDescription, NSPhotoLibraryUsageDescription,
+      NSLocationWhenInUseUsageDescription, NSLocationAlwaysAndWhenInUseUsageDescription,
+      NSContactsUsageDescription, NSHealthShareUsageDescription,
+      NSHealthUpdateUsageDescription, NSBluetoothAlwaysUsageDescription,
+      NSFaceIDUsageDescription) and that each string explains the specific use. Flag
+      permissions declared but not needed, location Always when When In Use suffices,
+      full photo library access where PHPickerViewController would do, permission
+      prompts at launch instead of in context, and features or paid functionality that
+      stop working entirely when a non-essential permission is denied.
+    evidence:
+      - Specific purpose strings for each permission
+      - Contextual permission requests and graceful denial handling
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.25", "gdpr:Art.5(1)(c)", "google-play-policy:Permissions", "owasp-masvs:MASVS-PRIVACY-1"]
+
+  - ref: "5.1.1(v)"
+    title: In-app account deletion and optional login
+    requirement: >
+      Apps that support account creation must let users initiate deletion of the account
+      and associated data from within the app, and apps without significant
+      account-based features must be usable without login.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Check the app settings or profile screen has a discoverable "Delete account"
+      action that triggers server-side deletion (not just sign-out or deactivation), with
+      at most a confirmation step and clear information on timing and retained data.
+      If Sign in with Apple is used, the server must revoke the user token via the
+      Sign in with Apple REST API (auth/revoke) on deletion. Apps in highly regulated
+      industries may use a customer-service flow but must explain it. Check that
+      subscription management is explained, since deletion does not cancel App Store
+      subscriptions.
+    evidence:
+      - In-app deletion entry point and server deletion
+      - Sign in with Apple token revocation on deletion
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.17", "google-play-policy:Account Deletion", "ccpa-cpra:1798.105"]
+
+  - ref: "5.1.2"
+    title: Permission before sharing personal data, including with third-party AI
+    requirement: >
+      Apps may not use, transmit or share personal data without permission unless
+      otherwise permitted by law; they must clearly disclose where personal data will be
+      shared with third parties, including third-party AI, and obtain explicit
+      permission before doing so; data may not be repurposed without further consent.
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      Find calls to external AI and data services (OpenAI, Anthropic, Google Gemini,
+      Azure OpenAI, Replicate, Hugging Face endpoints, analytics or enrichment APIs)
+      that receive user content, health data, photos, voice or identifiers, whether
+      from the app directly or via the backend. Check that, before the first such
+      transfer, the app shows a clear disclosure naming what data is sent, to whom and
+      why, and records an explicit opt-in (not bundled with terms), with a way to revoke
+      it in settings, and that the feature is disabled until consent. Check the privacy
+      policy names the AI providers.
+    evidence:
+      - Disclosure and explicit consent screen before third-party AI sharing
+      - Consent state checked before requests and revocable in settings
+    checks: [llm-prompt-injection-risk, pii-in-logs]
+    artifacts: [privacy-policy, ai-documentation]
+    crosswalk: ["gdpr:Art.7", "gdpr:Art.28", "google-play-policy:User Data", "owasp-masvs:MASVS-PRIVACY-2"]
+
+  - ref: "ATT"
+    title: App Tracking Transparency before tracking
+    requirement: >
+      Apps must obtain permission through the App Tracking Transparency framework before
+      tracking users across apps and websites owned by other companies or accessing the
+      advertising identifier, and must not gate features on that permission.
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      If the app uses IDFA, advertising or attribution SDKs, or shares data with data
+      brokers, check Info.plist has NSUserTrackingUsageDescription and the code calls
+      ATTrackingManager.requestTrackingAuthorization before any tracking SDK reads
+      identifiers or sends events for advertising, and respects .denied by disabling
+      tracking (for example Meta SDK setAdvertiserTrackingEnabled(false)). Check no
+      fingerprinting is used as a substitute. Check NSPrivacyTracking and
+      NSPrivacyTrackingDomains in the privacy manifest are consistent.
+    evidence:
+      - ATT prompt before tracking SDK initialisation
+      - Tracking disabled when permission is denied
+    checks: [analytics-tracking-sdk]
+    artifacts: []
+    crosswalk: ["eprivacy:Art.5(3)-apps", "google-play-policy:Advertising ID"]
+
+  - ref: "privacy-manifest"
+    title: Privacy manifest and required-reason API declarations
+    requirement: >
+      Apps and listed third-party SDKs must include a PrivacyInfo.xcprivacy privacy
+      manifest declaring collected data types, tracking status and domains, and an
+      approved reason for each required-reason API used; commonly used SDKs must ship
+      their own manifests and signatures.
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      Check for PrivacyInfo.xcprivacy in the app target. Search the code (including
+      native modules of cross-platform frameworks) for required-reason APIs: file
+      timestamp APIs (creationDate, modificationDate, stat, getattrlist), system boot
+      time (systemUptime, mach_absolute_time), disk space (volumeAvailableCapacityKey,
+      statfs), active keyboards (activeInputModes), and UserDefaults; each category used
+      needs an NSPrivacyAccessedAPITypes entry with an approved reason code (for example
+      CA92.1 for UserDefaults in the app). Check NSPrivacyCollectedDataTypes matches the
+      App Privacy details, and that third-party SDK versions in use include their own
+      manifests.
+    evidence:
+      - PrivacyInfo.xcprivacy with accessed API types and reasons
+      - SDK versions that ship privacy manifests
+    checks: []
+    artifacts: [third-party-notices]
+    crosswalk: ["google-play-policy:Data Safety"]
+
+  - ref: "privacy-labels"
+    title: Accurate App Privacy details
+    requirement: >
+      The App Privacy details in App Store Connect must accurately describe the data the
+      app and its third-party partners collect, whether it is linked to the user, and
+      whether it is used for tracking, and must be kept up to date.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Derive the actual data collection from code and SDKs (analytics events, crash
+      reporting, ads, AI APIs, backend storage) and compare with the App Privacy answers,
+      kept ideally in the repository (for example docs/app-privacy.md) and updated in the
+      release checklist. Mismatches with the privacy manifest or observed network calls
+      are common rejection causes.
+    evidence:
+      - Documented App Privacy answers consistent with code and SDKs
+      - Release checklist step to review them
+    checks: [analytics-tracking-sdk]
+    artifacts: [privacy-policy]
+    crosswalk: ["google-play-policy:Data Safety"]
+
+  - ref: "5.1.3"
+    title: Health and health research data
+    requirement: >
+      Health, fitness and medical data (including HealthKit, Clinical Health Records and
+      motion data) may not be used for advertising, marketing or data mining or disclosed
+      to third parties except to improve health management or for research with consent;
+      apps must not write false data to HealthKit or store personal health information
+      in iCloud; research apps need informed consent and ethics board approval
+      (with 5.1.2(vi) on HealthKit, HomeKit and similar framework data).
+    category: platform-policy
+    severity: critical
+    fixability: code
+    when: { fact: dataCategories, in: [health, genetic-biometric] }
+    guidance: >
+      Trace HealthKit reads (HKHealthStore requestAuthorization, HKSampleQuery) and other
+      health inputs to their destinations: they must not reach advertising or analytics
+      SDKs or third-party AI without explicit permission, must not be stored in
+      CloudKit or iCloud Drive, and must be encrypted on the server. Check the app
+      discloses the specific health data collected. Research features need a consent
+      flow and an ethics approval reference.
+    evidence:
+      - Health data flows limited to permitted uses
+      - No iCloud storage of health data
+      - Research consent and ethics approval where applicable
+    checks: [analytics-tracking-sdk, pii-in-logs]
+    artifacts: [privacy-policy, dpia]
+    crosswalk: ["gdpr:Art.9", "google-play-policy:Health Apps", "wa-mhmda:RCW19.373.030(1)(a)"]
+
+  - ref: "1.4.1"
+    title: Medical accuracy and health claims
+    requirement: >
+      Medical apps that could give inaccurate data or be used to diagnose or treat
+      patients are reviewed with greater scrutiny; they must disclose data and
+      methodology supporting accuracy claims, disclose regulatory clearance where
+      applicable, and remind users to consult a doctor.
+    category: platform-policy
+    severity: high
+    fixability: document
+    when:
+      any:
+        - { fact: sector, in: [healthcare] }
+        - { fact: dataCategories, in: [health] }
+        - { fact: aiRiskAreas, in: [medical] }
+    guidance: >
+      Check in-app copy, onboarding and the App Store description for diagnostic or
+      treatment claims, AI health interpretations and measurement claims (heart rate,
+      blood oxygen from camera, blood pressure). Each needs supporting methodology or
+      validation evidence, a regulatory clearance reference if marketed as a medical
+      device, and a visible disclaimer to consult a healthcare professional. Drug dosage
+      calculators must come from approved entities (1.4.2).
+    evidence:
+      - Validation or methodology documentation for health claims
+      - In-app medical disclaimer
+    checks: []
+    artifacts: [user-documentation]
+    crosswalk: ["eu-mdr:Rule11", "google-play-policy:Health Apps"]
+
+  - ref: "5.1.4"
+    title: Kids apps and Kids Category
+    requirement: >
+      Apps for children must comply with children's privacy laws; apps in the Kids
+      Category or primarily for kids should not include third-party analytics or
+      advertising, must not send personal or device information to third parties, and
+      must put external links and purchases behind a parental gate (with 1.3).
+    category: platform-policy
+    severity: critical
+    fixability: code
+    when: { any: [ { fact: audience, in: [children] }, { fact: dataCategories, in: [children] } ] }
+    guidance: >
+      Check dependencies for analytics, attribution and advertising SDKs and remove them
+      or use only limited, Apple-permitted configurations without identifiers. Check for
+      a parental gate (a challenge adults can solve) before external links, purchases
+      and permission prompts. Birthdate and parent contact collection must only serve
+      legal compliance.
+    evidence:
+      - No third-party analytics or advertising SDKs in kids builds
+      - Parental gate before links and purchases
+    checks: [analytics-tracking-sdk]
+    artifacts: [privacy-policy]
+    crosswalk: ["coppa:312.5", "gdpr:Art.8", "google-play-policy:Families"]
+
+  - ref: "1.2"
+    title: User-generated and AI-generated content safeguards
+    requirement: >
+      Apps with user-generated content, chatbots or AI-generated content must filter
+      objectionable material, let users report offensive content and block abusive
+      users, respond to reports promptly, and publish contact information (with 4.7.1
+      for chatbots and plug-ins).
+    category: platform-policy
+    severity: high
+    fixability: code
+    when:
+      any:
+        - { fact: aiRiskAreas, in: [chatbot, synthetic-content] }
+        - { fact: aiUsage, in: [third-party-models, own-models, general-purpose-model] }
+    guidance: >
+      Check AI outputs and user posts pass through moderation (provider moderation
+      endpoints, safety settings, custom filters) before display, that every generated
+      item or post has a report action that reaches a moderation queue, that users can
+      block others, and that the app identifies AI-generated content and that the user
+      is interacting with AI.
+    evidence:
+      - Moderation on AI output and UGC
+      - Report and block functions with a review queue
+    checks: [ai-disclosure-missing, llm-output-execution]
+    artifacts: [ai-documentation]
+    crosswalk: ["google-play-policy:AI-Generated Content", "eu-ai-act:Art.50(1)", "owasp-llm-top10:LLM05"]
+
+  - ref: "2.5"
+    title: No downloaded executable code and public APIs only
+    requirement: >
+      Apps must be self-contained, use only public APIs, and not download or execute
+      code that introduces or changes features (2.5.1, 2.5.2), and background modes must
+      be used only for their intended purposes (2.5.4).
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      Flag eval or Function on remotely fetched JavaScript outside a WebView, dynamic
+      loading of native code (dlopen of downloaded libraries), and OTA updates that
+      change native behaviour or the app's primary purpose (JavaScript bundle updates via
+      Expo Updates or CodePush are tolerated when they do not change the app's purpose).
+      Check UIBackgroundModes in Info.plist lists only modes the app really uses
+      (location, audio, voip, fetch, processing) and private API selectors are not called.
+    evidence:
+      - No remote native code loading
+      - Background modes matching real features
+    checks: [dynamic-code-eval, llm-output-execution]
+    artifacts: []
+    crosswalk: ["google-play-policy:Device and Network Abuse"]
+
+  - ref: "2.5.14"
+    title: Consent and indicator when recording user activity
+    requirement: >
+      Apps must request explicit consent and show a clear visual or audible indicator
+      when recording, logging or otherwise capturing user activity, including camera,
+      microphone and screen recording.
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      Check features that record audio or video, capture the screen (ReplayKit), or log
+      user interactions (session replay SDKs such as those from analytics vendors) ask
+      for explicit consent and show an indicator while active. Session replay must mask
+      text input and sensitive views. Flag silent recording or session replay enabled by
+      default.
+    evidence:
+      - Consent before recording or session replay
+      - Recording indicator in the UI
+    checks: [analytics-tracking-sdk]
+    artifacts: []
+    crosswalk: ["gdpr:Art.7"]
+
+  - ref: "4.8"
+    title: Equivalent privacy-friendly login option
+    requirement: >
+      Apps that use a third-party or social login for the primary account must also
+      offer an equivalent login option that limits data to name and email, lets users
+      keep their email private, and does not collect interactions for advertising without
+      consent (Sign in with Apple satisfies this), with listed exemptions.
+    category: platform-policy
+    severity: medium
+    fixability: code
+    guidance: >
+      If the app offers Google, Facebook or other social login, check that Sign in with
+      Apple (AuthenticationServices, ASAuthorizationAppleIDProvider) or an equivalent
+      option is offered with similar prominence, and that the backend handles private
+      relay email addresses. Apps using only their own account system are exempt.
+    evidence:
+      - Sign in with Apple or equivalent offered alongside social login
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "2.3.6"
+    title: Accurate age rating
+    requirement: >
+      Developers must answer the age rating questionnaire honestly so the rating matches
+      the content, including user-generated and AI-generated content, medical or
+      wellness topics, and in-app controls.
+    category: platform-policy
+    severity: medium
+    fixability: document
+    guidance: >
+      Check the release documentation records the current age rating answers and that
+      they reflect chat, UGC, AI-generated content, web access, gambling-like mechanics
+      and health topics. Where the app restricts access by age, check the restriction
+      uses declared or verified age (for example the Declared Age Range API) as required
+      by guidelines 1.2.1(a) and 4.7.5 for creator content and mini apps.
+    evidence:
+      - Age rating answers recorded with the release
+    checks: []
+    artifacts: [user-documentation]
+    crosswalk: ["google-play-policy:Families"]
+
+  - ref: "5.1.1(ix)"
+    title: Regulated services submitted by the responsible legal entity
+    requirement: >
+      Apps in highly regulated fields (banking, financial services, healthcare, gambling,
+      legal cannabis, air travel, crypto trading) should be submitted by the legal entity
+      that provides the service, not by an individual developer.
+    category: platform-policy
+    severity: medium
+    fixability: process
+    when: { fact: sector, in: [finance, healthcare] }
+    guidance: >
+      Confirm the Apple Developer account is an organisation account belonging to the
+      regulated legal entity and that licences or registrations are available for review.
+    evidence:
+      - Organisation developer account owned by the regulated entity
+    checks: []
+    artifacts: []
+    crosswalk: []

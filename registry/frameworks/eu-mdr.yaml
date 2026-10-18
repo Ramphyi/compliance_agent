@@ -1,0 +1,446 @@
+id: eu-mdr
+title: Regulation (EU) 2017/745 on medical devices - software and cybersecurity provisions
+shortTitle: EU MDR
+version: Regulation (EU) 2017/745, consolidated version as amended (including Regulation (EU) 2023/607)
+authority: European Parliament and Council of the European Union
+kind: regulation
+jurisdictions: [EU]
+url: https://eur-lex.europa.eu/eli/reg/2017/745/oj/eng
+textPolicy: open
+summary: >
+  The EU Medical Device Regulation governs placing medical devices on the EU market,
+  including medical device software (MDSW). For software it sets classification under
+  Annex VIII Rule 11, the general safety and performance requirements (GSPR) on software
+  life cycle, IT security, IT environment and labelling, UDI assignment, technical
+  documentation, and post-market surveillance and vigilance. MDCG guidance (2019-11 on
+  qualification and classification, 2019-16 on cybersecurity, 2025-6 on the AI Act
+  interplay) explains how these apply to software.
+applicability:
+  all:
+    - { fact: markets, in: [EU] }
+    - any:
+        - { fact: medicalClass, in: [class-I, class-IIa, class-IIb, class-III] }
+        - { fact: productTypes, in: [medical-device] }
+applicabilityNote: >
+  Applies when software with a medical intended purpose (diagnosis, prevention,
+  monitoring, prediction, prognosis, treatment or alleviation of disease or injury) is
+  placed on the EU or EEA market or put into service there, including apps distributed
+  through app stores and software supplied as a service. Wellness software with no
+  medical purpose is outside scope, so confirm the qualification first (MDCG 2019-11
+  rev.1). Legacy devices certified under the old directives may benefit from the
+  transition periods extended by Regulation (EU) 2023/607, subject to its conditions.
+  AI-based MDSW that requires notified body assessment is also a high-risk AI system
+  under the AI Act (Article 6(1)). The Commission proposed a targeted revision of the MDR
+  and IVDR in December 2025 (COM(2025) 1023); it was still a proposal in the sources
+  checked for this file, so audit against the regulation in force. Medical device
+  classification and qualification need confirmation by regulatory counsel or a
+  notified body.
+keyDates:
+  - { date: "2021-05-26", note: MDR date of application }
+  - { date: "2025-06-17", note: "MDCG 2019-11 rev.1 on qualification and classification of software published" }
+  - { date: "2025-12-16", note: "Commission proposal for a targeted revision of the MDR and IVDR, COM(2025) 1023" }
+  - { date: "2027-12-31", note: "End of the extended transition for legacy class III and implantable class IIb devices (Regulation (EU) 2023/607), subject to conditions" }
+  - { date: "2028-08-02", note: "AI Act high-risk obligations for AI in Annex I products, including medical devices, apply as postponed by Regulation (EU) 2026/1744" }
+  - { date: "2028-12-31", note: "End of the extended transition for other legacy devices, including software up-classified by Rule 11 (Regulation (EU) 2023/607), subject to conditions" }
+controls:
+  - ref: "Art.2(1)"
+    title: Qualification of software as a medical device
+    requirement: >
+      Determine and document whether the software is medical device software, based on
+      the manufacturer's intended purpose and the MDR definition of a medical device, and
+      whether it is an accessory or a module of a larger system (MDCG 2019-11 rev.1).
+    category: governance
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a qualification assessment (docs/regulatory/qualification.md) that walks
+      the MDCG 2019-11 decision steps: is it software, does it act on data beyond storage,
+      archival, communication or simple search, is the action for the benefit of
+      individual patients, and does it have a medical purpose. Compare the documented
+      intended purpose with what the code and UI do: risk scores, diagnostic suggestions,
+      dose calculators, triage recommendations, alerts based on vital signs. For modular
+      products, check that MDSW modules are identified separately from non-medical
+      modules and that the boundary is enforced in the architecture. Flag app store
+      listings, onboarding text or marketing copy in the repository that claim a medical
+      purpose the qualification denies.
+    evidence:
+      - Documented qualification decision with intended purpose
+      - Module boundary between MDSW and non-medical functions
+      - Marketing and UI claims consistent with the intended purpose
+    artifacts: [user-documentation]
+    crosswalk: ["iso-14971:5.2", "eu-ai-act:Art.6"]
+
+  - ref: "Rule11"
+    title: Software classification under Annex VIII Rule 11
+    requirement: >
+      Classify the software using Annex VIII, in particular Rule 11. Software that provides
+      information used for diagnostic or therapeutic decisions is class IIa, rising to IIb
+      when such decisions could cause serious deterioration of health or surgery, and to
+      III when they could cause death or irreversible deterioration. Software monitoring
+      physiological processes is IIa, or IIb for vital parameters where variations could
+      put the patient in immediate danger. Other software is class I. Software driving
+      or influencing a device takes that device's class.
+    category: governance
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a classification rationale that cites Rule 11 (and implementing rules
+      3.3 for software driving hardware) and the MDCG 2019-11 examples. Check that the
+      class matches the functions in the code: algorithms that produce diagnoses,
+      treatment suggestions or alarms on vital signs usually push the class to IIa or
+      higher. Compare with the medicalClass profile answer and with the IEC 62304 safety
+      class. Flag a class I self-declaration for software that informs diagnosis or
+      therapy, since that is a common misclassification.
+    evidence:
+      - Classification rationale citing the applicable rules
+      - Consistency between intended purpose, functions and class
+      - Conformity assessment route matching the class (notified body for IIa and above)
+    artifacts: [risk-management-file]
+    crosswalk: ["iec-62304:4.3", "eu-ai-act:Art.6"]
+
+  - ref: "GSPR14.2(d)"
+    title: Safe interaction with the IT environment
+    requirement: >
+      Design the device to remove or reduce as far as possible risks from negative
+      interaction between the software and the IT environment in which it runs and
+      interacts (Annex I, 14.2(d)).
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    guidance: >
+      Check how the software behaves with other software and networks: version checks
+      and graceful handling of unsupported OS, browser or runtime versions; defensive
+      handling of malformed data from interfaced systems (HL7, FHIR, DICOM, device
+      protocols); timeouts, retries and circuit breakers on network calls; behaviour when
+      a dependency is unavailable (clear error, no silent stale data); and isolation from
+      other apps (sandboxing, no shared writable storage). Good looks like a supported
+      environment matrix in documentation enforced at start-up, plus integration tests
+      for degraded network and malformed input. Flag silent fallbacks that show stale or
+      partial clinical data without warning.
+    evidence:
+      - Supported environment matrix enforced at runtime
+      - Input validation and error handling on all interfaces
+      - Tests for degraded network and malformed external data
+    checks: [unsafe-deserialization, tls-verification-disabled]
+    artifacts: [architecture-doc, automated-tests]
+    crosswalk: ["iso-14971:5.3", "fda-cybersecurity:V.A.3"]
+
+  - ref: "GSPR17.1"
+    title: Repeatability, reliability and performance; single fault conditions
+    requirement: >
+      Electronic programmable systems, including software, must be designed to ensure
+      repeatability, reliability and performance in line with the intended use, and in
+      the event of a single fault condition, appropriate means must eliminate or reduce
+      the consequent risks or impairment of performance.
+    category: functional-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for deterministic, tested calculation code (fixed-precision or decimal
+      arithmetic for doses, explicit units, versioned algorithms and models with
+      reproducible outputs), integrity checks on stored and transmitted clinical data
+      (checksums, database constraints, transactions), and fault handling that moves to a
+      safe state: watchdogs or health checks, alarms when data feeds stop, explicit
+      error states rather than default values. Check that performance claims (latency of
+      alarms, accuracy of measurements) are tested. Flag floating-point dose
+      calculations without rounding rules, swallowed exceptions in clinical paths, and
+      default values substituted for missing measurements.
+    evidence:
+      - Verified algorithms with reproducibility tests
+      - Data integrity controls and fault handling to a safe state
+      - Performance tests against stated claims
+    checks: [missing-watchdog, error-details-leak]
+    artifacts: [automated-tests, risk-management-file]
+    crosswalk: ["iec-62304:5.7.1", "iso-14971:7.1", "iec-61508:7.4.3"]
+
+  - ref: "GSPR17.2"
+    title: State-of-the-art software life cycle, risk management and information security
+    requirement: >
+      Software must be developed and manufactured according to the state of the art,
+      taking into account development life cycle, risk management including information
+      security, verification and validation.
+    category: secure-development
+    severity: high
+    fixability: process
+    guidance: >
+      This GSPR is usually demonstrated through IEC 62304 (life cycle), ISO 14971 (risk),
+      IEC 81001-5-1 (security activities) and IEC 82304-1 (health software product). In the
+      repository look for the software development plan, requirements with IDs, the
+      architecture document, SOUP list or SBOM, the risk management file with security
+      risks, the threat model, and test evidence produced by CI. Check that security
+      activities (threat modelling, static analysis, dependency scanning, penetration
+      testing) are part of the documented life cycle, not ad hoc. Flag a technical file
+      that claims IEC 62304 conformity while the repository shows no requirements,
+      traceability or test records.
+    evidence:
+      - Life cycle documentation mapped to IEC 62304 and IEC 81001-5-1
+      - Risk management file covering information security
+      - Verification and validation records per release
+    artifacts: [requirements-traceability, risk-management-file, threat-model, automated-tests]
+    crosswalk: ["iec-62304:5.1.1", "iec-81001-5-1:4.1", "iso-14971:5.4", "fda-cybersecurity:IV.A"]
+
+  - ref: "GSPR17.3"
+    title: Design for mobile computing platforms
+    requirement: >
+      Software intended for use with mobile computing platforms must be designed taking
+      into account the specific features of the platform (such as screen size and contrast
+      ratio) and the external factors of its use environment (such as varying light and
+      noise levels).
+    category: functional-safety
+    severity: medium
+    fixability: code
+    when: { fact: productTypes, in: [mobile-app] }
+    guidance: >
+      Check mobile UI code for responsive layouts and minimum font sizes on clinical
+      values, support for dynamic type and dark mode without losing contrast, colour not
+      used as the only signal for alarms, audible alerts paired with vibration or visual
+      cues, handling of interruptions (calls, backgrounding, OS killing the app) without
+      losing data or alarms, and a list of supported devices and OS versions enforced at
+      runtime. Look for usability or summative test evidence on small screens. Flag
+      critical values that truncate or wrap ambiguously, and alarms that depend on the app
+      being in the foreground.
+    evidence:
+      - Supported device and OS list enforced in the app
+      - UI tests on small screens and in high-contrast or dark modes
+      - Alarm and notification behaviour verified when the app is backgrounded
+    artifacts: [automated-tests, user-documentation]
+    crosswalk: ["eu-accessibility-act:AnnexI", "owasp-masvs:MASVS-PLATFORM-1"]
+
+  - ref: "GSPR17.4"
+    title: Minimum hardware, IT network and IT security requirements
+    requirement: >
+      The manufacturer must set out minimum requirements for hardware, IT network
+      characteristics and IT security measures, including protection against unauthorised
+      access, needed to run the software as intended, and state them in the instructions
+      for use (Annex I, 17.4 and 23.4(ab)).
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a system requirements or operating environment section in the IFU or
+      user documentation: supported OS and browser versions, CPU and memory, network
+      bandwidth and latency, required ports and protocols, firewall and proxy rules, TLS
+      requirements, antivirus compatibility, and the security measures the operator must
+      provide (network segmentation, account management, backups). Compare with the code:
+      ports opened by the server, outbound endpoints called, minimum SDK or engine
+      versions in build files (minSdkVersion, IPHONEOS_DEPLOYMENT_TARGET, engines in
+      package.json). Flag undocumented outbound connections or ports.
+    evidence:
+      - Documented minimum hardware, network and IT security requirements in the IFU
+      - Consistency with build targets, open ports and outbound endpoints in code
+    artifacts: [user-documentation, architecture-doc]
+    crosswalk: ["fda-cybersecurity:VI.A", "iec-81001-5-1:5.8.2"]
+
+  - ref: "GSPR18.8"
+    title: Protection against unauthorised access
+    requirement: >
+      Devices must be designed and manufactured to protect, as far as possible, against
+      unauthorised access that could hamper the device from functioning as intended
+      (Annex I, 18.8), with security capabilities proportionate to the risk as described
+      in MDCG 2019-16.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check authentication and authorisation on every interface that can read health data
+      or change device behaviour: role-based access checks server side, no
+      unauthenticated maintenance or debug endpoints, strong password hashing (argon2,
+      bcrypt, scrypt, PBKDF2), session expiry, rate limiting on login, verified JWTs, TLS
+      with certificate validation for all network traffic, encryption of health data at
+      rest (database or field-level encryption with keys in a KMS or the platform
+      keystore), signed software updates, and security event logging. Flag hardcoded
+      credentials, disabled certificate checks, cleartext transport, and debug builds
+      shipped to production.
+    evidence:
+      - Authentication and authorisation enforced on all interfaces
+      - Encryption in transit and at rest with managed keys
+      - Security event logging and signed updates
+    checks: [hardcoded-secret, default-credentials, jwt-unverified, weak-password-hash, tls-verification-disabled, cleartext-transport, missing-rate-limiting, debug-enabled, insecure-cookie]
+    artifacts: [threat-model, security-policy]
+    crosswalk: ["fda-cybersecurity:V.B.1", "iec-81001-5-1:5.3.1", "owasp-asvs:V6.2.1"]
+
+  - ref: "MDCG2019-16"
+    title: Cybersecurity across the life cycle and post-market security management
+    requirement: >
+      Following MDCG 2019-16 rev.1, manage cybersecurity across the whole life cycle:
+      secure design, security risk management linked to safety risk, security testing,
+      information for operators on secure configuration and their part of the joint
+      responsibility, and post-market monitoring of vulnerabilities with timely updates.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a vulnerability management process: SECURITY.md or a security.txt with a
+      reporting address, dependency and container scanning in CI (Dependabot, Renovate,
+      Trivy, Grype, OSV-Scanner), an SBOM per release, a documented patch timeline for
+      critical vulnerabilities, and release notes that flag security fixes. Check that
+      operator-facing documentation covers secure configuration, account management,
+      backup, update installation and secure decommissioning. Flag products with no way to
+      receive vulnerability reports or no update path.
+    evidence:
+      - Vulnerability intake and coordinated disclosure process
+      - Automated dependency and image scanning with triage records
+      - Operator security guidance and update process
+    artifacts: [security-policy, vulnerability-scanning, sbom, update-policy]
+    crosswalk: ["iec-81001-5-1:9.2", "fda-cybersecurity:524B(b)(1)", "eu-cra:AnnexI.II.5"]
+
+  - ref: "GSPR23"
+    title: Labelling and instructions for use, including electronic IFU
+    requirement: >
+      Provide the label and instructions for use required by Annex I chapter III,
+      including intended purpose, warnings, residual risks and software requirements. For
+      software, the IFU may be electronic under Implementing Regulation (EU) 2021/2226,
+      subject to its conditions (risk assessment, access from within the software or a
+      website, version history, and paper copies on request).
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Check that the software exposes its label information on an about screen or
+      equivalent (manufacturer name and address, product name, version, UDI, CE mark with
+      notified body number where applicable, authorised representative for non-EU
+      manufacturers) and links to the IFU. For electronic IFU, look for the eIFU risk
+      assessment, an in-app help or IFU link that works offline or degrades gracefully,
+      versioned IFU documents matching software versions, and a way to request a paper
+      copy. Flag about screens missing regulatory information or IFU versions that do not
+      match the release.
+    evidence:
+      - About screen with label information and UDI
+      - Versioned electronic IFU accessible from the software
+      - eIFU risk assessment and paper-copy request route
+    artifacts: [user-documentation]
+    crosswalk: ["iso-14971:8", "fda-cybersecurity:VI.A"]
+
+  - ref: "AnnexVI-C6.5"
+    title: UDI assignment and display for software
+    requirement: >
+      Assign a UDI to the software at system level. A new UDI-DI is needed for changes
+      that alter original performance, safety, intended use or data interpretation (for
+      example new algorithms, database structure, operating platform or interfaces); minor
+      revisions such as bug fixes and security patches need a new UDI-PI. Display the UDI
+      in plain text on an accessible screen (such as an about screen), or provide it
+      through an API for software without a user interface.
+    category: transparency-documentation
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for the UDI (Basic UDI-DI, UDI-DI and a UDI-PI that carries the software
+      version) in the about screen, settings page, or a /version or /about API for
+      headless software. Check that the UDI-PI or version is injected at build time from
+      the release tag, and that the release process documents when a change requires a new
+      UDI-DI versus a new UDI-PI (MDCG 2018-5). Flag missing UDI display, hardcoded
+      versions that drift from the release, and significant algorithm changes released
+      under the same UDI-DI without assessment.
+    evidence:
+      - UDI displayed in plain text or exposed via API
+      - Build-time version injection tied to release tags
+      - Documented UDI-DI change assessment in the release process
+    artifacts: [changelog, user-documentation]
+    crosswalk: ["iec-62304:5.8.4"]
+
+  - ref: "AnnexII"
+    title: Technical documentation for software
+    requirement: >
+      Keep technical documentation (Annexes II and III) that describes the software
+      design, development, verification and validation, including the software
+      architecture, versions, data processing, test results in the intended environment,
+      and the post-market surveillance plan.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Check that the repository or the linked design history file contains the inputs a
+      technical file needs: architecture and data flow descriptions, the software version
+      history, the SOUP list or SBOM, verification and validation reports per release,
+      cybersecurity documentation, the risk management file, and the clinical evaluation
+      or performance evidence for algorithms. Good looks like generated artefacts (test
+      reports, SBOM, traceability matrix) archived per release so the file can be rebuilt.
+      Flag releases whose evidence cannot be retrieved.
+    evidence:
+      - Architecture, V&V and cybersecurity documentation per release
+      - Archived release evidence that can be regenerated or retrieved
+    artifacts: [architecture-doc, requirements-traceability, sbom, risk-management-file]
+    crosswalk: ["iec-62304:5.3.1", "fda-cybersecurity:V.B.2"]
+
+  - ref: "Art.83"
+    title: Post-market surveillance system, plan and reports
+    requirement: >
+      Operate a post-market surveillance system proportionate to the risk class, based on
+      a PMS plan, that actively collects and analyses data on quality, performance and
+      safety, and produce a PMS report (class I) or periodic safety update reports
+      (class IIa at least every two years, IIb and III at least annually) (Articles 83 to
+      86).
+    category: logging-monitoring
+    severity: high
+    fixability: process
+    guidance: >
+      Look for the data the software feeds into PMS: crash and error telemetry, usage
+      metrics for safety-relevant features, algorithm performance monitoring (for example
+      drift or override rates for AI outputs), complaint intake from in-app feedback, and
+      vulnerability monitoring. Check that telemetry is privacy-aware (pseudonymised, no
+      health data in logs without a legal basis) and that a PMS plan names these sources.
+      Flag products with no in-field monitoring and no feedback channel.
+    evidence:
+      - PMS plan naming software data sources
+      - Telemetry and complaint intake implemented
+      - PMS report or PSUR inputs derived from field data
+    checks: [pii-in-logs]
+    artifacts: [incident-response-plan]
+    crosswalk: ["iso-14971:10", "iec-62304:6.2.1"]
+
+  - ref: "Art.87"
+    title: Vigilance - serious incidents and field safety corrective actions
+    requirement: >
+      Report serious incidents and field safety corrective actions to the competent
+      authorities within the MDR deadlines (no later than 15 days after awareness; 2 days
+      for a serious public health threat; 10 days for death or unanticipated serious
+      deterioration), and treat safety-related software updates as field safety
+      corrective actions where applicable.
+    category: governance
+    severity: high
+    fixability: process
+    guidance: >
+      Look for an incident response or vigilance procedure that covers software causes
+      (algorithm error, data corruption, cybersecurity incident affecting safety) and
+      the ability to act in the field: remote kill switch or feature flags for unsafe
+      functions, forced update or minimum supported version enforcement, and user
+      notification channels for field safety notices. Check that logs retain enough
+      information to investigate an incident (version, timestamps, inputs and outputs of
+      the algorithm) without leaking health data. Flag products that cannot disable a
+      faulty feature or force an update.
+    evidence:
+      - Vigilance procedure with MDR reporting timelines
+      - Technical means to disable features, force updates and notify users
+      - Investigation-ready logs
+    artifacts: [incident-response-plan, update-policy]
+    crosswalk: ["iec-62304:9", "fda-cybersecurity:524B(b)(2)"]
+
+  - ref: "MDCG2025-6"
+    title: AI Act interplay for AI-based medical device software
+    requirement: >
+      Where the MDSW contains an AI system and needs notified body assessment, it is also
+      a high-risk AI system under the AI Act; integrate the AI Act requirements (risk
+      management, data governance, logging, transparency, human oversight, accuracy,
+      robustness and cybersecurity) into the MDR quality system and technical
+      documentation, as explained in MDCG 2025-6.
+    category: ai-governance
+    severity: high
+    fixability: process
+    when: { not: { fact: aiUsage, in: [none] } }
+    guidance: >
+      Look for model documentation (model cards, datasheets for training data, data
+      lineage and splits), versioned and reproducible training pipelines, frozen model
+      artefacts with hashes, performance evaluation per subgroup, automatic event logging
+      of inferences (model version, input reference, output, timestamp) as AI Act
+      Article 12 expects, human oversight features (clinician confirmation, override,
+      explanation of outputs), and monitoring for drift. Check that change control
+      treats model retraining as a significant change unless a predetermined change plan
+      covers it. Flag models loaded from unpinned remote sources and AI outputs presented
+      without disclosure or oversight.
+    evidence:
+      - AI technical documentation integrated with the MDR technical file
+      - Inference logging, human oversight features and drift monitoring
+      - Change control for model updates
+    checks: [ai-disclosure-missing, llm-output-execution, llm-prompt-injection-risk]
+    artifacts: [ai-documentation, risk-management-file]
+    crosswalk: ["eu-ai-act:Art.6", "eu-ai-act:Art.12", "eu-ai-act:Art.14", "iso-iec-42001:A.6.2.4"]

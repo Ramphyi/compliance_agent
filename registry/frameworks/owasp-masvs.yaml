@@ -1,0 +1,505 @@
+id: owasp-masvs
+title: OWASP Mobile Application Security Verification Standard
+shortTitle: OWASP MASVS
+version: 2.1.0
+authority: OWASP Foundation (OWASP MAS project)
+kind: standard
+jurisdictions: [global]
+url: https://mas.owasp.org/MASVS/
+textPolicy: open
+summary: >
+  MASVS is the industry standard for mobile app security, organised in eight control groups:
+  storage, cryptography, authentication and authorisation, network, platform interaction,
+  code quality, resilience against reverse engineering, and privacy. The companion MASTG
+  testing guide and MASWE weakness list describe how to verify each control on Android and
+  iOS.
+applicability:
+  fact: productTypes
+  in: [mobile-app]
+applicabilityNote: >
+  Applies to Android and iOS apps, including cross-platform apps (React Native, Flutter,
+  Kotlin Multiplatform, .NET MAUI, Capacitor and Cordova). Voluntary, but it is the basis of
+  the ioXt and ADA (App Defense Alliance) MASA assessments that Google Play recognises with
+  a security badge, and of most mobile pentests. Version 2.1.0 (January 2024) added the
+  MASVS-PRIVACY group and is the current release. MASVS-RESILIENCE controls are defence in
+  depth and are scoped here to apps handling payment, financial or health data; the
+  anti-static and anti-dynamic analysis controls (RESILIENCE-3 and RESILIENCE-4) are left
+  out because they are rarely assessable from source. Backend APIs used by the app are
+  covered by OWASP ASVS.
+keyDates:
+  - { date: "2024-01-18", note: "MASVS 2.1.0 released, adding the MASVS-PRIVACY control group" }
+controls:
+  - ref: MASVS-STORAGE-1
+    title: Secure storage of sensitive data
+    requirement: >
+      The app stores sensitive data such as credentials, tokens, keys and personal data
+      only in protected platform storage, encrypted where needed, and never in shared or
+      world-readable locations.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Android: flag tokens or personal data in SharedPreferences, SQLite, Room or files
+      without encryption, external storage (getExternalStorageDirectory,
+      Environment.getExternalStoragePublicDirectory), MODE_WORLD_READABLE, and logs.
+      Compliant: Android Keystore-backed keys with EncryptedSharedPreferences or Tink, or
+      SQLCipher for databases. iOS: flag tokens in UserDefaults, plists, Core Data or files
+      without Data Protection; compliant is Keychain with kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+      or AfterFirstUnlockThisDeviceOnly and file protection NSFileProtectionComplete.
+      React Native: flag AsyncStorage for secrets (use react-native-keychain or
+      expo-secure-store). Flutter: flag shared_preferences for secrets (use
+      flutter_secure_storage).
+    evidence:
+      - Tokens and keys stored in Keychain or Keystore-backed storage
+      - No sensitive data in plain preferences, external storage or app bundles
+    checks: [hardcoded-secret]
+    crosswalk: ["iso-iec-27001:A.8.24", "gdpr:Art.32"]
+
+  - ref: MASVS-STORAGE-2
+    title: Prevent leakage of sensitive data
+    requirement: >
+      The app prevents sensitive data from leaking through backups, logs, keyboard caches,
+      clipboard, screenshots, notifications and other system mechanisms.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Android: check android:allowBackup and android:fullBackupContent or
+      android:dataExtractionRules in AndroidManifest.xml (backup disabled or sensitive
+      files excluded), Log.d, Log.v and println of tokens or personal data (strip with R8
+      rules -assumenosideeffects for release), FLAG_SECURE on sensitive screens, and
+      inputType textNoSuggestions or textPassword on sensitive fields. iOS: check
+      NSLog and print of secrets, files excluded from iCloud backup
+      (isExcludedFromBackup), secureTextEntry, and snapshot blurring when entering the
+      background. Check that sensitive data is not placed on the clipboard or in
+      notification text.
+    evidence:
+      - Backup rules excluding sensitive data
+      - No sensitive data in release logs, clipboard or notifications
+    checks: [mobile-backup-allowed, pii-in-logs]
+    crosswalk: ["owasp-asvs:V16.2.5", "iso-iec-27001:A.8.12"]
+
+  - ref: MASVS-CRYPTO-1
+    title: Strong, current cryptography
+    requirement: >
+      The app uses current strong cryptographic algorithms and modes, following industry
+      best practice, and secure random number generation.
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Flag Cipher.getInstance("AES") or "AES/ECB/..." (Java defaults to ECB), DES, 3DES,
+      RC4, MD5 and SHA-1 for security, static IVs, java.util.Random or Math.random for
+      keys or tokens, and CommonCrypto kCCOptionECBMode or kCCAlgorithmDES on iOS.
+      Compliant: AES-GCM via Keystore or Tink on Android, CryptoKit (AES.GCM, ChaChaPoly)
+      on iOS, SecureRandom and SecRandomCopyBytes for randomness.
+    evidence:
+      - Authenticated encryption and approved hashes only
+      - CSPRNG for all security-relevant random values
+    checks: [weak-cipher, weak-hash, insecure-random]
+    crosswalk: ["owasp-asvs:V11.3.2", "owasp-asvs:V11.5.1", "iso-iec-27001:A.8.24"]
+
+  - ref: MASVS-CRYPTO-2
+    title: Key management
+    requirement: >
+      The app manages cryptographic keys securely across their life cycle: generated on
+      the device in hardware-backed storage where possible, never hardcoded, and protected
+      from extraction.
+    category: cryptography
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag keys, IVs or salts as string or byte array literals, keys in resources,
+      BuildConfig fields, Info.plist, google-services files misused for secrets, or
+      JavaScript bundles. Compliant Android code generates keys with KeyGenParameterSpec in
+      AndroidKeyStore (setIsStrongBoxBacked where available, setUserAuthenticationRequired
+      for sensitive keys); iOS uses Secure Enclave keys (kSecAttrTokenIDSecureEnclave) or
+      Keychain items. Third-party API keys that must ship in the app should be restricted
+      by app signature or bundle id at the provider and never grant privileged access.
+    evidence:
+      - No hardcoded keys; keys generated in Keystore or Secure Enclave
+    checks: [hardcoded-crypto-key, hardcoded-secret]
+    crosswalk: ["owasp-asvs:V13.3.1", "iso-iec-27001:A.8.24"]
+
+  - ref: MASVS-AUTH-1
+    title: Secure authentication and authorisation protocols
+    requirement: >
+      The app uses secure authentication and authorisation protocols such as OAuth 2.0 with
+      PKCE and OpenID Connect, performs authorisation on the backend, and handles tokens
+      securely.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check OAuth flows use the system browser (AppAuth, ASWebAuthenticationSession,
+      Custom Tabs) with PKCE, not embedded WebViews or the password grant. Check that
+      authorisation decisions are not made on the client only (feature unlocks or premium
+      flags stored locally without server verification), that tokens are stored per
+      MASVS-STORAGE-1, refresh tokens are rotated, and logout revokes tokens server side.
+      Flag client secrets embedded in the app.
+    evidence:
+      - OAuth with PKCE through the system browser
+      - Server-side authorisation for protected features
+    checks: [hardcoded-secret, jwt-unverified]
+    crosswalk: ["owasp-asvs:V9.1.1", "owasp-asvs:V8.2.1"]
+
+  - ref: MASVS-AUTH-2
+    title: Secure local authentication
+    requirement: >
+      Local authentication such as biometrics or a device PIN follows platform best
+      practice and is bound to a cryptographic operation rather than a simple success
+      callback.
+    category: authentication-access
+    severity: medium
+    fixability: code
+    guidance: >
+      Android: check BiometricPrompt is used with a CryptoObject tied to a Keystore key
+      created with setUserAuthenticationRequired(true) and
+      setInvalidatedByBiometricEnrollment(true); flag event-bound unlocks that only check
+      onAuthenticationSucceeded. iOS: flag LAContext.evaluatePolicy used alone to unlock
+      secrets; compliant is a Keychain item protected with SecAccessControl
+      (.biometryCurrentSet or .userPresence). Cross-platform plugins
+      (react-native-biometrics, local_auth) must be configured for key-bound mode.
+    evidence:
+      - Biometric unlock bound to Keystore or Keychain keys
+    crosswalk: ["owasp-asvs:V6.3.3"]
+
+  - ref: MASVS-AUTH-3
+    title: Step-up authentication for sensitive operations
+    requirement: >
+      The app requires additional authentication for sensitive operations such as payments,
+      changing credentials or viewing highly sensitive data.
+    category: authentication-access
+    severity: medium
+    fixability: code
+    guidance: >
+      Identify sensitive actions (payments, transfers, changing email, password or MFA,
+      exporting health records) and check that the backend requires recent
+      authentication or a second factor (step-up token, acr claim, re-entry of password or
+      biometric bound to a server challenge), not only a client-side prompt.
+    evidence:
+      - Server-verified step-up for sensitive operations
+    crosswalk: ["psd2-sca:RTS-Art.4", "owasp-asvs:V6.3.3"]
+
+  - ref: MASVS-NETWORK-1
+    title: Secure network traffic
+    requirement: >
+      All network traffic uses TLS with proper certificate and hostname validation, and
+      cleartext traffic is disabled.
+    category: communications-security
+    severity: critical
+    fixability: code
+    guidance: >
+      Android: check android:usesCleartextTraffic is absent or false in
+      AndroidManifest.xml, res/xml/network_security_config.xml sets
+      cleartextTrafficPermitted="false" (debug-overrides only for debug builds, no user CA
+      trust in release), and flag custom X509TrustManager or HostnameVerifier that accept
+      everything, SslErrorHandler.proceed() in WebViews, and OkHttp hostnameVerifier
+      lambdas returning true. iOS: check Info.plist NSAppTransportSecurity has no
+      NSAllowsArbitraryLoads or broad NSExceptionDomains with NSExceptionAllowsInsecureHTTPLoads,
+      and flag URLSessionDelegate code that trusts any server trust. Flutter: flag
+      badCertificateCallback returning true. React Native: check native config as above.
+    evidence:
+      - Cleartext disabled in manifest, network security config and ATS
+      - No custom trust managers or delegates bypassing validation
+    checks: [mobile-cleartext-allowed, tls-verification-disabled, cleartext-transport]
+    crosswalk: ["owasp-asvs:V12.2.1", "owasp-asvs:V12.3.2", "iso-iec-27001:A.8.20"]
+
+  - ref: MASVS-NETWORK-2
+    title: Identity pinning for own endpoints
+    requirement: >
+      The app pins the identity (certificate or public key) of remote endpoints under the
+      developer's control, with a tested rotation plan.
+    category: communications-security
+    severity: medium
+    fixability: code
+    when:
+      any:
+        - { fact: dataCategories, in: [payment-cards, financial, health, genetic-biometric] }
+        - { fact: sector, in: [finance, healthcare] }
+    guidance: >
+      Android: look for <pin-set> with backup pins and an expiration in
+      network_security_config.xml, or OkHttp CertificatePinner. iOS: NSPinnedDomains in
+      Info.plist or TrustKit or URLSession delegate pinning of SPKI hashes. Check that at
+      least one backup pin exists and that pins cover only the developer's own domains.
+      Pinning is defence in depth; MASVS expects it where the threat model warrants it.
+    evidence:
+      - Public key pins with backup keys for own API domains
+    crosswalk: ["owasp-asvs:V12.3.2"]
+
+  - ref: MASVS-PLATFORM-1
+    title: Secure inter-process communication
+    requirement: >
+      The app uses IPC mechanisms such as intents, content providers, services, broadcast
+      receivers, URL schemes, universal links and app extensions securely, exposing only
+      what is intended and validating all input.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Android: in AndroidManifest.xml flag activities, services, receivers and providers
+      with android:exported="true" (or intent filters, which export by default before
+      API 31) and no android:permission with protectionLevel signature; flag content
+      providers with grantUriPermissions on broad paths, implicit intents carrying
+      sensitive data, mutable PendingIntents (use FLAG_IMMUTABLE), and deep link handlers
+      that perform actions or load URLs from parameters without validation. Prefer App
+      Links with android:autoVerify="true". iOS: validate parameters in
+      application(_:open:options:) and scene continueUserActivity handlers, prefer
+      universal links over custom URL schemes for authentication callbacks, and restrict
+      UIPasteboard sharing and app group containers.
+    evidence:
+      - Only intended components exported, protected by permissions
+      - Deep link and URL handlers validate parameters and require authentication for actions
+    checks: [mobile-exported-component]
+    crosswalk: ["owasp-asvs:V2.2.1", "owasp-asvs:V8.2.1"]
+
+  - ref: MASVS-PLATFORM-2
+    title: Secure WebViews
+    requirement: >
+      WebViews are configured with the minimum capabilities needed, load only trusted
+      content, and do not expose native functionality to untrusted pages.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Android: flag setJavaScriptEnabled(true) on WebViews that load remote or user content,
+      addJavascriptInterface exposed to untrusted origins, setAllowFileAccess(true),
+      setAllowFileAccessFromFileURLs or setAllowUniversalAccessFromFileURLs(true),
+      setMixedContentMode(MIXED_CONTENT_ALWAYS_ALLOW), and shouldOverrideUrlLoading that
+      loads arbitrary URLs. iOS: flag UIWebView (deprecated), WKWebView loading untrusted
+      URLs with WKScriptMessageHandler bridges, and allowFileAccessFromFileURLs.
+      React Native WebView: flag originWhitelist ['*'] with injected JavaScript or
+      onMessage handlers that act on untrusted messages, and allowFileAccess. Compliant
+      WebViews restrict navigation to an allowlist and validate bridge messages and their
+      origin.
+    evidence:
+      - WebView settings minimised and navigation restricted to trusted origins
+      - JavaScript bridges limited to trusted content with message validation
+    checks: [xss-risk]
+    crosswalk: ["owasp-asvs:V3.5.1", "owasp-asvs:V1.2.1"]
+
+  - ref: MASVS-PLATFORM-3
+    title: Secure user interface
+    requirement: >
+      The app uses the user interface securely, preventing sensitive data exposure through
+      screenshots, screen recording and overlays, and protecting against tapjacking.
+    category: data-protection
+    severity: medium
+    fixability: code
+    guidance: >
+      Android: check FLAG_SECURE on screens showing credentials, payment or health data,
+      filterTouchesWhenObscured or setHideOverlayWindows on sensitive confirmation
+      buttons, and masking of sensitive fields. iOS: check secureTextEntry on secret
+      fields and hiding sensitive content in applicationWillResignActive or when screen
+      capture is detected (UIScreen.capturedDidChangeNotification). Check that sensitive
+      values are masked by default in the UI.
+    evidence:
+      - Screenshot protection and masking on sensitive screens
+      - Overlay protection on sensitive actions
+    crosswalk: ["iso-iec-27001:A.8.12"]
+
+  - ref: MASVS-CODE-1
+    title: Up-to-date platform version
+    requirement: >
+      The app requires a supported, up-to-date minimum platform version so that security
+      fixes and modern protections are available.
+    category: updates-maintenance
+    severity: low
+    fixability: code
+    guidance: >
+      Check minSdk and targetSdk in build.gradle or build.gradle.kts (targetSdk must meet
+      the current Google Play requirement; minSdk should exclude Android versions without
+      security updates where the threat model requires it) and IPHONEOS_DEPLOYMENT_TARGET
+      in the Xcode project or Podfile. Flag very old minimums that force insecure fallbacks.
+    evidence:
+      - Documented minimum OS versions and current target SDK
+    crosswalk: ["google-play-policy:Target API level"]
+
+  - ref: MASVS-CODE-2
+    title: Enforced app updates
+    requirement: >
+      The app has a mechanism to make users update when a critical security fix is
+      released, such as a forced update or minimum supported version check.
+    category: updates-maintenance
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for Play Core In-App Updates with IMMEDIATE update type, a minimum supported
+      version returned by the backend or remote config and enforced on start, or API
+      version gating that rejects outdated clients. Check that the backend can block
+      vulnerable versions.
+    evidence:
+      - Minimum supported version enforcement or forced update flow
+    artifacts: [update-policy]
+    crosswalk: ["eu-cra:AnnexI.II.2", "iso-iec-27001:A.8.8"]
+
+  - ref: MASVS-CODE-3
+    title: No components with known vulnerabilities
+    requirement: >
+      The app only uses third-party libraries and SDKs without known vulnerabilities and
+      keeps them up to date.
+    category: vulnerability-management
+    severity: high
+    fixability: code
+    guidance: >
+      Check lockfiles and dependency declarations (Gradle with version catalogs and
+      dependency locking or verification-metadata.xml, Podfile.lock, Package.resolved,
+      package-lock.json or yarn.lock for React Native, pubspec.lock for Flutter), automated
+      updates (Dependabot, Renovate) and vulnerability scanning (OWASP Dependency-Check,
+      osv-scanner, Snyk, Trivy). Flag dynamic versions such as 1.+ or latest.release.
+    evidence:
+      - Locked dependencies with automated updates and vulnerability scanning
+    checks: [unpinned-dependencies]
+    artifacts: [dependency-lockfile, dependency-update-automation, vulnerability-scanning, sbom]
+    crosswalk: ["owasp-asvs:V15.2.1", "iso-iec-27001:A.8.8"]
+
+  - ref: MASVS-CODE-4
+    title: Validation of untrusted input
+    requirement: >
+      The app validates and sanitises all untrusted input, including data from deep links,
+      IPC, the network, files, the clipboard and QR codes, and avoids unsafe
+      deserialisation and dynamic code loading.
+    category: input-validation
+    severity: high
+    fixability: code
+    guidance: >
+      Flag raw SQL built from input in SQLite (rawQuery or execSQL with concatenation),
+      Java ObjectInputStream or Parcelable data from untrusted intents, NSKeyedUnarchiver
+      without requiresSecureCoding, DexClassLoader or dynamic code download, eval in hybrid
+      apps, and file paths from intents or zip entries without validation. Check that
+      parsed data from deep links and push payloads is validated before use.
+    evidence:
+      - Parameterised local queries and safe parsers for untrusted data
+      - No dynamic code loading from untrusted sources
+    checks: [sql-injection-risk, unsafe-deserialization, dynamic-code-eval, path-traversal-risk]
+    crosswalk: ["owasp-asvs:V2.2.1", "owasp-asvs:V1.5.2"]
+
+  - ref: MASVS-RESILIENCE-1
+    title: Platform integrity validation
+    requirement: >
+      The app checks the integrity of the platform it runs on, such as detecting rooted or
+      jailbroken devices and emulators, and responds according to its risk model.
+    category: code-safety
+    severity: low
+    fixability: code
+    when:
+      any:
+        - { fact: dataCategories, in: [payment-cards, financial, health] }
+        - { fact: sector, in: [finance, healthcare] }
+    guidance: >
+      Look for Play Integrity API calls verified on the backend (not only on the device),
+      Apple App Attest or DeviceCheck verification on the server, and root or jailbreak
+      detection libraries (RootBeer, IOSSecuritySuite, freeRASP) with a documented
+      response (warn, limit features, block). Client-only checks are easily bypassed and
+      count only as defence in depth.
+    evidence:
+      - Server-verified Play Integrity or App Attest tokens
+    crosswalk: ["psd2-sca:RTS-Art.9"]
+
+  - ref: MASVS-RESILIENCE-2
+    title: Anti-tampering
+    requirement: >
+      The app implements mechanisms to detect tampering with its code and resources, such
+      as signature verification and integrity checks, and does not ship debuggable
+      release builds.
+    category: code-safety
+    severity: medium
+    fixability: code
+    when:
+      any:
+        - { fact: dataCategories, in: [payment-cards, financial, health] }
+        - { fact: sector, in: [finance, healthcare] }
+    guidance: >
+      Check that release builds set android:debuggable false (no debuggable true in
+      release buildTypes), enable R8 or ProGuard minification and obfuscation
+      (minifyEnabled true), and strip debug symbols. Look for app signature verification
+      through Play Integrity or App Attest on the server and for integrity checks on
+      downloaded resources.
+    evidence:
+      - Non-debuggable, minified release builds
+      - Server-side verification of app integrity
+    checks: [debug-enabled]
+    crosswalk: ["owasp-asvs:V13.4.2"]
+
+  - ref: MASVS-PRIVACY-1
+    title: Minimal access to sensitive data and resources
+    requirement: >
+      The app requests only the permissions and data it needs, uses the least invasive
+      alternative (approximate location, photo picker, one-time permissions), and asks at
+      the time of use.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Android: review <uses-permission> entries in AndroidManifest.xml (including those
+      merged from SDKs) and flag unnecessary sensitive ones (ACCESS_FINE_LOCATION where
+      coarse suffices, ACCESS_BACKGROUND_LOCATION, READ_CONTACTS, READ_SMS,
+      READ_EXTERNAL_STORAGE or READ_MEDIA_* where the photo picker would do,
+      QUERY_ALL_PACKAGES, RECORD_AUDIO). iOS: review Info.plist usage descriptions
+      (NSLocationAlwaysAndWhenInUseUsageDescription, NSContactsUsageDescription,
+      NSCameraUsageDescription) and PHPicker use. Check that permissions are requested
+      in context, not at launch.
+    evidence:
+      - Permission inventory with justification per permission
+      - Least invasive APIs used for location, media and contacts
+    crosswalk: ["gdpr:Art.25", "google-play-policy:Permissions", "apple-app-review:5.1.1"]
+
+  - ref: MASVS-PRIVACY-2
+    title: Prevent identification of the user
+    requirement: >
+      The app avoids unnecessary identification and tracking of users, using
+      privacy-preserving identifiers and avoiding fingerprinting and cross-app tracking
+      without consent.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag collection of persistent hardware identifiers (IMEI, MAC address, serial,
+      ANDROID_ID used for tracking), advertising ids (AAID, IDFA) without consent and,
+      on iOS, without ATTrackingManager authorisation, device fingerprinting, and analytics
+      or ad SDKs initialised before consent. Check that personal data sent to analytics is
+      pseudonymised and that SDK data collection is configured to the minimum.
+    evidence:
+      - Consent gating before tracking or advertising SDKs initialise
+      - No persistent hardware identifiers used for tracking
+    checks: [analytics-tracking-sdk]
+    crosswalk: ["eprivacy:Art.5(3)", "gdpr:Art.6", "apple-app-review:ATT", "google-play-policy:Advertising ID"]
+
+  - ref: MASVS-PRIVACY-3
+    title: Transparency about data collection
+    requirement: >
+      The app is transparent about the data it collects and how it is used, including by
+      third-party SDKs, with accurate store disclosures and privacy policy.
+    category: privacy-rights
+    severity: medium
+    fixability: document
+    guidance: >
+      Compare the data flows found in code and SDKs with the privacy policy, Google Play
+      Data safety form and Apple privacy nutrition label. iOS: check PrivacyInfo.xcprivacy
+      privacy manifests exist for the app and for SDKs that need them, declaring collected
+      data types, tracking domains and required-reason API usage. Check in-app disclosure
+      before collecting sensitive data.
+    evidence:
+      - Privacy policy and store disclosures matching actual data flows
+      - Privacy manifest (PrivacyInfo.xcprivacy) present and accurate
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.13", "apple-app-review:privacy-manifest", "google-play-policy:Data Safety"]
+
+  - ref: MASVS-PRIVACY-4
+    title: User control over their data
+    requirement: >
+      The app gives users control over their data, including managing consent and
+      permissions, and requesting deletion of their account and data.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for in-app account deletion that deletes or schedules deletion of server-side
+      data (required by Apple 5.1.1(v) and Google Play account deletion policy, plus a web
+      deletion link for Play), consent settings that can be changed later (a consent
+      management screen that re-initialises SDKs accordingly), and data export where
+      offered.
+    evidence:
+      - In-app account deletion wired to backend deletion
+      - Consent settings users can revisit and change
+    crosswalk: ["gdpr:Art.17", "apple-app-review:5.1.1(v)", "google-play-policy:Account Deletion"]

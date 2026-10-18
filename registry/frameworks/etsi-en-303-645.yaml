@@ -1,0 +1,493 @@
+id: etsi-en-303-645
+title: Cyber Security for Consumer Internet of Things - Baseline Requirements
+shortTitle: ETSI EN 303 645
+version: V3.1.3 (2024-09)
+authority: ETSI
+kind: standard
+jurisdictions: [EU, UK, global]
+url: https://www.etsi.org/deliver/etsi_en/303600_303699/303645/03.01.03_60/en_303645v030103p.pdf
+textPolicy: open
+summary: >
+  ETSI EN 303 645 is the baseline cyber security standard for consumer IoT devices and
+  their associated services. It sets out mandatory (M) and recommended (R) provisions in
+  thirteen groups (5.1 to 5.13), from banning universal default passwords to validating
+  input, plus data protection provisions (clause 6). It underpins the UK PSTI deemed
+  compliance route, national labels (Finland, Singapore, Germany) and the EU RED and CRA
+  standardisation work.
+applicability:
+  all:
+    - { fact: audience, in: [consumers, children] }
+    - any:
+        - { fact: productTypes, in: [iot-device] }
+        - all:
+            - { fact: productTypes, in: [embedded-firmware] }
+            - { fact: connectivity, in: [internet, wifi, bluetooth, cellular, nfc-uwb] }
+applicabilityNote: >
+  Applies to consumer IoT devices that connect to a network (directly or through a
+  gateway or app) and to their associated services such as the companion app and cloud
+  backend. It is voluntary in itself, but the UK PSTI regulations deem compliance with
+  provisions 5.1-1, 5.1-2, 5.2-1 and 5.3-13 (as published in V2.1.1) to satisfy UK law,
+  and buyers and labelling schemes ask for it. Recommended provisions that are not
+  implemented need a documented justification (5.0-1). V3.1.3 split several V2.1.1
+  provisions into A and B parts (5.3-4, 5.3-6, 5.3-15, 5.6-4, 5.13-1, 6-3) and added
+  5.0-1, 5.1-2A, 6-6, 6-7 and 6-8.
+keyDates:
+  - { date: "2020-06-19", note: V2.1.1 published; the UK PSTI regulations reference this version }
+  - { date: "2024-09-24", note: V3.1.3 published }
+  - { date: "2025-06-30", note: Latest date for withdrawal of conflicting national standards for V3.1.3 }
+controls:
+  - ref: "5.0-1"
+    title: Justify recommendations not implemented
+    requirement: >
+      The manufacturer records, for each recommended provision it does not implement, a
+      justification for why it is not needed or not appropriate for the device (M).
+    category: governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for an EN 303 645 conformance statement or implementation conformance
+      statement (ICS) in the repository (docs/compliance/en303645*, a Markdown or
+      spreadsheet export of Annex B) that lists each provision with status and, for
+      unimplemented recommendations, a reason. ETSI TS 103 701 assessment reports are
+      strong evidence.
+    evidence:
+      - Completed implementation conformance statement with justifications
+
+  - ref: "5.1-1"
+    title: No universal default passwords
+    requirement: >
+      Where passwords are used, in any state other than the factory default, every
+      password must be unique per device or defined by the user (M).
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Search firmware, companion apps and provisioning scripts for shared credentials:
+      literal passwords in Wi-Fi AP setup (softAP passwords such as "12345678"), web admin
+      logins (admin/admin), telnet or SSH root passwords in /etc/shadow of the rootfs
+      overlay, BLE pairing passkeys fixed in code (static passkey 000000 or 123456), MQTT
+      usernames and passwords shared across the fleet, and DEFAULT_PASSWORD constants.
+      Good looks like per-device credentials generated at manufacture and printed on the
+      label, or a forced user-defined password at first setup with no network service
+      exposed before that.
+    evidence:
+      - No shared default passwords in code, images or provisioning scripts
+      - Per-device or user-defined credentials at setup
+    checks: [default-credentials, hardcoded-secret]
+    crosswalk: ["uk-psti:Sch1.1", "en-18031:AUM-5", "eu-cra:AnnexI.I.2(b)", "iec-62443-4-2:CR 1.5"]
+
+  - ref: "5.1-2"
+    title: Unique pre-installed passwords resist automated attack
+    requirement: >
+      Pre-installed per-device passwords must be generated so they cannot be guessed for
+      a class of devices, for example not from incremental counters, MAC addresses or
+      serial numbers (M).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Inspect the factory provisioning or label-printing tooling (tools/provision*,
+      manufacturing scripts) and any code that derives a default password at runtime. Flag
+      passwords derived from the MAC address, serial number, chip ID or a counter, unless
+      through a keyed function with a secret not on the device. Good looks like passwords
+      from a cryptographic RNG with enough length, written to protected storage.
+    evidence:
+      - Provisioning tool generating random per-device passwords
+    checks: [insecure-random, default-credentials]
+    crosswalk: ["uk-psti:Sch1.1", "en-18031:AUM-5"]
+
+  - ref: "5.1-3"
+    title: Best practice cryptography for authentication
+    requirement: >
+      Authentication mechanisms used to authenticate users against the device must use
+      best practice cryptography suited to the technology, risk and usage (M).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check how credentials travel and are stored: login over HTTPS or an encrypted BLE
+      link (LE Secure Connections, not legacy Just Works for sensitive actions), password
+      verification against salted slow hashes (PBKDF2, bcrypt, argon2) rather than
+      plaintext comparison, and token-based app pairing with signed tokens. Flag HTTP
+      basic auth over cleartext and password storage in plain NVS.
+    evidence:
+      - Encrypted channel for authentication
+      - Hashed credential storage
+    checks: [cleartext-transport, weak-password-hash, weak-hash]
+    crosswalk: ["en-18031:AUM-1"]
+
+  - ref: "5.1-4"
+    title: Simple way to change the authentication value
+    requirement: >
+      Where a user can authenticate against the device, the device must offer a simple way
+      for the user or administrator to change the authentication value (M).
+    category: authentication-access
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for a password or PIN change function in the web UI, app or device menu and
+      check it updates the stored credential and invalidates existing sessions.
+    evidence:
+      - Credential change function available to users
+    crosswalk: ["en-18031:AUM-4"]
+
+  - ref: "5.1-5"
+    title: Brute force protection
+    requirement: >
+      Devices that are not constrained must make brute-force attacks on authentication
+      via network interfaces impracticable (M, conditional).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check login handlers on HTTP, MQTT, BLE and local APIs for attempt limits, increasing
+      delays or lockout. Flag authentication endpoints without counters and PINs short
+      enough to enumerate without rate limiting.
+    evidence:
+      - Attempt limiting on every network authentication path
+    checks: [missing-rate-limiting]
+    crosswalk: ["iec-62443-4-2:CR 1.11", "en-18031:AUM-6"]
+
+  - ref: "5.2-1"
+    title: Public vulnerability disclosure policy
+    requirement: >
+      The manufacturer must publish a vulnerability disclosure policy that gives at least
+      contact information for reporting issues and timelines for acknowledgement and
+      status updates (M).
+    category: vulnerability-management
+    severity: high
+    fixability: document
+    guidance: >
+      Look for SECURITY.md, a security.txt (RFC 9116) on the product website or device web
+      interface, and a disclosure policy page linked from documentation. It must name the
+      contact (email or form), the acknowledgement time and the update cadence until
+      resolution.
+    evidence:
+      - Published policy with contact and timelines
+    artifacts: [security-policy]
+    crosswalk: ["uk-psti:Sch1.2", "eu-cra:AnnexI.II.5", "nist-ir-8259:8259B-2"]
+
+  - ref: "5.3-2"
+    title: Secure update mechanism
+    requirement: >
+      Devices that are not constrained must have an update mechanism for the secure
+      installation of updates (M, conditional). All software components should be securely
+      updateable (5.3-1, R).
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Identify the OTA path (esp_https_ota, MCUboot with mcumgr or SUIT, Zephyr DFU, Nordic
+      nRF Connect FOTA, SWUpdate, RAUC, Mender, app-driven BLE DFU) and check it covers all
+      components, including the radio coprocessor firmware and the companion app. Check
+      A/B slots or rollback on failed boot, and that the update can be applied without
+      technical skills (5.3-3).
+    evidence:
+      - OTA mechanism covering all software components
+      - Fail-safe update with rollback
+    checks: [firmware-update-unsigned]
+    artifacts: [update-policy]
+    crosswalk: ["eu-cra:AnnexI.I.2(c)", "en-18031:SUM-1", "iec-62443-4-2:EDR 3.10"]
+
+  - ref: "5.3-10"
+    title: Verify updates through a trust relationship
+    requirement: >
+      Where updates are delivered over a network interface, the device must verify the
+      authenticity and integrity of each update via a trust relationship (M), using best
+      practice cryptography (5.3-7, M).
+    category: updates-maintenance
+    severity: critical
+    fixability: code
+    guidance: >
+      Check that the bootloader or update agent verifies a signature with a public key
+      anchored on the device before installing: MCUboot with signed images
+      (imgtool sign, MCUBOOT_SIGN_EC256 or ED25519), ESP-IDF secure boot v2 or
+      CONFIG_SECURE_SIGNED_APPS_NO_SECURE_BOOT, Nordic DFU with signed init packets, SUIT
+      manifests with COSE signatures. Flag updates verified only by CRC or by an unsigned
+      SHA-256 downloaded alongside the image, TLS treated as the only protection, and
+      development signing keys used for release.
+    evidence:
+      - Signature verification before installation
+      - Production keys separated from development keys
+    checks: [firmware-update-unsigned, tls-verification-disabled, hardcoded-crypto-key]
+    crosswalk: ["iec-62443-4-1:SUM-4", "en-18031:SUM-2", "eu-cra:AnnexI.I.2(f)"]
+
+  - ref: "5.3-13"
+    title: Publish the defined support period
+    requirement: >
+      The manufacturer must publish, in an accessible, clear and transparent way, the
+      defined support period during which security updates are provided (M).
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Look for an update or support policy (UPDATE_POLICY.md, docs/support-period, product
+      web page text) that states an end date or a period from a defined start, and check
+      that the companion app or device UI shows it. A vague "regular updates" statement is
+      not enough.
+    evidence:
+      - Published support period with an end date
+    artifacts: [update-policy, user-documentation]
+    crosswalk: ["uk-psti:Sch1.3", "eu-cra:Art.13(8)", "nist-ir-8259:8259B-3"]
+
+  - ref: "5.4-1"
+    title: Secure storage of sensitive security parameters
+    requirement: >
+      Sensitive security parameters in persistent storage must be stored securely by the
+      device (M).
+    category: secrets-management
+    severity: high
+    fixability: code
+    guidance: >
+      Check where Wi-Fi credentials, cloud tokens, private keys and pairing keys are kept:
+      ESP-IDF NVS encryption (CONFIG_NVS_ENCRYPTION) with flash encryption
+      (CONFIG_SECURE_FLASH_ENC_ENABLED), a secure element (ATECC608, SE050, OPTIGA), TF-M
+      protected storage, Android Keystore or iOS Keychain in the app. Flag keys in plaintext
+      files, SPIFFS or LittleFS, or EEPROM without readout protection.
+    evidence:
+      - Encrypted or hardware-protected storage of secrets
+    checks: [secure-boot-disabled, mobile-backup-allowed]
+    crosswalk: ["en-18031:SSM-2", "iec-62443-4-2:CR 1.5"]
+
+  - ref: "5.4-3"
+    title: No hard-coded critical security parameters
+    requirement: >
+      Hard-coded critical security parameters must not be used in device software source
+      code (M).
+    category: secrets-management
+    severity: critical
+    fixability: code
+    guidance: >
+      Search source and configuration for literal keys, certificates with private keys,
+      shared API tokens and AES key arrays (static const uint8_t key[16] = {...}), cloud
+      credentials in sdkconfig defaults, and default TLS client certificates shared by the
+      fleet. Good looks like secrets injected at manufacture into protected storage.
+    evidence:
+      - No secrets in the source tree or build defaults
+    checks: [hardcoded-secret, hardcoded-crypto-key]
+    crosswalk: ["cert-c:MSC41-C", "en-18031:CCK-3"]
+
+  - ref: "5.4-4"
+    title: Unique per-device keys for updates and communications
+    requirement: >
+      Critical security parameters used for update integrity and authenticity checks and
+      for protecting communication with associated services must be unique per device and
+      produced so that attacks against a class of devices are not possible (M). Public keys
+      used to verify signatures are not secrets.
+    category: secrets-management
+    severity: high
+    fixability: code
+    guidance: >
+      Check the cloud connection credentials (AWS IoT, Azure DPS, MQTT client certificates)
+      are per device, generated on device or by a factory HSM, and not a shared fleet key.
+      Flag symmetric keys shared across all devices for update decryption or message
+      authentication.
+    evidence:
+      - Per-device client credentials
+      - No fleet-wide symmetric secrets
+    checks: [hardcoded-crypto-key]
+    crosswalk: ["en-18031:CCK-3"]
+
+  - ref: "5.5-1"
+    title: Best practice cryptography for communications
+    requirement: >
+      The device must use best practice cryptography to communicate securely (M).
+    category: communications-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check every outbound and inbound channel: TLS 1.2 or 1.3 for HTTP, MQTT (port 8883)
+      and WebSocket, certificate verification on (mbedtls_ssl_conf_authmode with
+      MBEDTLS_SSL_VERIFY_REQUIRED, esp_http_client with cert_pem or crt_bundle_attach),
+      BLE LE Secure Connections pairing, Matter or Thread with their standard security.
+      Flag http://, mqtt://, ws:// endpoints, verify mode NONE or OPTIONAL, and weak cipher
+      suites.
+    evidence:
+      - Encrypted, authenticated channels with certificate validation
+    checks: [cleartext-transport, tls-verification-disabled, weak-cipher]
+    crosswalk: ["en-18031:SCM-2", "eu-cra:AnnexI.I.2(e)", "iec-62443-4-2:CR 3.1"]
+
+  - ref: "5.5-5"
+    title: Authenticate security-relevant configuration changes
+    requirement: >
+      Device functions that allow security-relevant configuration changes over a network
+      interface must only be accessible after authentication (M).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Enumerate local network APIs (HTTP handlers, CoAP resources, UPnP, mDNS-advertised
+      services, BLE GATT characteristics) and check that writes changing Wi-Fi, credentials,
+      firmware, cloud endpoint or debug settings require authentication. Flag writable
+      GATT characteristics without encryption or authentication permissions and local
+      REST endpoints with no auth check.
+    evidence:
+      - Authentication on every configuration-changing interface
+    crosswalk: ["en-18031:ACM-1", "iec-62443-4-2:CR 2.1"]
+
+  - ref: "5.6-1"
+    title: Disable unused interfaces
+    requirement: >
+      All unused network and logical interfaces must be disabled (M), and only services
+      needed for the intended use should be enabled (5.6-5, R).
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      List services and ports the firmware opens (telnetd, FTP, UPnP, debug HTTP servers,
+      open MQTT brokers, ADB on Android-based devices) and compare with the documented
+      functions. Flag test or factory services that remain in release builds, for example
+      a factory-mode command handler reachable over Wi-Fi.
+    evidence:
+      - Only documented services enabled in release builds
+    checks: [debug-enabled, cleartext-transport]
+    crosswalk: ["eu-cra:AnnexI.I.2(j)", "iec-62443-4-2:CR 7.7"]
+
+  - ref: "5.6-4A"
+    title: Debug interfaces disabled or protected
+    requirement: >
+      Physically accessible debug interfaces must be disabled in software or protected
+      (M); physical debug ports should also be physically protected (5.6-4B, R).
+    category: hardware-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check release configuration for JTAG and SWD lock (STM32 RDP level 1 or 2, nRF52 or
+      nRF53 APPROTECT, ESP32 eFuse JTAG disable and CONFIG_SECURE_BOOT_ALLOW_JTAG off,
+      ESP32 CONFIG_SECURE_UART_ROM_DL_MODE secure download mode), UART console shells
+      disabled or authenticated, and U-Boot console locked (bootdelay 0 with
+      CONFIG_AUTOBOOT_KEYED or console disabled).
+    evidence:
+      - Debug lock enabled in production configuration
+      - Console access disabled or authenticated
+    checks: [debug-interface-enabled]
+    crosswalk: ["iec-62443-4-2:EDR 2.13", "en-18031:GEC-2"]
+
+  - ref: "5.7-1"
+    title: Secure boot
+    requirement: >
+      The device should verify its software using secure boot mechanisms (R), and alert
+      the user when an unauthorised change is detected (5.7-2, R).
+    category: hardware-security
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that secure boot is enabled in the release build: CONFIG_SECURE_BOOT and
+      CONFIG_SECURE_BOOT_V2_ENABLED on ESP32, MCUboot as immutable first stage with
+      signature validation, TF-M BL2, NXP HAB, or U-Boot verified boot with signed FIT.
+      A sdkconfig.defaults with secure boot off is a gap unless justified under 5.0-1.
+    evidence:
+      - Secure boot enabled in release configuration
+    checks: [secure-boot-disabled]
+    crosswalk: ["iec-62443-4-2:EDR 3.14", "en-18031:SSM-2"]
+
+  - ref: "5.8-3"
+    title: Document external sensing capabilities
+    requirement: >
+      All external sensing capabilities of the device, such as cameras, microphones,
+      location and motion sensors, must be documented in a clear and accessible way (M).
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Compare sensor drivers and permissions in the code (camera, microphone, GNSS,
+      accelerometer, PIR, ambient light, presence radar) with the user documentation and
+      privacy notice. Every sensor in the code must be listed.
+    evidence:
+      - User documentation listing all sensors
+    artifacts: [user-documentation, privacy-policy]
+    crosswalk: ["en-18031:DLM-1"]
+
+  - ref: "5.9-2"
+    title: Resilience to network and power loss
+    requirement: >
+      Devices should keep working locally when network access is lost and recover cleanly
+      after power loss (R), and reconnect in an orderly way without overloading
+      infrastructure (5.9-3, R).
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    guidance: >
+      Check reconnect logic for exponential back-off with jitter (no tight retry loops on
+      MQTT or HTTP failures), local control paths that do not need the cloud, power-fail
+      safe storage writes (journaling or double buffering of configuration), and a watchdog
+      that recovers hung states.
+    evidence:
+      - Back-off with jitter on reconnect
+      - Local operation without cloud connectivity
+    checks: [missing-watchdog]
+    crosswalk: ["eu-cra:AnnexI.I.2(h)", "eu-cra:AnnexI.I.2(i)"]
+
+  - ref: "5.11-1"
+    title: Simple user data erasure
+    requirement: >
+      Users must be given a simple way to erase their data from the device (M), and should
+      be able to delete personal data from associated services with clear instructions and
+      confirmation (5.11-2 to 5.11-4, R).
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for a factory reset that erases Wi-Fi credentials, tokens, keys, logs and user
+      content (nvs_flash_erase of user partitions, not just a flag), and an account or
+      device deletion path in the app and backend API that removes personal data.
+    evidence:
+      - Factory reset erasing all user data
+      - Account and data deletion in app and backend
+    crosswalk: ["eu-cra:AnnexI.I.2(m)", "en-18031:DLM-1"]
+
+  - ref: "5.13-1A"
+    title: Validate input from user interfaces
+    requirement: >
+      Device software must validate data input through user interfaces (M).
+    category: input-validation
+    severity: high
+    fixability: code
+    guidance: >
+      Check web UI form handlers, app inputs and local menus for length and format checks
+      before use, especially SSID and password fields copied into fixed buffers and
+      hostnames passed to system commands.
+    evidence:
+      - Validation of all user-supplied fields
+    checks: [unsafe-c-functions, command-injection-risk, xss-risk]
+    crosswalk: ["cert-c:STR31-C", "owasp-top10:A05"]
+
+  - ref: "5.13-1B"
+    title: Validate input from network interfaces and APIs
+    requirement: >
+      Device software must validate data transferred through APIs or between networks,
+      services and devices (M).
+    category: input-validation
+    severity: high
+    fixability: code
+    guidance: >
+      Check parsers for MQTT payloads, CoAP, JSON (cJSON results checked for NULL and type),
+      protobuf and BLE characteristic writes for length checks before memcpy, integer
+      overflow in length arithmetic, and schema validation in the backend API. Fuzz targets
+      for these parsers are strong evidence.
+    evidence:
+      - Bounds-checked parsers
+      - Fuzz tests for network input
+    checks: [unsafe-c-functions, command-injection-risk, sql-injection-risk, unsafe-deserialization]
+    crosswalk: ["cert-c:ARR38-C", "iec-62443-4-2:CR 3.5"]
+
+  - ref: "6-1"
+    title: Transparency about personal data
+    requirement: >
+      The manufacturer must give consumers clear information about what personal data is
+      processed, how, by whom and for what purposes, for each device and service including
+      third parties (M); consent must be valid and withdrawable (6-2, 6-3A, M) and
+      telemetry collection must be explained (6-5, M).
+    category: privacy-rights
+    severity: medium
+    fixability: document
+    guidance: >
+      Compare data flows in code (telemetry endpoints, analytics SDKs in the companion app,
+      third-party cloud services) with the privacy notice. Check consent prompts and a way
+      to withdraw consent in the app settings.
+    evidence:
+      - Privacy notice covering device, app and cloud
+      - Consent and withdrawal implemented where consent is the legal basis
+    checks: [analytics-tracking-sdk, pii-in-logs]
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.13", "en-18031:DLM-1"]

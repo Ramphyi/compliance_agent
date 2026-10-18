@@ -1,0 +1,30 @@
+id: medical-device-samd
+title: Software as a medical device (Class IIa, EU and US)
+description: >
+  Standalone software as a medical device, MDR Class IIa and IEC 62304 software
+  safety class B, for healthcare providers in the EU and US. Brings the EU MDR
+  and US FDA premarket expectations, IEC 62304 software life-cycle processes,
+  ISO 14971 risk management, ISO 13485 quality management, GDPR and HIPAA for
+  the health data it handles, and verification and traceability evidence.
+examples: []
+answers:
+  productTypes: [medical-device]
+  sector: [healthcare]
+  markets: [EU, US]
+  audience: [healthcare-providers]
+  orgRole: manufacturer
+  orgSize: medium
+  dataCategories: [personal, health]
+  aiUsage: none
+  medicalClass: class-IIa
+  swSafetyClass: B
+  safetyCritical: injury-possible
+  connectivity: [internet]
+  updates: manual
+  distribution: [direct-download, on-premise]
+  regulatedEntity: [hipaa-business-associate]
+  certificationsTarget: [iso-13485]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify: []

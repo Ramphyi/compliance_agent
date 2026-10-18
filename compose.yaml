@@ -1,43 +1,33 @@
+# Internal deployment. Mount the repositories to audit under ./repos (read-write so fixes can be committed),
+# or set ASSAY_ALLOW_CLONE=true and add repositories by URL in the dashboard.
 services:
-  db:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: clearance
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a strong POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: clearance
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U clearance -d clearance"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-    networks: [backend]
-  app:
+  assay:
     build: .
-    restart: unless-stopped
-    init: true
-    env_file: .env
-    environment:
-      NODE_ENV: production
-      DB_DRIVER: postgres
-      DEMO_MODE: "false"
-      DATABASE_URL: postgresql://clearance:${POSTGRES_PASSWORD}@db:5432/clearance
-      PORT: 4000
+    image: assay:latest
     ports:
-      - "127.0.0.1:4000:4000"
-    depends_on:
-      db:
-        condition: service_healthy
+      - "127.0.0.1:4317:4317"   # put a TLS reverse proxy in front for team access
+    environment:
+      # Per-reviewer tokens (name:token, comma separated). Required when listening beyond localhost.
+      ASSAY_TOKENS: ${ASSAY_TOKENS:?set ASSAY_TOKENS, e.g. alice:<random>,bob:<random>}
+      # Model: Claude via the Anthropic API...
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # ...or an on-premise model behind an OpenAI-compatible endpoint (vLLM, Ollama, LM Studio):
+      # ASSAY_PROVIDER: openai-compatible
+      # ASSAY_OPENAI_BASE_URL: http://llm.internal:8000/v1
+      # ASSAY_MODEL: your-model
+      ASSAY_ALLOW_CLONE: ${ASSAY_ALLOW_CLONE:-false}
+      # Directories where projects may be added by path from the dashboard.
+      ASSAY_PROJECT_ROOTS: /workspace:/data/repos
+      # Only these reviewers may approve build/test commands (they execute project code in this container).
+      ASSAY_APPROVERS: ${ASSAY_APPROVERS:-}
+    volumes:
+      - assay-data:/data
+      - ./repos:/workspace
+    command: ["serve", "/workspace"]
     read_only: true
-    tmpfs: [/tmp]
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
-    networks: [backend, egress]
-networks:
-  backend:
-    internal: true
-  egress: {}
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
 volumes:
-  pgdata: {}
+  assay-data:

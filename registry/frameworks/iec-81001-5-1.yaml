@@ -1,0 +1,401 @@
+id: iec-81001-5-1
+title: Health software and health IT systems safety, effectiveness and security - Part 5-1 Security - Activities in the product life cycle
+shortTitle: IEC 81001-5-1
+version: Edition 1.0 (2021-12), corrected version 2025-12 with Interpretation Sheet 1
+authority: IEC / ISO (IEC SC 62A with ISO TC 215)
+kind: standard
+jurisdictions: [global, EU, US]
+url: https://webstore.iec.ch/en/publication/63293
+textPolicy: paraphrased
+summary: >
+  IEC 81001-5-1 adds security activities to the health software life cycle. It follows
+  the IEC 62304 process structure (development, maintenance, risk management,
+  configuration management, problem resolution) and adapts the secure development
+  practices of IEC 62443-4-1 to health software: security requirements, defence-in-depth
+  design, secure coding, security testing, release integrity, security updates,
+  vulnerability handling, and documentation that transfers residual security
+  responsibilities to operators.
+applicability:
+  any:
+    - { fact: sector, in: [healthcare] }
+    - { fact: productTypes, in: [medical-device] }
+applicabilityNote: >
+  Applies to manufacturers of health software, whether or not it is a medical device,
+  and is the reference for the security part of the life cycle for medical device
+  software. In the EU, EN IEC 81001-5-1:2022 is on the Commission's list of standards
+  requested for harmonisation under the MDR and IVDR, and notified bodies and MDCG 2019-16
+  treat it as state of the art for GSPR 17.2 and 18.8; whether it has been cited in the
+  Official Journal could not be confirmed for this file, so check the current list of
+  harmonised standards (Implementing Decision (EU) 2021/1182 as amended) before claiming
+  presumption of conformity. FDA's premarket cybersecurity guidance asks for a secure
+  product development framework that this standard can provide; check the FDA Recognized
+  Consensus Standards database for its current recognition status. Interpretation Sheet 1
+  (December 2025) clarifies accompanying documentation and the software item categories
+  used for risk transfer (maintained, supported and required software). ISO lists a new
+  work item for a second edition. Requirement text is paraphrased; consult the licensed
+  standard for exact wording.
+keyDates:
+  - { date: "2021-12-16", note: Edition 1.0 published }
+  - { date: "2025-12-04", note: "Interpretation Sheet 1 published (accompanying documentation, software item categories for risk transfer)" }
+controls:
+  - ref: "4.1"
+    title: Security activities within the quality management system
+    requirement: >
+      Integrate the security life cycle activities into the quality management system,
+      assign responsibilities, decide which activities apply to the product, make sure
+      people doing security work have the needed expertise, and improve the process over
+      time.
+    category: secure-development
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a secure development procedure referenced from the software development
+      plan (docs/sdl.md, docs/security/lifecycle.md) that lists each activity of this
+      standard, who owns it, and whether it applies (with justification when not). Check
+      that CI enforces the automatable parts (static analysis, dependency scanning, secret
+      scanning, security tests) and that security training or expertise is named for
+      reviewers of security-relevant code (CODEOWNERS for auth, crypto and update code).
+      Flag a procedure that exists on paper while CI shows none of the promised gates.
+    evidence:
+      - Secure life cycle procedure with an applicability decision per activity
+      - Named responsibilities and security expertise for reviewers
+      - CI gates matching the procedure
+    artifacts: [security-policy, code-review-process, ci-pipeline]
+    crosswalk: ["iec-62443-4-1:SM-1", "nist-ssdf:PO.1.1", "fda-cybersecurity:IV.A", "eu-mdr:GSPR17.2"]
+
+  - ref: "4.1.5"
+    title: Software items from third-party suppliers
+    requirement: >
+      Identify third-party software items, manage the security risks they bring, and
+      monitor them for vulnerabilities throughout the product life cycle.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Check that every third-party component is identified with an exact version through
+      lockfiles, pinned base images and an SBOM per release, and that components are
+      selected with security in mind (maintained upstream, signed releases, no known
+      critical vulnerabilities). Look for dependency scanning in CI and on a schedule
+      (Dependabot, Renovate, Grype, Trivy, OSV-Scanner) and for triage records. Flag
+      unpinned versions, unmaintained or end-of-life components, and copied third-party
+      code with no recorded origin.
+    evidence:
+      - SBOM per release and committed lockfiles
+      - Selection criteria and vulnerability monitoring for third-party items
+      - Triage records for component vulnerabilities
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile, vulnerability-scanning, dependency-update-automation]
+    crosswalk: ["iec-62304:8.1.2", "iec-62304:5.3.3", "fda-cybersecurity:524B(b)(3)", "iec-62443-4-1:SM-9"]
+
+  - ref: "4.3"
+    title: Software item categories for risk transfer
+    requirement: >
+      Classify software items by who maintains their security over time: items the
+      manufacturer maintains and patches, items the manufacturer supports but the operator
+      updates, and items that are required but not supported; tell operators which
+      category applies and what that means for them.
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a component list (often the annotated SBOM or the IFU security section)
+      that marks each item, such as the application code and bundled libraries
+      (maintained), the database or OS the customer installs (supported), and platform
+      prerequisites (required), with the update responsibility for each. Check that
+      bundled libraries are patched by the manufacturer and that release notes tell
+      operators about updates to supported items. Flag deployments where it is unclear
+      who patches the OS, runtime or database.
+    evidence:
+      - Component categorisation with update responsibility per item
+      - Operator documentation stating their security responsibilities
+    artifacts: [sbom, user-documentation]
+    crosswalk: ["fda-cybersecurity:VI.A", "eu-mdr:GSPR17.4"]
+
+  - ref: "5.1.2"
+    title: Development environment security
+    requirement: >
+      Protect the development, build and release environment so the software cannot be
+      tampered with between design and delivery.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Inspect repository and CI settings: protected branches with required reviews and
+      status checks, CI actions pinned by commit SHA, minimal token permissions
+      (permissions blocks in GitHub Actions), secrets in the CI secret store or a vault
+      rather than in files, builds in ephemeral runners from pinned images, and build
+      provenance (SLSA attestations, signed artefacts). Flag hardcoded secrets in the
+      repository or build scripts, actions referenced by mutable tags, and release builds
+      done on developer machines.
+    evidence:
+      - Branch protection and review enforcement
+      - Pinned CI actions and build images, least-privilege CI tokens
+      - Build provenance for release artefacts
+    checks: [hardcoded-secret, unpinned-dependencies]
+    artifacts: [ci-pipeline, code-review-process]
+    crosswalk: ["iec-62443-4-1:SM-7", "nist-ssdf:PO.5.1", "iec-62304:8.2"]
+
+  - ref: "5.2.1"
+    title: Health software security requirements
+    requirement: >
+      Define security requirements for the product from its intended use, the product
+      security context and the threat model, covering capabilities such as
+      authentication, authorisation, data protection, logging and updates, and review
+      them.
+    category: secure-development
+    severity: high
+    fixability: document
+    guidance: >
+      Look for security requirements with IDs in the requirements specification (for
+      example SEC-001 password policy, SEC-010 encryption at rest for health data, SEC-020
+      audit log of record access, SEC-030 signed updates) and check they trace to threats
+      in the threat model and to tests. Compare them with the code: every security feature
+      found in code should be a requirement, and every requirement should be implemented.
+      Flag products whose only security requirement is a generic "the system shall be
+      secure".
+    evidence:
+      - Security requirements with IDs traced to threats and tests
+      - Security requirements review record
+    artifacts: [requirements-traceability, threat-model]
+    crosswalk: ["iec-62304:5.2.2", "iec-62443-4-1:SR-3", "fda-cybersecurity:V.B.1"]
+
+  - ref: "5.3.1"
+    title: Defence-in-depth architecture and secure design
+    requirement: >
+      Design the architecture with layered security controls, apply secure design
+      principles (least privilege, attack surface reduction, secure defaults, input
+      validation at trust boundaries), secure the external interfaces, and review the
+      design for security.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Check the architecture document and the code for layered controls: network
+      segmentation or private subnets for databases, authentication at the gateway and
+      authorisation in each service, encryption in transit between services, field-level
+      or database encryption for health data, secrets from a vault or KMS, containers
+      running as non-root with read-only filesystems, and minimal exposed ports. Look for
+      security design review records (pull request reviews by security owners, design
+      review notes). Flag single points of trust (one shared admin credential, services
+      trusting any caller on the internal network), wildcard CORS, and containers running
+      as root.
+    evidence:
+      - Architecture with documented security layers and trust boundaries
+      - Secure defaults and least-privilege configuration in code and infrastructure
+      - Security design review records
+    checks: [docker-root-user, cors-wildcard, missing-security-headers, debug-enabled]
+    artifacts: [architecture-doc, threat-model]
+    crosswalk: ["iec-62443-4-1:SD-1", "iec-62304:5.3.1", "fda-cybersecurity:V.B.1", "eu-mdr:GSPR18.8"]
+
+  - ref: "5.5.1"
+    title: Secure coding standards and security implementation review
+    requirement: >
+      Apply secure coding standards suited to the languages used, and review the
+      implementation for security, using static analysis and manual review, before
+      release.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a documented secure coding standard (OWASP guidance for web, CERT C or
+      MISRA for C, language-specific linters with security rules) and static analysis in
+      CI (CodeQL, Semgrep, SonarQube, Bandit, gosec, Brakeman). Check that pull requests
+      touching authentication, cryptography, input parsing or update code get a review by
+      someone with security expertise. Flag the detector hits listed here, since they are
+      the patterns a secure coding standard is meant to prevent.
+    evidence:
+      - Secure coding standard and enforced static analysis rules
+      - Security review of security-relevant changes
+    checks: [sql-injection-risk, command-injection-risk, xss-risk, path-traversal-risk, dynamic-code-eval, unsafe-deserialization, unsafe-c-functions, weak-hash, weak-cipher, insecure-random]
+    artifacts: [coding-standard, static-analysis-config, code-review-process]
+    crosswalk: ["iec-62443-4-1:SI-1", "iec-62443-4-1:SI-2", "iec-62304:5.1.12", "owasp-top10:A03"]
+
+  - ref: "5.7.3"
+    title: Security requirements, threat mitigation and vulnerability testing
+    requirement: >
+      Test that security requirements are met and that threat mitigations work, and
+      perform vulnerability testing: abuse cases, malformed and unexpected input (fuzzing),
+      attack surface analysis, known-vulnerability scanning, software composition
+      analysis, and dynamic analysis (5.7.1 to 5.7.3).
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for security test cases tagged with security requirement or threat IDs,
+      negative tests for authorisation (horizontal and vertical access), fuzzing harnesses
+      for parsers and protocol handlers (libFuzzer, AFL++, Jazzer, Atheris, cargo-fuzz),
+      DAST against a test deployment (OWASP ZAP baseline), container and dependency
+      scanning, and secret scanning. Check that these run in CI and that findings block
+      release or are triaged. Flag parsers of external input with no fuzzing and APIs with
+      no authorisation tests.
+    evidence:
+      - Security and threat mitigation tests traced to requirements and threats
+      - Fuzzing, DAST, SCA and scanning results per release
+    artifacts: [automated-tests, vulnerability-scanning, ci-pipeline]
+    crosswalk: ["iec-62443-4-1:SVV-1", "iec-62443-4-1:SVV-3", "fda-cybersecurity:V.C", "iec-62304:5.7.1"]
+
+  - ref: "5.7.4"
+    title: Penetration testing with tester independence
+    requirement: >
+      Perform penetration testing that looks for exploitable weaknesses in the product as
+      a whole, and manage conflicts of interest so testers have appropriate independence
+      from the developers (5.7.4 and 5.7.5).
+    category: testing-verification
+    severity: high
+    fixability: process
+    guidance: >
+      Look for penetration test reports (docs/security/pentest-<date>.pdf or a summary)
+      with scope covering the device, apps, APIs, cloud and update channel, the testers'
+      independence and qualifications, methods, findings with severity, and remediation
+      status linked to issues. Check that the tested version is identified and that the
+      test is repeated after major changes. Flag products released with no penetration
+      test or with open critical findings.
+    evidence:
+      - Penetration test report with scope, method and tester independence
+      - Remediation tracking for findings
+    artifacts: [vulnerability-scanning]
+    crosswalk: ["iec-62443-4-1:SVV-4", "fda-cybersecurity:V.C"]
+
+  - ref: "5.8.2"
+    title: Release documentation and security guidelines for operators
+    requirement: >
+      Resolve or justify security findings before release, and release documentation
+      that tells operators how to install, configure, operate, update and securely
+      decommission the product, including residual security risks they must manage
+      (5.8.1, 5.8.2 and 5.8.7).
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a security guide for operators (hardening and secure configuration,
+      account and role setup, ports and protocols, logging and log forwarding, backup,
+      update installation, end of support, data sanitisation when decommissioning) and a
+      release checklist showing open security findings were resolved or accepted with a
+      rationale. Compare documented defaults with the code (default accounts, default
+      ports, debug flags). Flag insecure defaults that the documentation tells operators
+      to change instead of fixing them in the product.
+    evidence:
+      - Operator security guide and decommissioning instructions
+      - Release record of resolved or accepted security findings
+    checks: [default-credentials, debug-enabled]
+    artifacts: [user-documentation, changelog]
+    crosswalk: ["iec-62443-4-1:SG-3", "fda-cybersecurity:VI.A", "eu-mdr:GSPR17.4", "iec-62304:5.8.2"]
+
+  - ref: "5.8.3"
+    title: Release file integrity and private key protection
+    requirement: >
+      Give operators a way to verify the integrity and origin of released software, and
+      protect the private keys used for signing (5.8.3 and 5.8.4).
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Check that release artefacts are signed (code-signing certificates for installers,
+      cosign or Sigstore for containers, GPG for archives, platform signing for mobile
+      apps, firmware signature verified by the bootloader) and that checksums are
+      published. Check that signing keys live in an HSM, a cloud KMS or the CI secret
+      store with restricted access, never in the repository, and that key rotation and
+      revocation are documented. Flag private keys or keystores committed to the
+      repository and unsigned update packages.
+    evidence:
+      - Signed release artefacts with published verification instructions
+      - Signing keys held in an HSM, KMS or restricted secret store
+    checks: [hardcoded-secret, hardcoded-crypto-key, firmware-update-unsigned]
+    artifacts: [ci-pipeline]
+    crosswalk: ["iec-62443-4-1:SM-8", "iec-62304:5.8.4", "fda-cybersecurity:524B(b)(2)"]
+
+  - ref: "6.1.1"
+    title: Timely delivery of security updates with verified integrity
+    requirement: >
+      Plan maintenance so security updates are delivered in a timely way, verify that
+      they fix the issue without side effects, make updates to maintained software
+      available, protect their integrity, and inform users about updates to supported
+      software (6.1.1, 6.2.2 and 6.3).
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a documented security update policy with target timelines by severity, a
+      release pipeline that can ship a patch quickly, regression tests that run on
+      security patches, an update channel that verifies signatures before installation,
+      and release notes or advisories that identify security fixes. For products the
+      customer hosts, check that patches for bundled components (for example the base
+      container image) are released, not left to the operator. Flag products with no
+      update mechanism or no stated update timeline.
+    evidence:
+      - Security update policy with timelines
+      - Signed update delivery and verification
+      - Security advisories or release notes for security fixes
+    checks: [firmware-update-unsigned, cleartext-transport]
+    artifacts: [update-policy, changelog, ci-pipeline]
+    crosswalk: ["iec-62443-4-1:SUM-4", "iec-62443-4-1:SUM-5", "fda-cybersecurity:524B(b)(2)"]
+
+  - ref: "6.2.1"
+    title: Monitoring public incident and vulnerability reports
+    requirement: >
+      Monitor public sources of security incidents and vulnerabilities that could affect
+      the product and its third-party items, and feed them into problem and modification
+      analysis.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Look for scheduled vulnerability scans against the SBOM (GitHub Dependabot alerts,
+      scheduled Grype or OSV-Scanner jobs, a dependency-track instance) that run even
+      when the code does not change, subscriptions to vendor advisories for major
+      components (OS, database, runtime), and triage records with a decision and
+      timeline. Flag scans that only run on pull requests, and alerts left open without
+      triage.
+    evidence:
+      - Scheduled SBOM-based vulnerability monitoring
+      - Triage records linked to problem reports
+    artifacts: [vulnerability-scanning, sbom, dependency-update-automation]
+    crosswalk: ["iec-62304:6.2.1", "fda-cybersecurity:524B(b)(1)", "iso-14971:10"]
+
+  - ref: "7.2"
+    title: Threat modelling and security risk estimation
+    requirement: >
+      Within the security risk management process, establish the product security
+      context, identify vulnerabilities, threats and their adverse impacts (threat
+      modelling, Annex C), estimate and evaluate security risks, control them, and
+      monitor the effectiveness of controls (7.1 to 7.5).
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a threat model with data flow diagrams and trust boundaries for all
+      interfaces in the code, a security risk register with ratings and decisions, and
+      links from security risks to safety hazards in the ISO 14971 file where harm is
+      possible. Check that the product security context (assumed operator controls,
+      network environment) is written down and repeated in the operator documentation.
+      Flag threat models that omit interfaces present in the code or that were never
+      updated after architecture changes.
+    evidence:
+      - Threat model and product security context
+      - Security risk register linked to safety risk management
+      - Monitoring of risk control effectiveness
+    artifacts: [threat-model, risk-management-file]
+    crosswalk: ["fda-cybersecurity:V.A.1", "fda-cybersecurity:V.A.2", "iso-14971:5.4", "iec-62443-4-1:SR-2"]
+
+  - ref: "9.2"
+    title: Vulnerability intake, analysis, remediation and disclosure
+    requirement: >
+      Provide a way to receive vulnerability reports, review and analyse them, address
+      security-related issues, and disclose them to users and other parties (9.2 to 9.5
+      and 4.1.7).
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Look for SECURITY.md or /.well-known/security.txt with a monitored contact and
+      response timelines, a vulnerability handling procedure (intake, acknowledgement,
+      severity rating such as CVSS, fix, verification, advisory), private issue tracking
+      for security reports (GitHub security advisories or a restricted project), and
+      published advisories. Flag repositories with no reporting channel and security bugs
+      discussed in public issues before a fix.
+    evidence:
+      - Published vulnerability reporting channel and policy
+      - Handling procedure with severity rating and timelines
+      - Security advisories for fixed vulnerabilities
+    artifacts: [security-policy, incident-response-plan]
+    crosswalk: ["iec-62443-4-1:DM-1", "fda-cybersecurity:524B(b)(1)", "iec-62304:9", "eu-cra:AnnexI.II.5"]

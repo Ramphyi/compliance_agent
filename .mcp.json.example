@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "assay": {
+      "command": "node",
+      "args": ["/opt/assay/assay.mjs", "mcp", ".", "--dashboard"]
+    }
+  }
+}

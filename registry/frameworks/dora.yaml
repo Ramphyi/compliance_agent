@@ -1,0 +1,412 @@
+id: dora
+title: Regulation (EU) 2022/2554 on digital operational resilience for the financial sector (DORA)
+shortTitle: DORA
+version: Regulation (EU) 2022/2554 with RTS and ITS (including Delegated Regulations (EU) 2024/1774, 2024/1772, 2024/1773, 2025/301 and Implementing Regulation (EU) 2024/2956)
+authority: European Parliament and Council of the European Union; supervised by the ESAs (EBA, EIOPA, ESMA) and national competent authorities
+kind: regulation
+jurisdictions: [EU]
+url: https://eur-lex.europa.eu/eli/reg/2022/2554/oj/eng
+textPolicy: open
+summary: >
+  DORA sets uniform digital operational resilience requirements for EU financial
+  entities: an ICT risk management framework (Articles 5 to 16, detailed in RTS
+  2024/1774), ICT incident management, classification and reporting (Articles 17 to 23),
+  digital operational resilience testing including threat-led penetration testing
+  (Articles 24 to 27), and management of ICT third-party risk with a register of
+  information and mandatory contract terms (Articles 28 to 30). Critical ICT third-party
+  providers are also subject to EU oversight.
+applicability:
+  any:
+    - { fact: regulatedEntity, in: [dora-financial-entity, ict-provider-to-finance] }
+applicabilityNote: >
+  Applies directly to EU financial entities such as credit institutions, payment and
+  e-money institutions, investment firms, crypto-asset service providers, insurers and
+  others listed in Article 2; microenterprises and some smaller entities use the
+  simplified framework in Article 16. ICT providers to financial entities are not
+  regulated in the same way, but they are bound through the contract terms of Article 30
+  and the financial entity's third-party risk policy, and providers designated as
+  critical are overseen by the ESAs. Controls here apply to financial entities unless
+  marked otherwise; controls without a narrower condition are also what a provider must
+  be able to evidence to its financial-entity customers. Proportionality applies: confirm
+  the entity type, size and whether it is designated for TLPT with the competent
+  authority.
+keyDates:
+  - { date: "2023-01-16", note: DORA entered into force }
+  - { date: "2024-06-25", note: "RTS on the ICT risk management framework, Delegated Regulation (EU) 2024/1774, published in the Official Journal" }
+  - { date: "2024-12-02", note: "ITS on the register of information, Implementing Regulation (EU) 2024/2956, published in the Official Journal" }
+  - { date: "2025-01-17", note: DORA applies }
+  - { date: "2025-02-20", note: "RTS on content and time limits for major incident reports, Delegated Regulation (EU) 2025/301, published in the Official Journal" }
+controls:
+  - ref: "Art.6"
+    title: Documented ICT risk management framework owned by the management body
+    requirement: >
+      Maintain a sound, comprehensive and documented ICT risk management framework
+      (strategies, policies, procedures, protocols and tools) as part of overall risk
+      management, approved and overseen by the management body, reviewed at least
+      annually and after major incidents, with a digital operational resilience strategy
+      (Articles 5 and 6; RTS 2024/1774 Articles 1 to 3).
+    category: governance
+    severity: high
+    fixability: process
+    when: { fact: regulatedEntity, in: [dora-financial-entity] }
+    guidance: >
+      This is mainly organisational. In a repository, look for the security and ICT
+      policies the framework relies on (security policy, access, cryptography, change,
+      backup, logging, vulnerability management, incident response) and check that the
+      technical configuration matches them. Look for review dates and ownership. Flag
+      policies that reference controls the code and infrastructure do not implement.
+    evidence:
+      - Approved ICT risk management framework and resilience strategy
+      - ICT security policies referenced by the framework
+      - Annual review records
+    artifacts: [security-policy, risk-management-file]
+    crosswalk: ["nis2:Art.21(2)(a)", "iso-iec-27001:6.1.2", "soc2:CC3.2"]
+
+  - ref: "Art.8"
+    title: Identification and inventory of ICT assets and dependencies
+    requirement: >
+      Identify, classify and document all ICT-supported business functions, information
+      assets and ICT assets, their roles, dependencies and links to ICT third-party
+      providers, keep inventories current, and assess risk on legacy systems (Article 8;
+      RTS 2024/1774 Articles 4 and 5).
+    category: risk-assessment
+    severity: high
+    fixability: code
+    when: { fact: regulatedEntity, in: [dora-financial-entity] }
+    guidance: >
+      Check that infrastructure is defined as code (Terraform, CloudFormation, Pulumi,
+      Kubernetes manifests, Helm) so the asset inventory can be generated, that resources
+      are tagged with owner, criticality and data classification, that service
+      dependencies and external providers are documented (architecture docs, service
+      catalogue such as Backstage catalog-info.yaml), and that an SBOM exists for in-house
+      software. Flag click-ops resources missing from code, untagged resources, and
+      external SaaS dependencies absent from the architecture documentation.
+    evidence:
+      - Asset inventory with owners, criticality and dependencies
+      - Infrastructure as code with classification tags
+      - Mapping of critical functions to assets and providers
+    artifacts: [architecture-doc, sbom]
+    crosswalk: ["iso-iec-27001:A.8.9", "pci-dss:Req12.3.1", "nis2:Art.21(2)(i)"]
+
+  - ref: "RTS1774-Art.6"
+    title: Encryption and cryptographic key management
+    requirement: >
+      Define and apply a policy on encryption of data at rest, in transit and, where
+      relevant, in use, based on data classification and ICT risk, and manage
+      cryptographic keys through their whole life cycle with controls against loss,
+      unauthorised access, disclosure and modification (RTS 2024/1774 Articles 6 and 7;
+      DORA Article 9).
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Check encryption at rest for databases, object storage, queues and backups
+      (KMS-managed keys), TLS 1.2 or higher with verification for all connections,
+      including internal service traffic and database connections, field-level encryption
+      for the most sensitive financial or personal data, keys in a KMS or HSM with
+      rotation and restricted decrypt permissions, and a cryptography inventory. Flag
+      hardcoded keys, weak algorithms, disabled certificate checks and unencrypted
+      storage resources in infrastructure code.
+    evidence:
+      - Encryption policy reflected in configuration
+      - KMS or HSM key management with rotation
+      - TLS everywhere, including internal traffic
+    checks: [hardcoded-crypto-key, weak-cipher, weak-hash, tls-verification-disabled, cleartext-transport, insecure-random]
+    artifacts: [security-policy]
+    crosswalk: ["pci-dss:Req3.5.1", "pci-dss:Req4.2.1", "hipaa-security:164.312(a)(2)(iv)", "nis2:Art.21(2)(h)"]
+
+  - ref: "RTS1774-Art.21"
+    title: Identity management, access control and strong authentication
+    requirement: >
+      Give every user and system a unique identity, grant access on least privilege and
+      need to know with periodic review, and use strong authentication based on the risk,
+      including for remote and privileged access (RTS 2024/1774 Articles 20 and 21; DORA
+      Article 9(4)(c) and (d)).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check that the application and infrastructure use central identity (SSO, OIDC),
+      MFA for privileged and remote access, role-based authorisation enforced server side,
+      separate service identities with scoped permissions (no shared root or admin keys),
+      just-in-time or time-limited privileged access, and access review records. Flag
+      shared accounts, wildcard IAM policies, long-lived static cloud keys in CI, and
+      admin endpoints without MFA.
+    evidence:
+      - Unique identities and least-privilege roles
+      - MFA for privileged and remote access
+      - Periodic access reviews
+    checks: [hardcoded-secret, default-credentials, jwt-unverified, weak-password-hash, missing-rate-limiting]
+    artifacts: [security-policy]
+    crosswalk: ["pci-dss:Req8.4.2", "pci-dss:Req7.2.1", "hipaa-security:164.312(d)"]
+
+  - ref: "RTS1774-Art.16"
+    title: Secure acquisition, development and maintenance of ICT systems
+    requirement: >
+      Develop and maintain ICT systems under a documented secure development approach,
+      including security requirements, testing and approval before production, analysis
+      of source code where relevant (including proprietary software from ICT providers),
+      separation of environments, and protection of test data (RTS 2024/1774 Article 16).
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a secure SDLC in the repository: security requirements, required code
+      review, SAST and SCA in CI, secret scanning, separate test, staging and production
+      environments, test data that is synthetic or masked rather than production
+      personal or financial data, and release approval gates. Flag production data in
+      fixtures, missing review, and SAST or SCA absent from the pipeline.
+    evidence:
+      - Documented secure development procedure enforced in CI
+      - Source code review and automated security testing
+      - Separated environments and masked test data
+    checks: [hardcoded-secret, sql-injection-risk, command-injection-risk, xss-risk, unsafe-deserialization]
+    artifacts: [ci-pipeline, code-review-process, static-analysis-config, vulnerability-scanning]
+    crosswalk: ["nist-ssdf:PW.7.2", "pci-dss:Req6.2.3", "iso-iec-27001:A.8.25"]
+
+  - ref: "RTS1774-Art.17"
+    title: ICT change management
+    requirement: >
+      Record, test, assess, approve, implement and verify all changes to ICT systems in a
+      controlled way, with fallback procedures and emergency change rules, and segregation
+      between those who approve and those who implement (RTS 2024/1774 Article 17; DORA
+      Article 9(4)(e)).
+    category: secure-development
+    severity: medium
+    fixability: process
+    guidance: >
+      Check that production changes go through the pipeline with environment protection
+      rules and required approvers, that infrastructure changes are applied from reviewed
+      code (terraform plan in pull requests, GitOps), that rollback is defined, and that
+      emergency changes are logged and reviewed afterwards. Flag manual console changes
+      and self-approved deployments.
+    evidence:
+      - Gated deployment with approvals and rollback
+      - Infrastructure changes via reviewed code
+      - Emergency change records
+    artifacts: [ci-pipeline, code-review-process, changelog]
+    crosswalk: ["pci-dss:Req6.5.1", "soc2:CC8.1", "iec-62304:8.2"]
+
+  - ref: "RTS1774-Art.10"
+    title: Vulnerability and patch management
+    requirement: >
+      Identify vulnerabilities through regular scanning and monitoring of sources,
+      including third-party libraries, prioritise them by criticality, and deploy patches
+      and updates within defined timeframes, with emergency procedures for critical
+      issues (RTS 2024/1774 Article 10; DORA Article 9(4)(f)).
+    category: vulnerability-management
+    severity: high
+    fixability: code
+    guidance: >
+      Check dependency and container scanning in CI and on a schedule (Dependabot,
+      Renovate, Trivy, Grype), infrastructure scanning (tfsec, Checkov), tracking of
+      third-party library vulnerabilities through an SBOM, defined patch timelines by
+      severity, and the age of open critical findings. Flag scans that never fail the
+      build, stale critical alerts and unsupported runtimes.
+    evidence:
+      - Automated vulnerability scanning of code, images and infrastructure
+      - Patch timelines by severity and remediation records
+    checks: [unpinned-dependencies]
+    artifacts: [vulnerability-scanning, dependency-update-automation, sbom]
+    crosswalk: ["pci-dss:Req6.3.3", "iec-81001-5-1:6.2.1", "nis2:Art.21(2)(e)"]
+
+  - ref: "Art.10"
+    title: Detection of anomalous activities and logging
+    requirement: >
+      Have mechanisms to promptly detect anomalous activities, including network
+      performance issues and ICT-related incidents, with multiple control layers, alert
+      thresholds and logging that supports detection and investigation (Article 10; RTS
+      2024/1774 Articles 12 and 23).
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Check structured security and audit logging (authentication events, privileged
+      actions, data exports, configuration changes, payment or transaction anomalies),
+      central log collection with protection against tampering and defined retention,
+      time synchronisation, alert rules and on-call routing, and monitoring of
+      availability and performance (SLO alerts). Flag missing audit events for privileged
+      actions, logs only on local disk, and personal or card data in logs.
+    evidence:
+      - Logging policy implemented with central, protected log storage
+      - Detection rules and alert routing
+      - Availability and performance monitoring
+    checks: [pii-in-logs]
+    artifacts: [incident-response-plan]
+    crosswalk: ["pci-dss:Req10.2.1", "hipaa-security:164.312(b)", "nis2:Art.21(2)(b)"]
+
+  - ref: "Art.12"
+    title: Backup, restoration and recovery
+    requirement: >
+      Define backup policies (scope and frequency by criticality), keep backups in
+      systems physically and logically segregated from the source, test restoration
+      periodically, and maintain ICT business continuity and response and recovery plans
+      with recovery objectives (Articles 11 and 12).
+    category: resilience-availability
+    severity: high
+    fixability: code
+    guidance: >
+      Check infrastructure code for automated backups of all critical data stores,
+      backups in a separate account or region with immutability (object lock, vault lock)
+      to resist ransomware, documented RTO and RPO per service, multi-zone or multi-region
+      deployment for critical functions, and evidence of restore tests and continuity
+      exercises. Flag backups in the same account without immutability, untested
+      restores, and single-zone critical services.
+    evidence:
+      - Segregated, immutable backups for critical data
+      - Restore test and continuity exercise records
+      - RTO and RPO defined per critical function
+    artifacts: [backup-restore, incident-response-plan]
+    crosswalk: ["hipaa-security:164.308(a)(7)", "nis2:Art.21(2)(c)", "soc2:A1.2"]
+
+  - ref: "Art.17"
+    title: ICT incident management and classification
+    requirement: >
+      Run an ICT-related incident management process to detect, manage and notify
+      incidents, record all incidents and significant cyber threats, and classify them
+      using the criteria in Article 18 and RTS 2024/1772 (clients and counterparts
+      affected, duration, geographical spread, data losses, criticality of services,
+      economic impact).
+    category: logging-monitoring
+    severity: high
+    fixability: process
+    when: { fact: regulatedEntity, in: [dora-financial-entity] }
+    guidance: >
+      Look for an incident response plan and runbooks that include DORA classification
+      criteria and thresholds, an incident record template with the data needed to
+      classify (affected clients, transactions, duration, data loss), and tooling that can
+      produce those numbers from logs and metrics. Flag incident processes that cannot
+      determine affected clients or duration from available telemetry.
+    evidence:
+      - Incident management procedure with DORA classification criteria
+      - Incident register including significant cyber threats
+    artifacts: [incident-response-plan]
+    crosswalk: ["nis2:Art.23", "hipaa-security:164.308(a)(6)", "soc2:CC7.4"]
+
+  - ref: "Art.19"
+    title: Reporting of major ICT-related incidents
+    requirement: >
+      Report major ICT-related incidents to the competent authority: an initial
+      notification within 4 hours of classifying the incident as major and no later than
+      24 hours after becoming aware of it, an intermediate report within 72 hours of the
+      initial notification, and a final report within one month of the latest
+      intermediate report (Article 19; Delegated Regulation (EU) 2025/301).
+    category: governance
+    severity: high
+    fixability: process
+    when: { fact: regulatedEntity, in: [dora-financial-entity] }
+    guidance: >
+      Check that the incident plan contains the reporting timelines, templates (ITS on
+      reporting forms), contacts at the competent authority, and a decision log for
+      classification time. Check that critical ICT providers are contractually bound to
+      notify the entity quickly enough to meet these deadlines. Flag plans that only
+      mention GDPR's 72-hour breach notice.
+    evidence:
+      - Reporting procedure with DORA timelines and templates
+      - Provider notification obligations that support the deadlines
+    artifacts: [incident-response-plan]
+    crosswalk: ["nis2:Art.23", "gdpr:Art.33"]
+
+  - ref: "Art.25"
+    title: Digital operational resilience testing programme
+    requirement: >
+      Run a risk-based testing programme that includes vulnerability assessments and
+      scans, open source analyses, network security assessments, source code reviews
+      where feasible, scenario-based, performance and end-to-end tests and penetration
+      tests, testing all ICT systems supporting critical or important functions at least
+      yearly (Articles 24 and 25).
+    category: testing-verification
+    severity: high
+    fixability: code
+    when: { fact: regulatedEntity, in: [dora-financial-entity] }
+    guidance: >
+      Look in CI and security documentation for SAST, SCA and open-source license and
+      vulnerability analysis, DAST, infrastructure scanning, load and performance tests
+      (k6, Gatling, JMeter), end-to-end tests of critical flows, chaos or failover tests,
+      and annual penetration test reports with remediation tracking. Flag critical
+      functions with no annual test evidence.
+    evidence:
+      - Testing programme covering the Article 25 test types
+      - Annual test results for systems supporting critical or important functions
+      - Remediation tracking
+    artifacts: [vulnerability-scanning, static-analysis-config, automated-tests, ci-pipeline]
+    crosswalk: ["pci-dss:Req6.2.4", "iec-81001-5-1:5.7.3", "nis2:Art.21(2)(f)"]
+
+  - ref: "Art.26"
+    title: Threat-led penetration testing for designated entities
+    requirement: >
+      Entities identified by competent authorities must perform threat-led penetration
+      testing on live production systems supporting critical or important functions at
+      least every three years, including relevant ICT third-party providers (Articles 26
+      and 27; RTS on TLPT).
+    category: testing-verification
+    severity: medium
+    fixability: process
+    when: { fact: regulatedEntity, in: [dora-financial-entity] }
+    guidance: >
+      Determine whether the entity has been designated for TLPT. If so, look for the TLPT
+      scope, threat intelligence and red team reports, remediation plans, and
+      attestations. For ICT providers in scope, check contracts require participation.
+      This is rarely evidenced in a code repository; mark as process evidence.
+    evidence:
+      - TLPT designation status
+      - TLPT reports, remediation plan and attestation where designated
+    artifacts: [vulnerability-scanning]
+    crosswalk: ["pci-dss:Req12.3.1"]
+
+  - ref: "Art.28"
+    title: ICT third-party risk strategy and register of information
+    requirement: >
+      Manage ICT third-party risk under a strategy and policy (RTS 2024/1773 for
+      providers supporting critical or important functions), assess providers before
+      contracting, keep a register of information on all ICT service arrangements in the
+      ITS 2024/2956 format, assess concentration risk, and have exit strategies for
+      critical services (Articles 28 and 29).
+    category: supply-chain
+    severity: high
+    fixability: process
+    when: { fact: regulatedEntity, in: [dora-financial-entity] }
+    guidance: >
+      Inventory every ICT third-party service the code and infrastructure depend on:
+      cloud providers, SaaS APIs (payments, KYC, messaging, LLM providers), managed
+      databases, monitoring, CDN and identity providers, from SDKs, environment
+      variables, Terraform providers and DNS. Check that each appears in the register with
+      the function it supports and its criticality, and that critical ones have exit
+      plans (data export, alternative provider, portable infrastructure code). Flag
+      providers found in code but not in the register.
+    evidence:
+      - Register of information covering all ICT providers found in code
+      - Pre-contract and ongoing provider assessments
+      - Exit strategies for critical services
+    artifacts: [processing-records, architecture-doc]
+    crosswalk: ["pci-dss:Req12.8.1", "nis2:Art.21(2)(d)", "soc2:CC9.2"]
+
+  - ref: "Art.30"
+    title: Contractual provisions and provider capabilities to meet them
+    requirement: >
+      Contracts for ICT services must describe services and subcontracting, data
+      processing locations, data protection, access to and return of data, service
+      levels, incident assistance, cooperation with authorities, termination rights and
+      participation in security awareness training; for critical or important functions
+      also quantitative service levels, notice and reporting duties, tested business
+      continuity plans and security measures, TLPT participation, unrestricted audit and
+      access rights, and exit strategies with a transition period (Article 30).
+    category: supply-chain
+    severity: high
+    fixability: process
+    guidance: >
+      For financial entities, check contracts against Article 30. For ICT providers,
+      check that the product can actually deliver what the contract promises: configurable
+      data residency (region pinning in infrastructure code), complete data export in a
+      usable format (bulk export APIs), documented service levels with monitoring,
+      incident notification to customers (status page, webhook or email alerts with
+      timelines), customer-accessible audit logs, support for audits and penetration
+      tests, a subcontractor list, business continuity plans with test evidence, and an
+      offboarding procedure that returns and then deletes data. Flag providers with no
+      export path, no regional control, or no customer incident notification.
+    evidence:
+      - Contract terms mapped to Article 30(2) and 30(3)
+      - Data export, region selection and customer incident notification features
+      - Audit rights, subcontractor list and continuity test evidence
+    artifacts: [backup-restore, incident-response-plan, security-policy]
+    crosswalk: ["gdpr:Art.28", "hipaa-security:164.308(b)(1)", "pci-dss:Req12.8.1"]

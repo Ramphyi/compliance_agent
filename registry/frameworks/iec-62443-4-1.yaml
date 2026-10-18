@@ -1,0 +1,417 @@
+id: iec-62443-4-1
+title: Security for industrial automation and control systems - Part 4-1 Secure product development lifecycle requirements
+shortTitle: IEC 62443-4-1
+version: Edition 1.0 (2018-01)
+authority: IEC / ISA
+kind: standard
+jurisdictions: [global, EU, US]
+url: https://webstore.iec.ch/en/publication/33615
+textPolicy: paraphrased
+summary: >
+  IEC 62443-4-1 defines the secure development lifecycle that suppliers of industrial
+  automation and control system (IACS) products must follow: eight practices covering
+  security management (SM), security requirements (SR), secure design (SD), secure
+  implementation (SI), verification and validation (SVV), defect management (DM),
+  security update management (SUM) and security guidelines (SG). Conformance is assessed
+  as a process maturity level and is a prerequisite for IEC 62443-4-2 component
+  certification (for example ISASecure SDLA or IECEE schemes).
+applicability:
+  any:
+    - { fact: productTypes, in: [industrial-control] }
+    - { fact: certificationsTarget, in: [iec-62443] }
+    - { fact: sector, in: [industrial-energy] }
+applicabilityNote: >
+  Applies to suppliers developing components or systems for industrial automation,
+  energy or utility operators, and to anyone targeting IEC 62443 certification. It is a
+  voluntary standard, but asset owners, NIS2 supply-chain clauses and EU CRA harmonised
+  standard work frequently reference it. Practices are process requirements: the
+  repository can show many of them (threat model, coding standard, CI security tests,
+  security policy, update process), while others need organisational evidence.
+  Requirement text is paraphrased; consult the licensed standard for exact wording.
+keyDates:
+  - { date: "2018-01-15", note: Edition 1.0 published }
+controls:
+  - ref: SM-1
+    title: Documented secure development process
+    requirement: >
+      The supplier must have a documented secure development process that covers all
+      eight practices, is applied to the product, and is under change control.
+    category: secure-development
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a repository-level description of the development process: CONTRIBUTING.md,
+      docs/process or docs/sdl, a security section in the engineering handbook, and CI
+      workflows that enforce it (.github/workflows, .gitlab-ci.yml, Jenkinsfile). Good
+      looks like a written SDL that names the security activities per release (threat
+      modelling, code review, static analysis, security testing, release sign-off) and CI
+      gates that match what the document says. A process that exists only in a wiki with no
+      trace in the repository is weak evidence.
+    evidence:
+      - Secure development lifecycle document mapped to SM, SR, SD, SI, SVV, DM, SUM and SG
+      - CI pipeline enforcing the documented gates
+      - Release checklist with security sign-off
+    artifacts: [coding-standard, code-review-process, ci-pipeline]
+    crosswalk: ["nist-ssdf:PO.1.1", "iec-81001-5-1:4.1", "iso-iec-27001:A.8.25"]
+
+  - ref: SM-7
+    title: Development environment security
+    requirement: >
+      The development, build and release environment must be protected so that the
+      product cannot be tampered with between design and delivery.
+    category: supply-chain
+    severity: high
+    fixability: process
+    guidance: >
+      Inspect CI configuration for protected branches, required reviews, pinned build
+      images and actions (uses: owner/action@<sha> rather than @main), least-privilege CI
+      tokens (permissions blocks in GitHub Actions), and secrets held in the CI secret store
+      rather than in the repository. Check that release builds run in CI, not on developer
+      laptops, and that build artefacts carry provenance or checksums. Flag hardcoded
+      credentials in build scripts and unpinned toolchain or base images.
+    evidence:
+      - Branch protection and mandatory review configuration
+      - Pinned CI actions, containers and toolchains
+      - Reproducible or provenance-attested release builds
+    checks: [hardcoded-secret, unpinned-dependencies]
+    artifacts: [ci-pipeline, dependency-lockfile]
+    crosswalk: ["nist-ssdf:PO.5.1", "nist-ssdf:PS.1.1", "iec-81001-5-1:5.1.2", "iso-iec-27001:A.8.31", "iso-iec-27001:A.8.4"]
+
+  - ref: SM-8
+    title: Protection of private signing keys
+    requirement: >
+      Private keys used for code signing and product identity must be protected from
+      unauthorised access and misuse, with defined procedures for their generation, storage
+      and use.
+    category: secrets-management
+    severity: critical
+    fixability: code
+    guidance: >
+      Search the repository for private keys and signing material: *.pem, *.key, *.p12,
+      *.pfx, MCUboot signing keys (root-rsa-2048.pem, root-ec-p256.pem shipped as the
+      default development key), ESP-IDF secure boot keys (secure_boot_signing_key.pem),
+      and keys embedded as byte arrays. Signing should happen in an HSM, a cloud KMS or an
+      isolated signing service invoked from CI, never with a key committed to the
+      repository. Check that development keys are clearly separated from production keys
+      and that the build fails if a known development key is used for a release.
+    evidence:
+      - Signing performed through HSM or KMS with access logging
+      - No private keys in the repository or build images
+      - Key management procedure (generation, rotation, revocation)
+    checks: [hardcoded-secret, hardcoded-crypto-key]
+    crosswalk: ["nist-ssdf:PS.2.1", "iec-62443-4-2:EDR 3.10", "iec-81001-5-1:5.8.3"]
+
+  - ref: SM-9
+    title: Security of externally provided components
+    requirement: >
+      Third-party and open-source components must be identified and their security
+      evaluated and managed throughout the product lifecycle.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a software bill of materials (CycloneDX or SPDX file, or a build step that
+      generates one), dependency lockfiles, vendored libraries (third_party/, vendor/,
+      components/, lib/) with recorded versions, and automated vulnerability scanning
+      (Dependabot, Renovate, OSV-Scanner, Grype, Trivy). For firmware, check that vendored
+      RTOS, TCP/IP stacks, mbedTLS or wolfSSL and vendor HALs have known versions and are
+      tracked for CVEs. Flag unpinned dependencies and copied-in code with no origin.
+    evidence:
+      - SBOM generated per release
+      - Dependency lockfiles and pinned versions
+      - Automated vulnerability scanning of dependencies
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile, vulnerability-scanning, third-party-notices]
+    crosswalk: ["nist-ssdf:PW.4.1", "eu-cra:AnnexI.II.1", "iec-81001-5-1:4.1.5"]
+
+  - ref: SR-2
+    title: Threat model
+    requirement: >
+      A threat model must be produced and kept current for the product, identifying data
+      flows, trust boundaries, entry points, threats and their mitigations, and reviewed
+      when the design changes.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for docs/threat-model*, STRIDE tables, data flow diagrams (draw.io, Microsoft
+      Threat Modeling Tool .tm7, OWASP Threat Dragon .json) and evidence of review dates.
+      A good threat model names every external interface found in the code (fieldbus
+      handlers such as Modbus or OPC UA servers, web management UI, SSH, serial console,
+      firmware update path, debug ports) and maps each threat to a requirement or
+      mitigation. Compare the interfaces in the threat model with listeners actually opened
+      in the code.
+    evidence:
+      - Threat model covering all interfaces and trust boundaries
+      - Traceability from threats to security requirements and tests
+    artifacts: [threat-model, architecture-doc]
+    crosswalk: ["nist-ssdf:PW.1.1", "eu-cra:Art.13(2)", "iec-81001-5-1:7.2"]
+
+  - ref: SR-3
+    title: Product security requirements
+    requirement: >
+      Security requirements must be specified for the product, derived from the security
+      context, threat model and target security level, and reviewed and approved.
+    category: secure-development
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a security requirements specification (requirements/*.md, ReqIF, Doors or
+      Jira exports, a security section in the system requirements) that states the target
+      security level (SL-C) per IEC 62443-4-2 and maps requirements to component
+      requirements (CR x.y) and to tests. Check for traceability IDs used in tests or
+      commit messages.
+    evidence:
+      - Security requirements specification with target SL
+      - Traceability matrix from requirements to design and tests
+    artifacts: [requirements-traceability]
+    crosswalk: ["nist-ssdf:PW.1.1", "iec-81001-5-1:5.2.1", "iso-iec-27001:A.8.26"]
+
+  - ref: SD-1
+    title: Secure design principles and defence in depth
+    requirement: >
+      The design must apply secure design principles, including defence in depth, least
+      privilege, minimised attack surface and secure defaults, and document how each layer
+      of defence mitigates the identified threats.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Review the architecture document and the code for privilege separation (processes or
+      RTOS tasks with MPU regions, services not running as root, docker USER), disabled
+      unused services and ports, and secure defaults (management interfaces off or bound to
+      localhost until configured, no default accounts). Check that defence layers described
+      in the documentation exist in code, for example authentication on the web UI and on
+      the fieldbus write path, not only one of them.
+    evidence:
+      - Architecture document describing defence-in-depth layers
+      - Least-privilege runtime configuration
+    checks: [docker-root-user, default-credentials, debug-enabled]
+    artifacts: [architecture-doc, threat-model]
+    crosswalk: ["iec-62443-4-2:CR 7.7", "eu-cra:AnnexI.I.2(b)", "iec-81001-5-1:5.3.1", "iso-iec-27001:A.8.27"]
+
+  - ref: SD-4
+    title: Secure design best practices and design review
+    requirement: >
+      Secure design best practices must be documented and applied, and security design
+      reviews must be carried out and their findings tracked to closure.
+    category: secure-development
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for design review records (ADR files under docs/adr, design review checklists in
+      pull request templates, security review labels). Good evidence is a pull request
+      template that asks about new interfaces, crypto changes and privilege changes, and
+      design records that reference the threat model.
+    evidence:
+      - Design review records with security checklist
+      - Tracked findings from design reviews
+    artifacts: [architecture-doc, code-review-process]
+
+  - ref: SI-1
+    title: Security implementation review
+    requirement: >
+      Implementation must be reviewed for security, including code review and static
+      analysis, to identify and remove security defects before release.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Check for static analysis in CI (cppcheck, clang-tidy, Coverity, CodeQL, Polyspace,
+      SonarQube, Semgrep) with security rule sets enabled and with the build failing on new
+      high findings. Check that compiler warnings are treated as errors (-Wall -Wextra
+      -Werror) and that hardening flags are on (-fstack-protector-strong,
+      -D_FORTIFY_SOURCE=2, -Wformat-security). Check that pull requests require review
+      (CODEOWNERS, branch protection). Run-time detectors on this repository corroborate:
+      unsafe C functions and injection patterns indicate reviews are not effective.
+    evidence:
+      - Static analysis configuration and results in CI
+      - Mandatory code review before merge
+      - Compiler hardening and warning flags in build files
+    checks: [unsafe-c-functions, command-injection-risk, sql-injection-risk]
+    artifacts: [static-analysis-config, code-review-process, ci-pipeline]
+    crosswalk: ["nist-ssdf:PW.7.2", "misra-c:Dir 4.1", "cert-c:STR31-C", "iec-81001-5-1:5.5.1"]
+
+  - ref: SI-2
+    title: Secure coding standards
+    requirement: >
+      Secure coding standards must be defined for each language used, cover avoidance of
+      known insecure constructs and banned functions, and be enforced.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a coding standard document (MISRA C, CERT C, CERT C++, AUTOSAR C++14 or an
+      internal standard) and for its enforcement: a static analysis profile mapped to the
+      standard, banned-function headers (for example a banned.h that poisons strcpy and
+      sprintf with #pragma GCC poison), or linters. Check whether the code actually
+      follows it: strcpy, sprintf and gets in C, unchecked return values, goto, and
+      dynamic memory in deterministic firmware.
+    evidence:
+      - Coding standard document per language
+      - Static analysis profile that enforces it
+      - Deviation records for justified exceptions
+    checks: [unsafe-c-functions, goto-statement, dynamic-memory-embedded]
+    artifacts: [coding-standard, static-analysis-config]
+    crosswalk: ["misra-c:GRP", "cert-c:STR31-C", "nist-ssdf:PW.5.1", "iec-81001-5-1:5.5.1", "iso-iec-27001:A.8.28"]
+
+  - ref: SVV-1
+    title: Security requirements testing
+    requirement: >
+      Testing must verify that each security requirement and security function works as
+      specified, including negative and boundary cases.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for automated tests that exercise security functions: authentication failures
+      and lockout, authorization checks per role, update signature rejection with a
+      tampered image, TLS rejection of invalid certificates, input validation on protocol
+      handlers. Check that tests run in CI and reference the security requirement IDs.
+    evidence:
+      - Automated tests for each security function, including negative tests
+      - Test results linked to requirements
+    artifacts: [automated-tests, requirements-traceability, ci-pipeline]
+    crosswalk: ["nist-ssdf:PW.8.2", "iec-81001-5-1:5.7.3", "iso-iec-27001:A.8.29"]
+
+  - ref: SVV-3
+    title: Vulnerability testing
+    requirement: >
+      The product must undergo vulnerability testing, including fuzzing of external
+      interfaces, attack surface analysis, known-vulnerability scanning and software
+      composition analysis.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for fuzz harnesses (libFuzzer LLVMFuzzerTestOneInput, AFL++, boofuzz or Peach
+      for network protocols, OSS-Fuzz configuration) targeting protocol parsers such as
+      Modbus, DNP3, OPC UA, MQTT and HTTP handlers; dependency and container scanning in
+      CI; and binary analysis for firmware images. A parser that handles network input with
+      no fuzz target is a gap.
+    evidence:
+      - Fuzzing harnesses for every network-facing parser
+      - Software composition analysis and image scanning in CI
+    artifacts: [vulnerability-scanning, automated-tests]
+    crosswalk: ["nist-ssdf:PW.8.2", "eu-cra:AnnexI.II.3", "iec-81001-5-1:5.7.3"]
+
+  - ref: SVV-4
+    title: Penetration testing
+    requirement: >
+      Penetration testing must be carried out on the product to find weaknesses not found
+      by other verification, by testers with appropriate independence from the developers.
+    category: testing-verification
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for penetration test reports or summaries (docs/security/pentest-*), tracked
+      findings in the issue tracker, and evidence that retests closed them. The repository
+      usually holds only a summary; confirm the date and scope match the current release.
+    evidence:
+      - Recent penetration test report covering the current release
+      - Remediation tracking for findings
+    crosswalk: ["nist-ssdf:PW.8.2", "iec-81001-5-1:5.7.4"]
+
+  - ref: DM-1
+    title: Receiving notifications of security issues
+    requirement: >
+      The supplier must have a process to receive reports of security issues from internal
+      and external sources, including researchers, customers and integrators.
+    category: vulnerability-management
+    severity: high
+    fixability: document
+    guidance: >
+      Look for SECURITY.md, a security.txt (/.well-known/security.txt in any web
+      interface), a PSIRT contact address and PGP key, and a documented intake workflow.
+      The contact must be reachable without a customer account.
+    evidence:
+      - Published vulnerability reporting contact and policy
+      - PSIRT intake procedure
+    artifacts: [security-policy]
+    crosswalk: ["eu-cra:AnnexI.II.5", "etsi-en-303-645:5.2-1", "uk-psti:Sch1.2", "iec-81001-5-1:9.2"]
+
+  - ref: DM-5
+    title: Assessing, addressing and disclosing security issues
+    requirement: >
+      Reported issues must be triaged, scored (for example with CVSS), fixed or mitigated
+      according to severity, and disclosed to users with advisories that explain impact
+      and remediation.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a vulnerability handling procedure describing triage, scoring, fix timelines
+      by severity and advisory publication (CSAF or plain advisories), a CHANGELOG that
+      flags security fixes, and CVE assignment practice. Check that security fixes in the
+      git history are reflected in release notes.
+    evidence:
+      - Vulnerability handling procedure with severity-based timelines
+      - Published security advisories
+    artifacts: [security-policy, incident-response-plan, changelog]
+    crosswalk: ["eu-cra:AnnexI.II.4", "nist-ssdf:RV.2.2", "iec-81001-5-1:9.2", "iso-iec-27001:A.8.8"]
+
+  - ref: SUM-4
+    title: Security update delivery with integrity
+    requirement: >
+      Security updates must be delivered in a way that lets the user verify they are
+      authentic and unmodified, and their documentation must explain how to apply them.
+    category: updates-maintenance
+    severity: critical
+    fixability: code
+    guidance: >
+      Inspect the update path: firmware update handlers, bootloader, package delivery. Good
+      looks like signed images verified before installation (MCUboot with
+      MCUBOOT_SIGNATURE_TYPE_ECDSA_P256 or ED25519 and image validation enabled, ESP-IDF
+      CONFIG_SECURE_SIGNED_APPS_NO_SECURE_BOOT or secure boot v2, SWUpdate or RAUC with
+      signed bundles, Mender with artifact signing), anti-rollback counters, and a
+      documented update procedure. Flag update code that writes a downloaded image to flash
+      without verifying a signature, or that checks only a CRC or SHA hash fetched from the
+      same channel.
+    evidence:
+      - Cryptographic signature verification of every update before installation
+      - Anti-rollback protection
+      - Update installation guide for users
+    checks: [firmware-update-unsigned, tls-verification-disabled]
+    artifacts: [update-policy, user-documentation]
+    crosswalk: ["iec-62443-4-2:EDR 3.10", "eu-cra:AnnexI.I.2(c)", "etsi-en-303-645:5.3-2", "iec-81001-5-1:6.1.1"]
+
+  - ref: SUM-5
+    title: Timely delivery of security patches
+    requirement: >
+      The supplier must deliver security patches to product users within a time frame
+      appropriate to the risk, and inform users of patches for dependent components or
+      operating systems.
+    category: updates-maintenance
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a published update policy stating target patch times by severity and the
+      support period, release cadence evidence in tags and changelog, and documentation on
+      which third-party component updates (OS, RTOS, TLS library) are qualified for the
+      product.
+    evidence:
+      - Update policy with patch timelines and support period
+      - Release history showing timely security releases
+    artifacts: [update-policy, changelog]
+    crosswalk: ["eu-cra:AnnexI.II.8", "uk-psti:Sch1.3", "iec-81001-5-1:6.1.1"]
+
+  - ref: SG-3
+    title: Security hardening and secure operation guidelines
+    requirement: >
+      The product documentation must explain how to integrate, configure and operate the
+      product securely, including hardening steps, account management, and secure
+      decommissioning and disposal.
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a security or hardening guide (docs/security-hardening.md, an administrator
+      manual section) that lists open ports and protocols, how to disable unused services,
+      how to change or create accounts, recommended network segmentation, logging setup and
+      how to wipe the device before disposal. Compare the listed ports with listeners in the
+      code.
+    evidence:
+      - Hardening guide matching the current release
+      - Account management and secure disposal instructions
+    artifacts: [user-documentation]
+    crosswalk: ["eu-cra:AnnexII", "iec-62443-4-2:CR 4.2", "iec-81001-5-1:5.8.2"]

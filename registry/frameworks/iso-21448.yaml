@@ -1,0 +1,219 @@
+id: iso-21448
+title: ISO 21448:2022 Road vehicles - Safety of the intended functionality
+shortTitle: ISO 21448 (SOTIF)
+version: First edition 2022-06
+authority: ISO (ISO/TC 22/SC 32)
+kind: standard
+jurisdictions: [global]
+url: https://www.iso.org/standard/77490.html
+textPolicy: paraphrased
+summary: >
+  ISO 21448 (SOTIF) addresses hazards caused by functional insufficiencies of the intended
+  functionality, such as perception limits or inadequate decisions, rather than by faults. It
+  applies especially to ADAS and automated driving functions that rely on sensors, complex
+  algorithms and machine learning: specify the function and its operating conditions, identify
+  hazards and triggering conditions, modify the function to reduce risk, and verify and validate
+  that the residual risk from known and unknown hazardous scenarios is acceptable, then monitor in
+  the field.
+applicability:
+  any:
+    - all:
+        - { fact: sector, in: [automotive] }
+        - { not: { fact: aiUsage, equals: none } }
+    - all:
+        - { fact: aiRiskAreas, in: [safety-component] }
+        - any:
+            - { fact: sector, in: [automotive] }
+            - { fact: productTypes, in: [automotive-ecu] }
+applicabilityNote: >
+  Applies to vehicle functions whose safety depends on situational awareness: emergency
+  intervention systems (for example AEB) and driving automation levels 1 to 5, including
+  functions without machine learning. The questionnaire has no ADAS fact yet, so confirm with the
+  team whether a sensing-based ADAS or automated driving function is in scope even when no AI is
+  used. Faults covered by ISO 26262 and cybersecurity threats (ISO/SAE 21434) are outside its
+  scope, while reasonably foreseeable misuse is inside. For ML components, ISO/PAS 8800:2024
+  (safety and artificial intelligence) complements it.
+controls:
+  - ref: "5"
+    title: Specification of the function and its operational design domain
+    requirement: >
+      The intended functionality, its operational design domain and use cases, system design and
+      architecture, and known performance insufficiencies with their countermeasures are
+      specified as the basis for the SOTIF activities.
+    category: functional-safety
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a function specification and an ODD definition in a structured form (road types,
+      speed range, weather, lighting, geography, traffic participants, infrastructure such as lane
+      markings and maps), for example based on ISO 34503 or a YAML or JSON ODD schema. Check that
+      the code enforces it: ODD monitors that check vehicle speed range, map availability, lane
+      marking quality, sensor blockage (camera blindness, radar blockage), weather inputs (rain or
+      light sensor, wiper state) and that trigger degradation or handover when outside the ODD.
+      Sensor specifications (field of view, range, resolution) should match the function's needs.
+    evidence:
+      - Function specification and structured ODD definition
+      - ODD monitoring implementation linked to the definition
+    artifacts: [architecture-doc, requirements-traceability]
+    crosswalk: ["iso-26262:4-6.4.2", "eu-ai-act:Art.13"]
+  - ref: "6"
+    title: Hazard identification, risk evaluation and acceptance criteria
+    requirement: >
+      Hazards caused by the intended functionality are identified and their risk evaluated, and
+      acceptance criteria for the residual risk are specified (6.3 to 6.5).
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a SOTIF hazard analysis (often derived from the ISO 26262 HARA but extended to
+      unintended and missing intervention due to insufficiencies), with severity and
+      controllability, and explicit acceptance criteria for residual risk, for example a target
+      rate of hazardous events per operating hour or per kilometre based on positive risk
+      balance against human drivers or field data. Acceptance criteria must be quantitative
+      enough to derive validation targets.
+    evidence:
+      - SOTIF hazard analysis and quantitative acceptance criteria
+    artifacts: [risk-management-file, safety-case]
+    crosswalk: []
+  - ref: "7"
+    title: Functional insufficiencies and triggering conditions
+    requirement: >
+      Potential functional insufficiencies of the specification and performance insufficiencies
+      of sensing, algorithms and actuation are analysed, together with the triggering conditions
+      that can activate them and reasonably foreseeable misuse, and the acceptability of the
+      system's response is estimated.
+    category: functional-safety
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a triggering-condition catalogue (glare, low sun, tunnel exits, heavy rain, snow
+      covering lane markings, reflective objects, unusual road users, sensor misalignment, GNSS
+      outage) linked to the components they affect. For machine learning perception, check for
+      analysis of data distribution coverage, out-of-distribution inputs, label quality, known
+      failure classes (small or occluded objects, rare classes), and uncertainty estimation or
+      confidence thresholds in code (score thresholds, tracking confirmation counts). ISO/PAS 8800
+      gives further guidance for ML elements. Misuse analysis should cover driver over-reliance
+      and inattention.
+    evidence:
+      - Triggering condition catalogue with affected components
+      - ML insufficiency analysis including data coverage and OOD behaviour
+    artifacts: [ai-documentation, risk-management-file]
+    crosswalk: ["eu-ai-act:Art.15", "automotive-spice:SUP.11"]
+  - ref: "8"
+    title: Functional modifications that reduce SOTIF risk
+    requirement: >
+      Measures that reduce SOTIF-related risk are implemented, such as system modifications,
+      functional restrictions, handing over authority to the driver and measures against
+      foreseeable misuse, and the specification is updated accordingly.
+    category: functional-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for the implemented measures in code: sensor fusion and cross-checks between radar,
+      camera and lidar before acting, plausibility checks of detected objects against vehicle
+      dynamics, restriction of the function (speed caps, disabling in detected adverse
+      conditions), degradation modes, driver monitoring (hands-on detection, eye tracking) and
+      take-over requests with defined timing and escalation, and minimal risk manoeuvres for
+      higher automation. Check that thresholds are calibratable and traced to the analysis.
+    evidence:
+      - Implemented measures traced to triggering conditions and hazards
+      - Handover and degradation logic with defined timing
+    artifacts: [requirements-traceability]
+    crosswalk: ["iso-26262:4-6.4.2", "eu-ai-act:Art.14"]
+  - ref: "9"
+    title: Verification and validation strategy with validation targets
+    requirement: >
+      A verification and validation strategy is defined, including integration and testing
+      specifications and validation targets derived from the acceptance criteria, covering both
+      known and unknown hazardous scenarios.
+    category: testing-verification
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a V&V plan that combines simulation, scenario-based testing, proving ground and
+      fleet driving, with validation targets expressed as required driven distance or hours or
+      scenario counts with a stated statistical confidence. Check the scenario database structure
+      (OpenSCENARIO .xosc, OpenDRIVE .xodr, scenario catalogues for CARLA, esmini, CarMaker or
+      Foretellix), coverage metrics over ODD parameters, and how simulation fidelity is argued.
+    evidence:
+      - V&V strategy with quantitative validation targets
+      - Scenario catalogue with ODD coverage metrics
+    artifacts: [automated-tests, test-coverage-config]
+    crosswalk: ["iso-26262:6-11", "eu-ai-act:Art.15"]
+  - ref: "10"
+    title: Evaluation of known hazardous scenarios
+    requirement: >
+      Sensing, planning algorithms, actuation and the integrated system are verified in known
+      scenarios, and the residual risk from known hazardous scenarios is evaluated against the
+      acceptance criteria.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for scenario-based test suites in CI (simulation runs, resimulation and replay of
+      recorded data, open-loop perception KPI evaluation), per-scenario pass criteria, perception
+      KPIs (detection rate, false positive and false negative rates, localisation error) per
+      object class and condition, and regression tracking across releases. For ML models, check
+      evaluation on held-out and condition-specific test sets, versioned datasets and models, and
+      robustness tests (noise, weather augmentation, adversarial-style perturbations).
+    evidence:
+      - Scenario test results and perception KPIs per release
+      - Residual risk evaluation for known hazardous scenarios
+    artifacts: [automated-tests, ai-documentation]
+    crosswalk: ["eu-ai-act:Art.15", "nist-ai-rmf:MEASURE 2.3", "automotive-spice:SWE.6"]
+  - ref: "11"
+    title: Evaluation of unknown hazardous scenarios
+    requirement: >
+      The residual risk from unknown hazardous scenarios is evaluated, for example through
+      randomised or exploratory testing, long-term vehicle and fleet testing and analysis of field
+      data, to show it meets the acceptance criteria.
+    category: testing-verification
+    severity: high
+    fixability: process
+    guidance: >
+      Look for exploratory scenario generation (parameter sweeps, search-based or randomised
+      scenario generation), fleet or shadow-mode testing infrastructure with trigger-based data
+      recording, and statistical evaluation of driven distance against the validation targets.
+      Check that newly discovered scenarios are fed back into the known-scenario catalogue.
+    evidence:
+      - Exploratory testing and fleet validation results with statistics
+      - Process feeding discovered scenarios back into the catalogue
+    artifacts: [automated-tests]
+    crosswalk: ["nist-ai-rmf:MEASURE 2.3"]
+  - ref: "12"
+    title: Evaluation of SOTIF achievement and release
+    requirement: >
+      Before release, the achievement of SOTIF is evaluated with defined methods and criteria and
+      a release recommendation is made, documenting residual risks and limitations.
+    category: governance
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a SOTIF release argument (often part of the safety case) that references the
+      validation results, open issues and known limitations, and the user-facing limitations in
+      the owner's manual or HMI. Check that the release decision is tied to a specific software
+      and model version.
+    evidence:
+      - SOTIF release recommendation with residual risk statement
+      - Documented known limitations communicated to users
+    artifacts: [safety-case, user-documentation]
+    crosswalk: ["iso-26262:2-6.4.8", "iso-26262:2-6.4.12"]
+  - ref: "13"
+    title: Operation phase field monitoring
+    requirement: >
+      During operation, topics relevant to SOTIF are observed in the field and issues are
+      evaluated and resolved through a defined process.
+    category: logging-monitoring
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for field monitoring hooks: event-triggered data recording (disengagements, emergency
+      braking events, take-over requests, near misses), upload to a backend with privacy
+      controls, dashboards for SOTIF KPIs, and a process to analyse events and push fixes through
+      the software update process. Recorded data must respect the privacy design (minimisation,
+      no unnecessary personal data).
+    evidence:
+      - Field monitoring triggers and data pipeline
+      - Issue evaluation and resolution records
+    checks: [pii-in-logs]
+    crosswalk: ["unece-r156:7.1.1", "eu-ai-act:Art.72", "nist-ai-rmf:MANAGE 4.1"]

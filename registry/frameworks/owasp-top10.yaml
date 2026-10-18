@@ -1,0 +1,265 @@
+id: owasp-top10
+title: OWASP Top 10 - The Ten Most Critical Web Application Security Risks
+shortTitle: OWASP Top 10:2025
+version: "2025"
+authority: OWASP Foundation
+kind: guideline
+jurisdictions: [global]
+url: https://owasp.org/Top10/2025/
+textPolicy: open
+summary: >
+  The OWASP Top 10 is the awareness standard for the most critical web application
+  security risks, built from contributed vulnerability data and a community survey. The
+  2025 edition (final, released after a November 2025 release candidate) adds Software
+  Supply Chain Failures and Mishandling of Exceptional Conditions, folds SSRF into Broken
+  Access Control, and renames the logging category to Security Logging and Alerting
+  Failures.
+applicability:
+  any:
+    - { fact: productTypes, in: [web-app, saas, backend-api] }
+applicabilityNote: >
+  Applies to web applications, hosted services and APIs, including the cloud backend and
+  web management interface of devices. It is a baseline referenced by PCI DSS, customer
+  security questionnaires and many contracts; for verifiable requirements use OWASP ASVS.
+  Projects that still report against the 2021 edition can map A01, A04 (now Cryptographic
+  Failures), A05 (Injection), A06, A07, A08 and A09 directly; the 2021 A10 SSRF is now
+  part of A01 and the 2021 A06 Vulnerable and Outdated Components is now part of A03.
+controls:
+  - ref: A01
+    title: Broken Access Control
+    requirement: >
+      Access must be denied by default and enforced server-side for every request, so users
+      cannot act outside their permissions. This includes insecure direct object
+      references, missing function-level checks, CORS misconfiguration, CSRF, path
+      traversal and server-side request forgery.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Map every route and resolver (Express or Fastify routers, NestJS controllers, Django
+      or FastAPI views, Spring controllers, GraphQL resolvers) and check each has an
+      authorization check tied to the current user, not only authentication. Look for
+      queries by ID without an ownership filter (findById(req.params.id) with no userId or
+      tenantId condition), admin routes protected only in the frontend, and tenant IDs taken
+      from the request body. Check CORS (no wildcard with credentials, no reflected
+      origins), CSRF protection for cookie sessions, file paths built from input, and
+      outbound fetches to user-supplied URLs (SSRF) without an allow-list and blocking of
+      internal and metadata addresses (169.254.169.254).
+    evidence:
+      - Central authorization middleware or policy layer applied to all routes
+      - Tests that one user cannot read or modify another user's or tenant's data
+      - SSRF allow-list for outbound requests built from user input
+    checks: [cors-wildcard, path-traversal-risk, jwt-unverified]
+    artifacts: [automated-tests]
+    crosswalk: ["iec-62443-4-2:CR 2.1", "en-18031:ACM-1", "owasp-asvs:V8.2.1", "owasp-asvs:V8.2.2", "owasp-asvs:V8.4.1", "owasp-asvs:V1.3.6", "owasp-asvs:V3.5.1", "iso-iec-27001:A.8.3"]
+
+  - ref: A02
+    title: Security Misconfiguration
+    requirement: >
+      The application and its platform must be hardened, with secure defaults, no
+      unnecessary features, debug modes off, security headers set, and consistent
+      configuration across environments.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Check production configuration: DEBUG=False in Django, NODE_ENV=production, no Spring
+      Boot actuator endpoints exposed without auth, no default admin consoles, directory
+      listing off, verbose errors off. Check security headers (Content-Security-Policy,
+      Strict-Transport-Security, X-Content-Type-Options, frame-ancestors or X-Frame-Options)
+      through helmet, middleware or reverse proxy config. Check cookies have Secure,
+      HttpOnly and SameSite. Check XML parsers disable external entities. Check containers
+      run as non-root and infrastructure as code does not open storage buckets publicly.
+    evidence:
+      - Production configuration with debug off and hardened defaults
+      - Security headers on all responses
+      - Container and infrastructure hardening
+    checks: [debug-enabled, missing-security-headers, insecure-cookie, docker-root-user, error-details-leak, cors-wildcard]
+    crosswalk: ["nist-ssdf:PW.9.1", "eu-cra:AnnexI.I.2(b)", "owasp-asvs:V13.4.2", "owasp-asvs:V3.4.3", "owasp-asvs:V3.3.1", "owasp-asvs:V3.4.2", "iso-iec-27001:A.8.9"]
+
+  - ref: A03
+    title: Software Supply Chain Failures
+    requirement: >
+      Dependencies, build systems and distribution must be controlled: components inventoried
+      and kept updated, sources trusted, versions pinned, and the CI/CD pipeline protected
+      against compromise.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Check lockfiles are committed (package-lock.json, pnpm-lock.yaml, poetry.lock,
+      go.sum, Cargo.lock) and used in CI (npm ci), versions are pinned (no "*" or
+      "latest"), automated updates (Dependabot, Renovate) and vulnerability scanning (npm
+      audit, OSV-Scanner, Snyk, Trivy) run in CI, an SBOM is produced per release, GitHub
+      Actions are pinned to commit SHAs with least-privilege permissions, and base images
+      are pinned by digest. Flag install scripts that curl and pipe to a shell.
+    evidence:
+      - Lockfiles and pinned versions
+      - Dependency scanning and update automation
+      - SBOM per release and hardened CI pipeline
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile, dependency-update-automation, vulnerability-scanning, ci-pipeline]
+    crosswalk: ["nist-ssdf:PW.4.1", "eu-cra:AnnexI.II.1", "iec-62443-4-1:SM-9", "owasp-asvs:V15.2.1", "iso-iec-27001:A.8.8"]
+
+  - ref: A04
+    title: Cryptographic Failures
+    requirement: >
+      Sensitive data must be protected in transit and at rest with current algorithms,
+      correct modes, managed keys and strong password hashing.
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Flag MD5 or SHA-1 for security, DES, 3DES, RC4, ECB mode, static IVs, keys in source,
+      Math.random or random.random for tokens, password hashing with plain SHA-256 or
+      without salt, TLS verification disabled (rejectUnauthorized false, verify=False,
+      InsecureSkipVerify true) and http:// endpoints. Good looks like TLS 1.2 or later
+      everywhere with HSTS, AES-GCM or libsodium, keys from a KMS or secret manager,
+      argon2id, scrypt or bcrypt for passwords, and crypto.randomBytes or secrets for
+      tokens.
+    evidence:
+      - Approved algorithms and TLS everywhere
+      - Keys in a secret manager or KMS
+      - Strong password hashing
+    checks: [weak-hash, weak-cipher, insecure-random, hardcoded-crypto-key, cleartext-transport, tls-verification-disabled, weak-password-hash]
+    crosswalk: ["eu-cra:AnnexI.I.2(e)", "iec-62443-4-2:CR 4.3", "owasp-asvs:V11.3.2", "owasp-asvs:V11.4.1", "owasp-asvs:V11.4.2", "owasp-asvs:V11.5.1", "owasp-asvs:V12.2.1", "owasp-asvs:V12.3.2", "iso-iec-27001:A.8.24"]
+
+  - ref: A05
+    title: Injection
+    requirement: >
+      Untrusted data must never be interpreted as code or commands: queries must be
+      parameterised, output encoded for its context, and interpreters fed only validated
+      input. This includes SQL, NoSQL, OS command, LDAP, expression language and
+      cross-site scripting.
+    category: input-validation
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag SQL built with string concatenation or template literals (query("SELECT ... " +
+      id), f-strings into cursor.execute), raw ORM calls with interpolation
+      ($queryRawUnsafe, sequelize.literal), MongoDB queries built from request objects
+      without type checks (operator injection with $ne or $where), exec or spawn with
+      shell true and interpolated input, eval and new Function, and HTML sinks (innerHTML,
+      dangerouslySetInnerHTML, v-html, template autoescape off). Good looks like
+      parameterised queries, allow-listed inputs, execFile with argument arrays, and
+      framework auto-escaping plus a strict CSP.
+    evidence:
+      - Parameterised queries throughout
+      - Context-aware output encoding and CSP
+      - No shell or eval with request data
+    checks: [sql-injection-risk, command-injection-risk, xss-risk, dynamic-code-eval, path-traversal-risk]
+    crosswalk: ["iec-62443-4-2:CR 3.5", "cert-c:ENV33-C", "owasp-asvs:V1.2.1", "owasp-asvs:V1.2.4", "owasp-asvs:V1.2.5", "owasp-asvs:V1.3.2", "owasp-asvs:V2.2.1"]
+
+  - ref: A06
+    title: Insecure Design
+    requirement: >
+      Security must be designed in through threat modelling, secure design patterns and
+      reference architectures, with business logic limits and abuse cases considered
+      before code is written.
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a threat model or security design notes covering trust boundaries, abuse
+      cases and business-logic limits (rate limits on costly operations, transaction
+      limits, anti-automation on sign-up and password reset, tenant isolation design). In
+      code, check that limits described in the design exist, for example quotas and
+      throttling on expensive endpoints.
+    evidence:
+      - Threat model and abuse cases for key flows
+      - Business-logic limits implemented and tested
+    checks: [missing-rate-limiting]
+    artifacts: [threat-model, architecture-doc]
+    crosswalk: ["nist-ssdf:PW.1.1", "iec-62443-4-1:SR-2", "owasp-asvs:V2.4.1", "iso-iec-27001:A.8.27"]
+
+  - ref: A07
+    title: Authentication Failures
+    requirement: >
+      Authentication and session management must resist credential stuffing and brute
+      force, reject weak or default credentials, support multi-factor authentication, and
+      manage session identifiers and tokens securely.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check login, sign-up, password reset and MFA flows: rate limiting and lockout or
+      back-off, breached-password checks, no default accounts, password hashing with
+      argon2id or bcrypt, session cookies with Secure, HttpOnly and SameSite, session
+      rotation on login and invalidation on logout, JWT verification with a fixed algorithm
+      allow-list (no alg none, no decode without verify), short token lifetimes, and
+      generic error messages that do not reveal whether an account exists.
+    evidence:
+      - Rate-limited authentication endpoints
+      - Secure session and token handling
+      - MFA available for privileged users
+    checks: [missing-rate-limiting, weak-password-hash, default-credentials, jwt-unverified, insecure-cookie, hardcoded-secret]
+    crosswalk: ["iec-62443-4-2:CR 1.11", "etsi-en-303-645:5.1-5", "owasp-asvs:V6.3.1", "owasp-asvs:V6.3.2", "owasp-asvs:V6.3.3", "owasp-asvs:V7.2.3", "owasp-asvs:V9.1.1", "iso-iec-27001:A.8.5"]
+
+  - ref: A08
+    title: Software or Data Integrity Failures
+    requirement: >
+      Code, updates, serialized data and critical data must be verified for integrity and
+      origin, and untrusted data must not be deserialized into objects without checks.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Flag native deserialization of untrusted data (pickle.loads, yaml.load without
+      SafeLoader, Java ObjectInputStream, .NET BinaryFormatter, node-serialize), scripts
+      loaded from CDNs without Subresource Integrity (integrity= attributes), auto-update
+      or plugin mechanisms without signature verification, and CI pipelines that deploy
+      unsigned artefacts. Good looks like JSON with schema validation, signed artefacts and
+      container images (cosign, Sigstore), and SRI on third-party scripts.
+    evidence:
+      - Safe parsers and schema validation for untrusted data
+      - Signed build artefacts and SRI on external scripts
+    checks: [unsafe-deserialization, dynamic-code-eval]
+    artifacts: [ci-pipeline]
+    crosswalk: ["nist-ssdf:PS.2.1", "eu-cra:AnnexI.I.2(f)", "owasp-asvs:V1.5.2"]
+
+  - ref: A09
+    title: Security Logging and Alerting Failures
+    requirement: >
+      Security-relevant events must be logged with enough context, protected from tampering
+      and leakage, monitored, and turned into alerts that someone acts on.
+    category: logging-monitoring
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that login successes and failures, access-control denials, input validation
+      failures, admin actions and high-value transactions are logged with user, time,
+      source and outcome through a structured logger (pino, winston, structlog, logback),
+      that logs do not contain passwords, tokens or full card or health data, that log
+      injection is prevented (encode newlines), and that alerting is configured (Sentry,
+      CloudWatch alarms, SIEM rules) with an incident response plan behind it.
+    evidence:
+      - Structured security event logging
+      - No secrets or sensitive data in logs
+      - Alerting rules and incident response plan
+    checks: [pii-in-logs]
+    artifacts: [incident-response-plan]
+    crosswalk: ["eu-cra:AnnexI.I.2(l)", "iec-62443-4-2:CR 2.8", "owasp-asvs:V16.3.1", "owasp-asvs:V16.2.5", "iso-iec-27001:A.8.15"]
+
+  - ref: A10
+    title: Mishandling of Exceptional Conditions
+    requirement: >
+      Applications must anticipate, detect and handle errors and abnormal conditions so
+      that they fail closed, do not leak details, release resources, and do not leave
+      partial or inconsistent state.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for empty catch blocks, catch-all handlers that continue as if the operation
+      succeeded, authorization or payment checks that fail open when a dependency errors,
+      unhandled promise rejections, stack traces returned to clients, missing global error
+      handlers, transactions not rolled back on error, and missing limits that let
+      malformed input exhaust memory or CPU. Good looks like a central error handler with
+      generic client messages, explicit fail-closed defaults, and database transactions
+      around multi-step changes.
+    evidence:
+      - Central error handling with generic client responses
+      - Fail-closed behaviour on dependency errors
+      - Transactions and cleanup on error paths
+    checks: [error-details-leak]
+    crosswalk: ["iec-62443-4-2:CR 3.7", "cert-c:ERR33-C", "owasp-asvs:V16.5.1"]

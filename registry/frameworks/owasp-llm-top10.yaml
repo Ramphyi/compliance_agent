@@ -1,0 +1,338 @@
+id: owasp-llm-top10
+title: OWASP Top 10 for Large Language Model Applications
+shortTitle: OWASP LLM Top 10
+version: "2025"
+authority: OWASP GenAI Security Project
+kind: guideline
+jurisdictions: [global]
+url: https://genai.owasp.org/llm-top-10/
+textPolicy: open
+summary: >
+  The OWASP Top 10 for LLM Applications lists the most critical security risks in
+  applications built on large language models, from prompt injection and sensitive data
+  disclosure to excessive agency and unbounded consumption. It is the de facto checklist
+  for securing chatbots, RAG pipelines and LLM agents that call tools.
+applicability:
+  not: { fact: aiUsage, in: [none] }
+applicabilityNote: >
+  Applies to any product that sends prompts to a language model, whether a hosted
+  third-party API or its own model, and to RAG and agent features. It is voluntary
+  guidance, but it is the reference most customers, pentesters and AI Act Article 15
+  robustness assessments use. Refs follow the 2025 numbering, which the official LLM Top 10
+  page still presents as current. A 2026 edition was posted on genai.owasp.org in August
+  2026 with re-ordered identifiers (for example Excessive Agency moves to LLM03 and System
+  Prompt Leakage becomes Hidden Context Exposure); map refs carefully if a customer
+  questionnaire uses the 2026 numbering. Controls with a suffix (for example
+  LLM01-indirect) are Assay sub-controls that split one OWASP entry into separately
+  testable parts.
+controls:
+  - ref: LLM01
+    title: Prompt injection through direct user input
+    requirement: >
+      User input must not be able to override the application's instructions, change the
+      model's role, or trigger actions the user is not allowed to perform. Instructions and
+      untrusted data must be kept separate, and the model's privileges must be limited so
+      that a successful injection has bounded impact.
+    category: ai-security
+    severity: high
+    fixability: code
+    guidance: >
+      Find where prompts are built (OpenAI chat.completions or responses calls, Anthropic
+      messages.create, LangChain ChatPromptTemplate, LlamaIndex, Vercel AI SDK
+      generateText or streamText, Semantic Kernel). Check that the system prompt is a
+      constant or a server-side template and that user text is passed only as a
+      user-role message, never interpolated into the system role or into tool
+      descriptions (f-strings, template literals, .format or string concatenation of
+      request fields into system or instructions). Flag endpoints that let the client send
+      the system prompt, the role field or the full messages array unvalidated. Good
+      looks like: fixed system prompt, user input in a delimited user message, input
+      length limits, an input classifier or guardrail for jailbreak patterns where risk
+      warrants it (Llama Guard, provider moderation, Lakera, NeMo Guardrails), and
+      authorisation enforced in code rather than by the prompt. Look for adversarial test
+      cases in the eval suite (promptfoo redteam, garak, PyRIT).
+    evidence:
+      - Server-side fixed system prompts with user content only in user-role messages
+      - Authorisation enforced outside the model
+      - Prompt-injection test cases in the evaluation suite
+    checks: [llm-prompt-injection-risk]
+    artifacts: [automated-tests, threat-model]
+    crosswalk: ["eu-ai-act:Art.15", "nist-ai-rmf:GAI 2.9", "iso-iec-42001:A.6.2.4"]
+
+  - ref: LLM01-indirect
+    title: Indirect prompt injection through retrieved content and tool output
+    requirement: >
+      Content the model reads from documents, web pages, emails, RAG chunks or tool results
+      must be treated as untrusted data that can carry instructions. It must not be able to
+      trigger tool calls, data exfiltration or privilege changes on its own.
+    category: ai-security
+    severity: high
+    fixability: code
+    guidance: >
+      Trace data that reaches the prompt from outside the user: vector store retrieval,
+      web fetch or browse tools, file and email ingestion, MCP server responses and
+      function-call results. Check that this content is wrapped as data (clearly delimited,
+      placed in user or tool messages rather than the system prompt), that the model
+      cannot follow it to call sensitive tools without a policy check, and that outbound
+      channels an attacker could use for exfiltration are restricted (markdown image
+      rendering of model output to arbitrary URLs, link unfurling, unrestricted HTTP tools).
+      Good looks like: content sanitisation (strip hidden HTML, zero-width and invisible
+      Unicode tag characters), an allowlist of image and link domains when rendering model
+      output, per-tool authorisation independent of the model's request, and tests with
+      poisoned documents.
+    evidence:
+      - Retrieved and tool content isolated from instructions
+      - Rendering allowlist for links and images in model output
+      - Test cases with injected instructions in documents and tool results
+    checks: [llm-prompt-injection-risk]
+    artifacts: [automated-tests, threat-model]
+    crosswalk: ["eu-ai-act:Art.15", "nist-ai-rmf:GAI 2.9"]
+
+  - ref: LLM02
+    title: Sensitive information disclosure
+    requirement: >
+      The application must prevent the model from revealing personal data, credentials,
+      proprietary data or other users' information, both in what it sends to the model
+      provider and in what the model returns, and must tell users how their data is used.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Check what is sent to the model: look for whole database records, user profiles,
+      access tokens, API keys or environment variables inserted into prompts, and for
+      health, payment or children's data sent to third-party providers without a data
+      processing agreement or zero-retention setting. Check prompt and completion logging
+      (LangSmith, Helicone, Langfuse, application logs) for unredacted personal data and
+      retention limits. Check per-user isolation of conversation memory and caches (cache
+      keys that include tenant and user id, no shared conversation state). Good looks like
+      data minimisation before prompting, PII redaction (Presidio or similar) where
+      needed, provider data-retention and training opt-out configured, output filters for
+      secrets and PII, and a privacy notice that names the AI processing.
+    evidence:
+      - Prompt construction includes only data needed for the task
+      - Provider data retention and training opt-out documented
+      - Redaction or minimisation of personal data in prompt logs
+    checks: [pii-in-logs, hardcoded-secret]
+    artifacts: [privacy-policy, processing-records]
+    crosswalk: ["gdpr:Art.25", "gdpr:Art.28", "iso-iec-27001:A.8.11", "nist-ai-rmf:GAI 2.4"]
+
+  - ref: LLM03
+    title: Supply chain of models, adapters and AI dependencies
+    requirement: >
+      Third-party models, LoRA adapters, datasets, plugins and AI libraries must come from
+      trusted sources, be pinned and verified, and be tracked for vulnerabilities and
+      licence terms.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Check model loading code: Hugging Face from_pretrained with a pinned revision (commit
+      hash) rather than a floating branch, trust_remote_code=False unless reviewed,
+      safetensors instead of pickle-based .bin or .pt checkpoints, torch.load with
+      weights_only=True, and checksum verification for downloaded weights. Check that
+      provider model ids are pinned to dated versions where the provider offers them,
+      that AI SDKs (openai, anthropic, langchain, llama-index, transformers) are pinned in
+      lockfiles and scanned, and that MCP servers and plugins come from vetted sources with
+      pinned versions. Look for an AI bill of materials or model inventory with licence
+      terms.
+    evidence:
+      - Pinned model revisions and dependency lockfiles
+      - Safe model serialisation formats and integrity checks
+      - Model and dataset inventory with source and licence
+    checks: [unsafe-deserialization, unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile, vulnerability-scanning]
+    crosswalk: ["nist-ai-rmf:GOVERN 6.1", "iso-iec-42001:A.10.3", "nist-ssdf:PW.4.1", "eu-ai-act:Art.15"]
+
+  - ref: LLM04
+    title: Data and model poisoning
+    requirement: >
+      Data used for pre-training, fine-tuning, embeddings and RAG must be vetted and
+      tracked so that attackers cannot introduce backdoors, biases or false content, and
+      models must be tested for poisoning effects.
+    category: ai-security
+    severity: medium
+    fixability: code
+    guidance: >
+      For fine-tuning, inspect data collection and preparation scripts: sources should be
+      documented, user-generated or scraped data validated and filtered, and datasets
+      versioned (DVC, LakeFS, dataset hashes). For RAG, check who can write to the
+      knowledge base and vector store (upload endpoints, connectors that ingest shared
+      drives or tickets) and whether ingested content is validated and attributed. Check
+      that feedback loops (thumbs-up data used for training) cannot be gamed by a single
+      user. Good looks like provenance records, anomaly checks on training data, held-out
+      evaluation before promoting a model, and restricted write access to knowledge bases.
+    evidence:
+      - Versioned datasets with provenance and validation steps
+      - Restricted, audited write access to knowledge bases
+      - Evaluation gate before deploying retrained models
+    artifacts: [ai-documentation, automated-tests]
+    crosswalk: ["eu-ai-act:Art.10", "iso-iec-42001:A.7.5", "nist-ai-rmf:GAI 2.9"]
+
+  - ref: LLM05
+    title: Improper output handling
+    requirement: >
+      Model output must be treated as untrusted input to downstream components. It must be
+      validated and encoded for its context before it reaches browsers, shells,
+      interpreters, databases, file systems or other services.
+    category: input-validation
+    severity: critical
+    fixability: code
+    guidance: >
+      Trace every place model output is consumed. Flag output passed to eval, exec, new
+      Function, subprocess or child_process, os.system, SQL strings, file paths, template
+      engines, or HTTP requests (SSRF). Flag rendering of model output as HTML or Markdown
+      without sanitisation (dangerouslySetInnerHTML, v-html, innerHTML, marked without
+      DOMPurify). Good looks like: structured output with schema validation (JSON schema,
+      zod, pydantic, provider structured outputs), parameterised queries for any
+      model-generated query values, code execution only in an isolated sandbox with no
+      network or secrets, and context-aware encoding before rendering.
+    evidence:
+      - Schema validation of structured model output
+      - No model output reaching interpreters, shells or SQL without validation
+      - Sanitised rendering of model-generated HTML or Markdown
+    checks: [llm-output-execution, xss-risk, sql-injection-risk, command-injection-risk, dynamic-code-eval]
+    crosswalk: ["owasp-asvs:V1.2.1", "owasp-asvs:V1.3.2", "owasp-top10:A05"]
+
+  - ref: LLM06
+    title: Excessive agency in tools and agents
+    requirement: >
+      LLM agents and tool integrations must have only the functions, permissions and
+      autonomy needed for their purpose. Tools must act with the end user's permissions,
+      not a privileged service identity.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      List every tool or function exposed to the model (tools arrays, function schemas,
+      LangChain tools, MCP servers, agent frameworks). For each, check: is it needed; does
+      it accept open-ended input (run_shell, execute_sql, http_request, write_file) where a
+      narrow operation would do; does it run with an admin token or service account
+      instead of the requesting user's scoped credentials; does it enforce authorisation
+      on the target resource independently of the model. Flag agents with filesystem or
+      shell access outside a sandbox, database tools with write privileges, and broad
+      OAuth scopes for third-party integrations. Good looks like narrow, typed tools,
+      per-user authorisation inside each tool, read-only defaults, and rate limits on
+      tool calls.
+    evidence:
+      - Tool inventory with purpose and required permissions
+      - Per-user authorisation enforced inside tool implementations
+      - Least-privilege credentials for agent integrations
+    checks: [llm-output-execution, command-injection-risk]
+    artifacts: [threat-model]
+    crosswalk: ["eu-ai-act:Art.14", "nist-ai-rmf:MANAGE 2.4", "owasp-asvs:V8.2.1"]
+
+  - ref: LLM06-approval
+    title: Human approval for high-impact agent actions
+    requirement: >
+      Actions with significant or irreversible effects, such as payments, sending messages
+      on the user's behalf, deleting data or changing permissions, must require explicit
+      human confirmation before execution.
+    category: ai-governance
+    severity: high
+    fixability: code
+    guidance: >
+      Identify tools that change state outside the conversation (send_email, transfer,
+      delete_*, create_order, update_permissions, git push, deploy). Check that execution
+      pauses for user confirmation showing the exact parameters (interrupt or approval
+      step in LangGraph, requires_approval flags, confirmation dialog in the client) and
+      that the server verifies the confirmation token rather than trusting the model's
+      claim that the user agreed. Check that there is an audit log of approved and
+      rejected actions.
+    evidence:
+      - Confirmation step with parameter preview for state-changing tools
+      - Server-side verification of approvals and an action audit log
+    crosswalk: ["eu-ai-act:Art.14", "nist-ai-rmf:MANAGE 2.4"]
+
+  - ref: LLM07
+    title: System prompt leakage
+    requirement: >
+      System prompts must not contain secrets, credentials, internal URLs or authorisation
+      rules whose disclosure would weaken security, because system prompts can be
+      extracted.
+    category: secrets-management
+    severity: medium
+    fixability: code
+    guidance: >
+      Read every system prompt and prompt template. Flag API keys, passwords, connection
+      strings, internal hostnames, unreleased business rules, and access-control logic
+      expressed only in the prompt ("only answer admins", "never reveal the discount code
+      X"). Secrets belong in a secret store and are used by server code, not the model.
+      Authorisation belongs in code. Assume the prompt is public and check that nothing in
+      it would help an attacker.
+    evidence:
+      - System prompts free of secrets and internal identifiers
+      - Access rules enforced in code rather than in the prompt
+    checks: [hardcoded-secret]
+    crosswalk: ["owasp-asvs:V13.3.1"]
+
+  - ref: LLM08
+    title: Vector and embedding weaknesses
+    requirement: >
+      RAG pipelines must enforce access control on retrieved content so users only receive
+      chunks they are entitled to, isolate tenants in vector stores, and validate content
+      before embedding.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Inspect vector store queries (Pinecone, Weaviate, Qdrant, pgvector, Chroma, Milvus,
+      OpenSearch, Azure AI Search). Check that every similarity search applies a filter
+      on tenant id and the user's permissions (metadata filters, namespaces per tenant,
+      row-level security for pgvector) derived from the authenticated session, not from
+      request parameters. Check that document permissions are copied into chunk metadata at
+      ingestion and updated when source permissions change or documents are deleted. Flag
+      a single shared collection queried without filters in a multi-tenant product. Check
+      that embedding inversion risk is considered for sensitive data (embeddings stored with
+      the same protection as the source text).
+    evidence:
+      - Permission and tenant filters on every retrieval query
+      - Chunk metadata carrying source document permissions
+      - Deletion and permission changes propagated to the vector store
+    crosswalk: ["owasp-asvs:V8.2.2", "owasp-asvs:V8.4.1", "iso-iec-27001:A.8.3"]
+
+  - ref: LLM09
+    title: Misinformation and overreliance
+    requirement: >
+      The application must reduce and signal the risk of false or fabricated output, ground
+      answers in reliable sources where accuracy matters, and design the interface so users
+      do not over-rely on unverified output.
+    category: ai-governance
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for grounding (RAG with citations shown to the user, links to source
+      passages), answer validation for high-stakes domains (medical, legal, financial),
+      refusal or abstention when retrieval returns nothing relevant, and visible notices
+      that output may be wrong. For code generation features, check that suggested
+      packages are validated against the registry to avoid hallucinated dependency
+      names. Look for factuality or groundedness evaluations in the test suite.
+    evidence:
+      - Citations or source links in grounded answers
+      - User-facing notice of possible inaccuracy
+      - Groundedness or factuality evaluations
+    checks: [ai-disclosure-missing]
+    artifacts: [automated-tests, user-documentation]
+    crosswalk: ["nist-ai-rmf:GAI 2.2", "eu-ai-act:Art.13"]
+
+  - ref: LLM10
+    title: Unbounded consumption
+    requirement: >
+      The application must limit model usage per user, tenant and request so that
+      attackers cannot cause denial of service, runaway cost or model extraction through
+      excessive queries.
+    category: resilience-availability
+    severity: high
+    fixability: code
+    guidance: >
+      Check that LLM endpoints have authentication and rate limiting (per user and per IP;
+      express-rate-limit, slowapi, API gateway quotas), that every model call sets
+      max_tokens or max_output_tokens, that input size is capped before tokenisation, and
+      that agent loops have a maximum number of steps and tool calls and an overall
+      timeout. Look for per-tenant budgets and spend alerts, provider-side spend limits,
+      and caching of repeated requests. Flag unauthenticated endpoints that proxy to a paid
+      model, and loops that retry indefinitely on errors.
+    evidence:
+      - Rate limits and quotas on AI endpoints
+      - max_tokens, input caps and agent step limits on every call path
+      - Cost monitoring with alerts
+    checks: [missing-rate-limiting]
+    crosswalk: ["owasp-asvs:V2.4.1", "soc2:A1.1"]

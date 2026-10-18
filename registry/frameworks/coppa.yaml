@@ -1,0 +1,216 @@
+id: coppa
+title: Children's Online Privacy Protection Rule (16 CFR Part 312), as amended in 2025
+shortTitle: COPPA Rule
+version: 16 CFR Part 312 as amended by the final rule published 2025-04-22 (FR Doc. 2025-05904)
+authority: US Federal Trade Commission
+kind: regulation
+jurisdictions: [US]
+url: https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-312
+textPolicy: paraphrased
+summary: >
+  The FTC rule implementing the Children's Online Privacy Protection Act. Operators of
+  websites, apps and online services directed to children under 13, or with actual
+  knowledge that they collect personal information from a child under 13, must give
+  notice, obtain verifiable parental consent, let parents review and delete data,
+  minimise and retain data only as needed, and keep it secure. The 2025 amendments add
+  separate consent for third-party disclosures, a written security programme and a
+  written retention policy.
+applicability:
+  all:
+    - { fact: markets, in: [US] }
+    - any:
+        - { fact: audience, in: [children] }
+        - { fact: dataCategories, in: [children] }
+applicabilityNote: >
+  Applies to operators of online services directed to children under 13 (judged by
+  subject matter, visual content, animated characters, music, ads, audience
+  composition and similar factors), to mixed-audience services that do not target
+  children as the primary audience, and to general-audience services with actual
+  knowledge that a user is under 13. Third-party SDK and plugin providers are covered
+  when they have actual knowledge they collect from users of a child-directed service.
+  Note the questionnaire's "children" audience means under 16; COPPA protects under 13.
+keyDates:
+  - { date: "2013-07-01", note: Previous amended COPPA Rule took effect }
+  - { date: "2025-04-22", note: Amended COPPA Rule published in the Federal Register }
+  - { date: "2025-06-23", note: Amended COPPA Rule took effect }
+  - { date: "2026-04-22", note: "Compliance date for most 2025 amendments (except certain safe harbor provisions in 312.11)" }
+controls:
+  - ref: "312.2-mixed-audience"
+    title: Neutral age screening and child-directed classification
+    requirement: >
+      Services must determine whether they are child-directed or mixed-audience; a
+      mixed-audience service may collect age information through a neutral age screen
+      before collecting other personal information and then apply COPPA protections to
+      users under 13.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Check for an age screen at first use that asks for birth date or age neutrally
+      (no default value, no hint that 13 or over is required, no encouragement to lie)
+      and does not allow immediate re-entry after an under-13 answer (store a flag or
+      cookie). Under-13 users must be routed to a parental consent flow or a
+      no-collection experience. Check no personal information, including persistent
+      identifiers for advertising, is collected before the screen.
+    evidence:
+      - Neutral age screen implementation
+      - Under-13 routing to consent or limited mode
+    checks: [analytics-tracking-sdk]
+    artifacts: []
+    crosswalk: ["gdpr:Art.8", "uk-gdpr:AADC"]
+
+  - ref: "312.4"
+    title: Online notice and direct notice to parents
+    requirement: >
+      Operators must post a prominent online notice of their children's information
+      practices (all operators' contact details, data collected, uses, identities and
+      categories of third-party recipients, retention policy, internal-operations uses of
+      persistent identifiers, parental rights) and send a direct notice to parents before
+      collecting a child's personal information.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Check the children's privacy notice is linked on the home or landing page and at
+      every point where children's data is collected, lists third parties by identity
+      and category, includes the written retention policy, and describes parental rights.
+      Check the direct notice template sent to parents (email or SMS) explains what will
+      be collected, why, whether data will be disclosed to third parties, and how to
+      consent or refuse.
+    evidence:
+      - Children's privacy notice with all required elements
+      - Direct notice template for parents
+    checks: []
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.13", "ccpa-cpra:1798.100(a)"]
+
+  - ref: "312.5"
+    title: Verifiable parental consent before collection
+    requirement: >
+      Operators must obtain verifiable parental consent before collecting, using or
+      disclosing a child's personal information, using a method reasonably calculated to
+      ensure the person is the parent, unless a listed exception applies (for example
+      one-time contact, safety, support for internal operations).
+    category: privacy-rights
+    severity: critical
+    fixability: code
+    guidance: >
+      Look for the parental consent flow: approved methods include signed forms, card or
+      payment transactions that notify the account holder, staffed phone or video calls,
+      government ID checks with deletion afterwards, knowledge-based questions, facial
+      matching against a photo ID with prompt deletion, and email-plus or text-plus for
+      operators that do not disclose children's data. Check consent records (parent
+      contact, method, timestamp, scope) and that collection, chat, uploads,
+      geolocation and third-party SDKs remain disabled until consent is recorded.
+    evidence:
+      - Parental consent flow using an accepted method
+      - Consent records and feature gating
+    checks: [analytics-tracking-sdk]
+    artifacts: []
+    crosswalk: ["gdpr:Art.8", "apple-app-review:5.1.4", "google-play-policy:Families"]
+
+  - ref: "312.5(a)(2)"
+    title: Separate parental consent for third-party disclosure
+    requirement: >
+      Operators must let parents consent to collection and use without consenting to
+      disclosure to third parties, and obtain separate verifiable consent before
+      disclosing children's data to third parties (for example for targeted advertising
+      or sale) unless the disclosure is integral to the service.
+    category: privacy-rights
+    severity: critical
+    fixability: code
+    guidance: >
+      Check the consent UI has a separate, optional choice for third-party disclosure
+      and that refusing it does not block the service. Trace data flows to advertising
+      networks, attribution SDKs, data brokers and partners; they must be disabled for
+      children without the separate consent. Persistent identifiers used only for
+      support for internal operations must not be used for behavioural advertising.
+    evidence:
+      - Separate disclosure consent choice in the parental flow
+      - Third-party flows disabled without that consent
+    checks: [analytics-tracking-sdk]
+    artifacts: []
+    crosswalk: ["ccpa-cpra:1798.120(c)"]
+
+  - ref: "312.6"
+    title: Parental review, deletion and refusal
+    requirement: >
+      On request, operators must let a verified parent review the child's personal
+      information, refuse further use or collection, and have the information deleted.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Check for a parent dashboard or request process to view the child's data, revoke
+      consent and delete the account and data, with parent verification. Deletion should
+      cascade to third parties that received the data.
+    evidence:
+      - Parent review, revoke and delete functions
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.15", "gdpr:Art.17"]
+
+  - ref: "312.7"
+    title: No conditioning participation on excess data
+    requirement: >
+      Operators must not condition a child's participation in a game, prize or other
+      activity on disclosing more personal information than reasonably necessary.
+    category: data-protection
+    severity: medium
+    fixability: code
+    guidance: >
+      Check child flows for required fields that are not needed (full name, photo, phone,
+      precise location, contacts access) and for features that unlock only after sharing
+      data. Optional fields should be clearly optional.
+    evidence:
+      - Minimal required fields in child flows
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.5(1)(c)"]
+
+  - ref: "312.8"
+    title: Written information security programme
+    requirement: >
+      Operators must establish, implement and maintain a written information security
+      programme appropriate to the sensitivity of children's data, with a designated
+      coordinator, at least annual risk assessments, safeguards, regular testing and
+      monitoring, annual evaluation, and written assurances from third parties that
+      receive the data.
+    category: data-protection
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a written security programme document naming a coordinator, an annual
+      risk assessment record, and evidence of testing (scans, penetration tests).
+      In code, apply the security checks: encryption in transit and at rest, access
+      control, no children's data in logs, secrets management. Check vendor contracts
+      or assurances for each third party that receives children's data.
+    evidence:
+      - Written information security programme with coordinator
+      - Annual risk assessment and testing records
+      - Third-party written assurances
+    checks: [pii-in-logs, tls-verification-disabled, cleartext-transport, hardcoded-secret, weak-password-hash]
+    artifacts: [security-policy, vulnerability-scanning]
+    crosswalk: ["gdpr:Art.32", "ccpa-cpra:1798.100(e)"]
+
+  - ref: "312.10"
+    title: Written data retention policy and deletion
+    requirement: >
+      Operators may retain children's personal information only as long as reasonably
+      necessary for the purpose collected, never indefinitely, must delete it securely
+      afterwards, and must publish a written retention policy stating purposes, business
+      need and deletion timeframe.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Check the retention policy in the children's privacy notice and the code that
+      enforces it: purge jobs for inactive child accounts, voice recordings (audio
+      collected to fulfil a request must be deleted immediately after), uploads, chat
+      logs and analytics. Flag indefinite retention and backups without expiry.
+    evidence:
+      - Published retention policy with deletion timeframes
+      - Purge jobs enforcing it
+    checks: []
+    artifacts: [privacy-policy, processing-records]
+    crosswalk: ["gdpr:Art.5(1)(e)", "ccpa-cpra:1798.100(a)(3)"]

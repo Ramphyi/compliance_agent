@@ -1,0 +1,392 @@
+id: ccpa-cpra
+title: California Consumer Privacy Act as amended by the California Privacy Rights Act, and the CPPA regulations
+shortTitle: CCPA/CPRA
+version: "Cal. Civ. Code 1798.100 et seq.; Cal. Code Regs. tit. 11, 7000 et seq. (updated regulations effective 2026-01-01)"
+authority: California Legislature; California Privacy Protection Agency (CPPA) and Attorney General
+kind: regulation
+jurisdictions: [US-CA]
+url: https://cppa.ca.gov/regulations/
+textPolicy: paraphrased
+summary: >
+  California's comprehensive consumer privacy law. It gives California residents
+  (consumers, employees and B2B contacts) rights to know, delete, correct, opt out of
+  the sale or sharing of personal information, limit use of sensitive personal
+  information and not be discriminated against, and imposes notice, contract, security
+  and, under the 2025 regulations, risk assessment, cybersecurity audit and automated
+  decision-making technology duties on covered businesses.
+applicability:
+  all:
+    - { fact: markets, in: [US-CA] }
+    - { fact: dataCategories, in: [personal, health, genetic-biometric, payment-cards, financial, children, location, vehicle, credentials, other-sensitive] }
+applicabilityNote: >
+  Applies to for-profit businesses that do business in California, determine the
+  purposes and means of processing California residents' personal information, and meet
+  a threshold: annual gross revenue above the inflation-adjusted amount (about 26.6
+  million USD in 2025), or buying, selling or sharing personal information of 100,000 or
+  more consumers or households, or earning half or more of revenue from selling or
+  sharing personal information. Service providers and contractors have contractual and
+  security duties. Confirm thresholds and roles with counsel; the questionnaire does not
+  capture revenue or volume.
+keyDates:
+  - { date: "2020-01-01", note: CCPA took effect }
+  - { date: "2023-01-01", note: CPRA amendments became operative }
+  - { date: "2026-01-01", note: "Updated CPPA regulations (ADMT, risk assessments, cybersecurity audits, other amendments) took effect" }
+  - { date: "2027-01-01", note: Compliance date for the ADMT requirements for significant decisions }
+  - { date: "2028-04-01", note: "First risk assessment attestations due to the CPPA; first cybersecurity audit certifications for businesses above 100 million USD revenue" }
+  - { date: "2029-04-01", note: "Cybersecurity audit certifications due for businesses with 50 to 100 million USD revenue" }
+  - { date: "2030-04-01", note: "Cybersecurity audit certifications due for businesses below 50 million USD revenue" }
+controls:
+  - ref: "1798.100(a)"
+    title: Notice at collection
+    requirement: >
+      At or before collection, businesses must tell consumers the categories of personal
+      and sensitive personal information collected, the purposes, whether it is sold or
+      shared, and how long each category is retained, with a link to the privacy policy
+      (regulations section 7012).
+    category: transparency-documentation
+    severity: high
+    fixability: code
+    guidance: >
+      Check that signup, checkout, lead forms, app onboarding and any SDK-driven
+      collection point show or link a notice at collection before data is submitted (a
+      short notice with a link to the privacy policy section). For mobile apps the link
+      should be in the store listing and in the app settings. Online tracking via
+      third-party SDKs counts as collection, so the notice must be reachable on the
+      landing page. Verify the categories listed match what the code collects.
+    evidence:
+      - Notice at collection on each collection screen
+      - Categories consistent with data model and SDKs
+    checks: [analytics-tracking-sdk]
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.13", "coppa:312.4"]
+
+  - ref: "1798.100(a)(3)"
+    title: Retention periods disclosed and enforced
+    requirement: >
+      Businesses must disclose how long they retain each category of personal
+      information (or the criteria) and may not keep it longer than reasonably necessary
+      for the disclosed purpose.
+    category: data-protection
+    severity: medium
+    fixability: code
+    guidance: >
+      Check the privacy policy lists retention per category and that code enforces it
+      (purge jobs, TTLs, lifecycle rules on object storage and logs). Flag categories
+      with no retention statement and tables or buckets that grow indefinitely.
+    evidence:
+      - Retention periods per category in the privacy policy
+      - Purge jobs or TTL configuration matching the disclosures
+    checks: []
+    artifacts: [privacy-policy, processing-records]
+    crosswalk: ["gdpr:Art.5(1)(e)", "coppa:312.10"]
+
+  - ref: "1798.130(a)(5)"
+    title: Privacy policy content and annual update
+    requirement: >
+      The online privacy policy must describe collection, sources, purposes, disclosures,
+      sales and sharing in the preceding 12 months, consumer rights and how to exercise
+      them, whether opt-out preference signals are honoured, and be updated at least
+      every 12 months (regulations section 7011).
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Check the privacy policy has a California section with all required elements, a
+      last-updated date within 12 months, at least two request methods (for example a
+      web form and a toll-free number or email, with an exception for online-only
+      businesses that have a direct relationship with consumers), and a statement on how
+      the business processes opt-out preference signals.
+    evidence:
+      - California section of the privacy policy with required elements
+      - Last-updated date within 12 months
+    checks: []
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.13"]
+
+  - ref: "1798.105"
+    title: Right to delete
+    requirement: >
+      Consumers can request deletion of personal information collected from them; the
+      business must delete it, direct service providers and contractors to delete, and
+      notify third parties it sold or shared to, subject to listed exceptions
+      (regulations section 7022).
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Check for a verified deletion request path (in-account delete or a request form)
+      and a cascade that removes data from primary stores, backups on their next cycle,
+      analytics and marketing tools, and processors (vendor deletion APIs). Check the
+      response tells the consumer what was deleted and which exceptions apply.
+    evidence:
+      - Deletion flow with verification and cascade to vendors
+      - Response templates explaining retained data
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.17", "apple-app-review:5.1.1(v)", "google-play-policy:Account Deletion"]
+
+  - ref: "1798.106"
+    title: Right to correct
+    requirement: >
+      Consumers can request correction of inaccurate personal information, and the
+      business must use commercially reasonable efforts to correct it, including in
+      downstream systems (regulations section 7023).
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that profile data is editable and that a correction request path exists for
+      non-editable data, with propagation to processors and an audit trail.
+    evidence:
+      - Profile edit and correction request handling
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.16"]
+
+  - ref: "1798.110"
+    title: Right to know and access
+    requirement: >
+      Consumers can request the categories and specific pieces of personal information
+      collected, sources, purposes and recipients, covering data collected on or after
+      1 January 2022 unless impossible or disproportionate; responses are due within 45
+      days, extendable once by 45 days (regulations section 7024).
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Check for an export of specific pieces of personal information in a portable
+      format through a secure, verified channel, and a request tracker with the 45-day
+      deadline. Sensitive identifiers (SSN, account passwords, biometric templates) must
+      not be disclosed in the response, only that they are held.
+    evidence:
+      - Verified access or export flow
+      - Request tracker with 45-day deadline
+    checks: []
+    artifacts: [user-documentation]
+    crosswalk: ["gdpr:Art.15", "gdpr:Art.20"]
+
+  - ref: "1798.120"
+    title: Opt-out of sale and sharing (Do Not Sell or Share)
+    requirement: >
+      Businesses that sell personal information or share it for cross-context
+      behavioural advertising must provide a clear "Do Not Sell or Share My Personal
+      Information" link (or an alternative opt-out link) and stop selling or sharing on
+      request, without requiring an account (regulations section 7026).
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Identify sale or sharing in the code: advertising pixels and SDKs (Meta, Google
+      Ads, TikTok, ad networks), data broker or partner exports, customer list uploads.
+      If present, check the website footer and app settings have the opt-out link, that
+      the opt-out sets a server-side and client-side flag, and that the flag disables
+      ad pixels, restricts data processing modes (for example Meta Limited Data Use,
+      Google restricted data processing) and stops partner exports. The opt-out flow must
+      take no more steps than opting in.
+    evidence:
+      - Do Not Sell or Share link on site and in app
+      - Opt-out flag that disables advertising tags and partner exports
+    checks: [analytics-tracking-sdk]
+    artifacts: [cookie-consent, privacy-policy]
+    crosswalk: ["eprivacy:Art.5(3)", "gdpr:Art.21"]
+
+  - ref: "7025"
+    title: Honour opt-out preference signals such as Global Privacy Control
+    requirement: >
+      Businesses that sell or share personal information must treat a browser or device
+      opt-out preference signal (for example Global Privacy Control) as a valid opt-out
+      request for that browser or device and any known consumer, and must display whether
+      the signal was processed.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Look for code that reads navigator.globalPrivacyControl in the browser or the
+      Sec-GPC request header on the server and then applies the same suppression as the
+      Do Not Sell or Share link, associates the opt-out with the logged-in account, and
+      shows a visible status such as "Opt-out preference signal honored" in the privacy
+      settings. Check the consent manager does not override GPC with an earlier opt-in
+      without a fresh consent request.
+    evidence:
+      - GPC detection in client or server code
+      - Suppression applied and status displayed
+    checks: [analytics-tracking-sdk]
+    artifacts: [cookie-consent]
+    crosswalk: ["eprivacy:Art.5(3)"]
+
+  - ref: "1798.121"
+    title: Limit the use of sensitive personal information
+    requirement: >
+      Businesses that use sensitive personal information (precise geolocation, health,
+      biometrics, genetic data, sex life, government IDs, account credentials, contents
+      of communications and others) beyond permitted purposes must offer a "Limit the Use
+      of My Sensitive Personal Information" link and honour it (regulations section 7027).
+    category: privacy-rights
+    severity: high
+    fixability: code
+    when: { fact: dataCategories, in: [health, genetic-biometric, location, credentials, other-sensitive, financial] }
+    guidance: >
+      Map sensitive personal information fields and their uses. If any is used to infer
+      characteristics, for advertising, or for purposes beyond providing the requested
+      service, check for the Limit link (or a combined alternative opt-out link) and
+      that the setting stops those uses. Prefer using sensitive data only for the
+      permitted purposes so no link is needed, and document that analysis.
+    evidence:
+      - Sensitive personal information inventory with uses
+      - Limit link and enforcement, or documented permitted-purpose analysis
+    checks: [pii-in-logs]
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.9", "wa-mhmda:RCW19.373.030(1)(a)"]
+
+  - ref: "1798.120(c)"
+    title: Opt-in for sale or sharing of minors' data
+    requirement: >
+      A business must not sell or share personal information of consumers it knows are
+      under 16 unless the consumer (13 to 15) or a parent (under 13) has affirmatively
+      authorised it; wilful disregard of age counts as knowledge.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    when: { any: [ { fact: audience, in: [children] }, { fact: dataCategories, in: [children] } ] }
+    guidance: >
+      Check whether the product records age or has signals it serves minors. For users
+      under 16, advertising pixels and data sales must be off by default and enabled
+      only after an opt-in (parental for under 13, coordinated with COPPA consent).
+    evidence:
+      - Age-based default that disables sale and sharing
+      - Opt-in records for minors
+    checks: [analytics-tracking-sdk]
+    artifacts: []
+    crosswalk: ["coppa:312.5(a)(2)", "gdpr:Art.8"]
+
+  - ref: "7004"
+    title: Symmetric choices and no dark patterns
+    requirement: >
+      Methods for submitting requests and obtaining consent must be easy to understand,
+      symmetrical in choice, avoid confusing language and manipulative design, and be
+      easy to execute; consent obtained through dark patterns is not consent.
+    category: consumer-protection
+    severity: medium
+    fixability: code
+    guidance: >
+      Review consent and opt-out UIs: the opt-out path should not take more steps than
+      the opt-in, buttons should have equal prominence, no pre-selected choices, no
+      guilt-tripping copy, and no forced account creation to opt out. Check cookie
+      banners and privacy settings for these patterns.
+    evidence:
+      - Consent and opt-out screens with symmetric options
+    checks: []
+    artifacts: [cookie-consent]
+    crosswalk: ["gdpr:Art.7"]
+
+  - ref: "1798.100(d)"
+    title: Contracts with service providers, contractors and third parties
+    requirement: >
+      Businesses must have contracts with service providers, contractors and third
+      parties that limit use to specified purposes, require CCPA-level protection,
+      allow the business to stop unauthorised use, and require notice if they can no
+      longer comply (regulations sections 7051 and 7053).
+    category: supply-chain
+    severity: medium
+    fixability: document
+    guidance: >
+      Build the vendor list from the code (SDKs, APIs, cloud and AI providers) and check
+      each has CCPA service provider terms or a third-party contract. Vendors without
+      service provider terms that receive data for their own purposes (many ad networks)
+      make the disclosure a sale or share.
+    evidence:
+      - Vendor inventory with contract status
+    checks: [analytics-tracking-sdk]
+    artifacts: [processing-records]
+    crosswalk: ["gdpr:Art.28"]
+
+  - ref: "1798.100(e)"
+    title: Reasonable security
+    requirement: >
+      Businesses must implement reasonable security procedures appropriate to the nature
+      of the personal information; breaches of certain unencrypted data caused by a
+      failure to do so give consumers a private right of action (1798.150).
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Apply the security checks: encryption in transit and at rest, strong password
+      hashing, secret management, access controls, logging without personal data, and
+      patching. Encryption of stored identifiers with health, financial or credential
+      data materially reduces breach liability.
+    evidence:
+      - Encryption and access control configuration
+      - Vulnerability management records
+    checks: [tls-verification-disabled, cleartext-transport, weak-password-hash, weak-hash, hardcoded-secret, pii-in-logs]
+    artifacts: [security-policy, incident-response-plan]
+    crosswalk: ["gdpr:Art.32", "coppa:312.8"]
+
+  - ref: "7150"
+    title: Risk assessments for significant-risk processing
+    requirement: >
+      Since 1 January 2026 businesses must conduct and document risk assessments before
+      processing that presents significant risk (selling or sharing, processing sensitive
+      personal information, ADMT for significant decisions, certain automated inference
+      and training of ADMT), and submit attestations to the CPPA, first by 1 April 2028.
+    category: risk-assessment
+    severity: medium
+    fixability: document
+    guidance: >
+      Check for a risk assessment document per significant-risk activity describing the
+      purpose, categories of data, benefits, negative impacts and safeguards, approved by
+      a responsible person, and a reminder or process for the CPPA submission. A GDPR
+      DPIA can be adapted but must cover the California-specific elements.
+    evidence:
+      - Risk assessments for each significant-risk activity
+      - Submission plan for the CPPA attestation
+    checks: []
+    artifacts: [dpia, risk-management-file]
+    crosswalk: ["gdpr:Art.35"]
+
+  - ref: "7200"
+    title: Automated decision-making technology for significant decisions
+    requirement: >
+      From 1 January 2027 businesses using ADMT to make significant decisions about
+      consumers (financial or lending, housing, education, employment, healthcare) must
+      give a pre-use notice, offer an opt-out or a qualifying human appeal, and answer
+      access requests about the ADMT logic and outcome.
+    category: ai-governance
+    severity: high
+    fixability: code
+    when: { fact: aiRiskAreas, in: [employment, essential-services, education, medical] }
+    guidance: >
+      Identify model or rules-based systems that replace or substantially replace human
+      decisions in the listed areas. Check for a pre-use notice in the UI, an opt-out or
+      human appeal path, logging of inputs, model version and outcome per decision, and
+      a way to explain the logic and result to the consumer on request.
+    evidence:
+      - Pre-use ADMT notice
+      - Opt-out or human appeal workflow
+      - Decision logs supporting access requests
+    checks: [ai-disclosure-missing]
+    artifacts: [ai-documentation]
+    crosswalk: ["gdpr:Art.22", "uk-gdpr:Art.22A-22D", "eu-ai-act:Art.26"]
+
+  - ref: "7120"
+    title: Annual cybersecurity audit
+    requirement: >
+      Businesses whose processing presents significant security risk (by revenue share
+      from selling or sharing, or by revenue and data volume thresholds) must complete an
+      independent annual cybersecurity audit and submit a certification, phased in by
+      revenue from 1 April 2028 to 1 April 2030.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Determine whether the business meets the audit thresholds. If so, check that the
+      security programme can evidence the components the audit examines (authentication
+      including MFA, encryption, access management, inventory, secure configuration,
+      vulnerability scanning and penetration testing, logging, training, vendor
+      oversight, incident response, backups) and that the first certification date is
+      planned.
+    evidence:
+      - Threshold analysis
+      - Security programme evidence mapped to the audit components
+    checks: []
+    artifacts: [security-policy, vulnerability-scanning, incident-response-plan]
+    crosswalk: ["soc2:CC4.1", "iso-iec-27001:9.2"]

@@ -1,0 +1,32 @@
+id: industrial-controller
+title: Industrial controller firmware (IEC 62443, SIL 2)
+description: >
+  A PLC or gateway firmware component for the industrial and energy sector,
+  supplied business-to-business, with a fieldbus and Ethernet interface and a
+  SIL 2 safety function. Brings IEC 62443 secure-development and component
+  security controls, IEC 61508 functional safety at SIL 2, the EU Cyber
+  Resilience Act product-security duties, NIS2 obligations for the operators who
+  deploy it, and secure coding for the firmware.
+examples: []
+answers:
+  productTypes: [embedded-firmware, industrial-control]
+  sector: [industrial-energy]
+  markets: [EU]
+  audience: [businesses, oem-integrators]
+  orgRole: manufacturer
+  orgSize: medium
+  dataCategories: [none]
+  aiUsage: none
+  safetyCritical: injury-possible
+  sil: SIL2
+  connectivity: [fieldbus, internet]
+  updates: manual
+  distribution: [preinstalled-hardware, on-premise]
+  regulatedEntity: [nis2-important]
+  certificationsTarget: [iec-62443]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify:
+  - make all
+  - make test

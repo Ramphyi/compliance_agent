@@ -1,0 +1,260 @@
+id: psd2-sca
+title: PSD2 (Directive (EU) 2015/2366) strong customer authentication and common and secure communication (Delegated Regulation (EU) 2018/389)
+shortTitle: PSD2 SCA and RTS
+version: Directive (EU) 2015/2366 with Delegated Regulation (EU) 2018/389 as amended by Delegated Regulation (EU) 2022/2360
+authority: European Parliament and Council of the European Union; RTS by the European Commission on an EBA draft
+kind: regulation
+jurisdictions: [EU]
+url: https://eur-lex.europa.eu/eli/dir/2015/2366/oj/eng
+textPolicy: open
+summary: >
+  PSD2 Article 97 requires strong customer authentication (SCA) when a payer accesses a
+  payment account online, initiates an electronic payment, or performs a remote action
+  that carries fraud risk. The regulatory technical standards (RTS) in Delegated
+  Regulation (EU) 2018/389 define the authentication code, dynamic linking of amount and
+  payee, independence of the two factors, session limits, permitted exemptions,
+  protection of personalised security credentials, and secure communication between
+  payment service providers and third-party providers.
+applicability:
+  all:
+    - { fact: sector, in: [finance] }
+    - { fact: markets, in: [EU] }
+    - { fact: dataCategories, in: [payment-cards, financial] }
+applicabilityNote: >
+  SCA obligations fall on payment service providers (account-servicing banks, payment and
+  e-money institutions, card issuers and acquirers). Software built for them (banking
+  apps, authentication servers, wallets, payment initiation and account information
+  services) must implement the RTS. Merchants and platforms are affected indirectly: their
+  checkout must support SCA challenges (for example 3-D Secure 2) and exemption requests
+  through their acquirer, and must flag merchant-initiated transactions correctly.
+  Confirm the organisation's role (PSP, technical service provider, third-party provider
+  or merchant) before treating these as direct obligations. A provisional agreement on a
+  third Payment Services Directive (PSD3) and a Payment Services Regulation (PSR) was
+  reached on 27 November 2025 and the Council published final compromise texts in April
+  2026; publication in the Official Journal was not confirmed in the sources checked for
+  this file, so PSD2 and the RTS remain the applicable law until the new rules apply.
+keyDates:
+  - { date: "2018-01-13", note: PSD2 applies (transposition deadline) }
+  - { date: "2019-09-14", note: RTS on SCA and common and secure communication apply }
+  - { date: "2023-07-25", note: "Amendment (EU) 2022/2360 to the account-access exemption applies (Article 10 revised and new mandatory Article 10a, renewal after 180 days)" }
+  - { date: "2025-11-27", note: "Provisional political agreement on PSD3 and the Payment Services Regulation (not yet in force)" }
+controls:
+  - ref: "Art.97"
+    title: SCA on account access, payment initiation and risky remote actions
+    requirement: >
+      Apply strong customer authentication when the payer accesses the payment account
+      online, initiates an electronic payment transaction, or carries out any action
+      through a remote channel that may imply a risk of payment fraud or other abuse, and
+      protect the confidentiality and integrity of personalised security credentials.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      For PSP software, map every route that shows balances or transactions, initiates
+      payments, or performs sensitive actions (adding a payee, changing contact details or
+      limits, enrolling a new device, exporting statements) and check each is protected by
+      an SCA step-up in the server, not only in the client. For merchant checkouts, check
+      the 3-D Secure 2 integration through the PSP SDK or API (Stripe PaymentIntents with
+      automatic 3DS, Adyen 3DS2, Checkout.com), that challenges are handled in the UI, that
+      exemption requests are made through the acquirer rather than by skipping
+      authentication, and that merchant-initiated and recurring payments are flagged with
+      the stored mandate. Flag sensitive routes with single-factor authentication and
+      checkouts that force frictionless flows.
+    evidence:
+      - Inventory of SCA-triggering actions with server-side step-up enforcement
+      - 3-D Secure 2 integration and correct transaction flags for merchants
+    checks: [jwt-unverified, missing-rate-limiting]
+    artifacts: [architecture-doc, threat-model]
+    crosswalk: ["pci-dss:Req8.4.2", "owasp-asvs:V6.3.3", "owasp-masvs:MASVS-AUTH-2"]
+
+  - ref: "RTS-Art.9"
+    title: Two independent factors from different categories
+    requirement: >
+      Base SCA on at least two elements from different categories (knowledge, possession,
+      inherence), each meeting its RTS protections, designed so the breach of one does not
+      compromise the others; on multi-purpose devices such as smartphones use separate
+      secure execution environments and controls against device or software tampering
+      (RTS Articles 6 to 9).
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Check that possession is proven cryptographically by a device-bound key (Android
+      Keystore or StrongBox, iOS Secure Enclave, FIDO2 or passkeys, hardware tokens)
+      rather than by something copyable such as a device ID or a cookie, that biometrics
+      unlock a key held in secure hardware (BiometricPrompt with CryptoObject, LAContext
+      with SecAccessControl) rather than returning a boolean, that SMS one-time passwords
+      are not paired with credentials sent over the same channel, and that root,
+      jailbreak and tampering detection and app attestation (Play Integrity, App Attest)
+      are used on the authenticating app. Flag biometric checks that only gate the UI,
+      possession factors stored in plain shared preferences, and OTPs generated with
+      non-cryptographic random numbers.
+    evidence:
+      - Device-bound cryptographic possession factor
+      - Biometric or knowledge factor unlocking keys in secure hardware
+      - Tamper and attestation checks on the authenticating device
+    checks: [insecure-random, hardcoded-crypto-key, mobile-backup-allowed]
+    artifacts: [threat-model]
+    crosswalk: ["owasp-masvs:MASVS-AUTH-2", "pci-dss:Req8.4.2", "hipaa-security:164.312(d)"]
+
+  - ref: "RTS-Art.4"
+    title: Authentication code, attempt limits and 5-minute session inactivity
+    requirement: >
+      Generate one-time authentication codes that reveal nothing about the factors, cannot
+      be derived from earlier codes and cannot be forged; block after at most five
+      consecutive failed attempts (temporarily or permanently, with an alert before a
+      permanent block); protect sessions against capture and manipulation of
+      authentication data; and end online account access sessions after no more than five
+      minutes of payer inactivity.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check OTP and challenge generation (cryptographic random, short validity, single
+      use, bound to the session), the failed-attempt counter and lockout logic on the
+      server (no more than five), the user notification before a permanent block, and the
+      idle timeout on online banking sessions (server session expiry and token lifetimes
+      of five minutes of inactivity or less, with the client logging out and clearing
+      data). Flag OTPs that can be reused, attempt limits enforced only client side, and
+      idle timeouts above five minutes.
+    evidence:
+      - Single-use, unpredictable authentication codes
+      - Server-side lockout after five failures with user notification
+      - Five-minute inactivity timeout on account access sessions
+    checks: [insecure-random, missing-rate-limiting, insecure-cookie]
+    artifacts: []
+    crosswalk: ["hipaa-security:164.312(a)(2)(iii)", "pci-dss:Req8.3.6", "owasp-asvs:V7.4.1"]
+
+  - ref: "RTS-Art.5"
+    title: Dynamic linking of amount and payee
+    requirement: >
+      For remote electronic payments, show the payer the amount and payee, make the
+      authentication code specific to that amount and payee, invalidate it if either
+      changes, and protect the confidentiality, authenticity and integrity of the amount
+      and payee throughout authentication; for batches, link to the total amount and the
+      payees.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Check that the signing or challenge payload includes the amount, currency and payee
+      identifier (for example a signed transaction hash or a FIDO assertion over the
+      transaction data), that the server verifies the code against the stored transaction
+      and rejects it if the amount or payee changed, and that the confirmation screen
+      shows exactly what is being signed. Flag OTPs that are not bound to transaction data,
+      payment amounts that can be edited after authentication, and confirmation screens
+      rendered from client-side data the server does not verify.
+    evidence:
+      - Authentication code cryptographically bound to amount and payee
+      - Server-side verification and invalidation on change
+      - Confirmation UI showing amount and payee
+    checks: [jwt-unverified]
+    artifacts: []
+    crosswalk: ["owasp-asvs:V6.3.3"]
+
+  - ref: "RTS-Art.2"
+    title: Transaction monitoring for fraud detection
+    requirement: >
+      Operate transaction monitoring mechanisms that detect unauthorised or fraudulent
+      payment transactions, considering at least compromised or stolen authentication
+      elements, the amount, known fraud scenarios, signs of malware in the session, and
+      abnormal use of the access device or software (RTS Articles 2 and 21).
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Look for a risk engine or fraud service called on login and payment (rules, scoring
+      models or a vendor integration), signals collected for it (device fingerprint,
+      location, velocity, new payee, amount anomalies, malware or emulator indicators),
+      logging of decisions, and feedback from confirmed fraud. Check that personal data
+      used for fraud monitoring is minimised and disclosed. Flag payment flows with no
+      risk evaluation.
+    evidence:
+      - Transaction monitoring integrated in login and payment flows
+      - Logged risk decisions and fraud feedback loop
+    checks: [pii-in-logs]
+    artifacts: [processing-records]
+    crosswalk: ["dora:Art.10", "pci-dss:Req10.2.1"]
+
+  - ref: "RTS-Art.18"
+    title: Exemptions applied only within their conditions
+    requirement: >
+      Apply SCA exemptions only under their RTS conditions: account information access
+      (Articles 10 and 10a), contactless at point of sale, unattended transport and
+      parking terminals, trusted beneficiaries, recurring transactions, transfers between
+      the payer's own accounts, low-value remote payments, secure corporate processes, and
+      transaction risk analysis within the fraud-rate thresholds, with fraud rates
+      monitored and exemptions withdrawn when thresholds are exceeded (Articles 10 to 20).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check the exemption logic in code: low-value limits (30 EUR per transaction with
+      cumulative counters of 100 EUR or five transactions), contactless limits, trusted
+      beneficiary lists that can only be created or changed with SCA, recurring-payment
+      exemption only for the same amount and payee after an initial authenticated
+      transaction, transaction risk analysis applied only when the measured fraud rate is
+      within the reference rate for the amount band, and the 180-day renewal for account
+      information access. Look for counters stored server side and for fraud-rate
+      reporting. Flag hardcoded exemption flags, client-controlled counters, and trusted
+      beneficiary changes without SCA.
+    evidence:
+      - Exemption rules implemented with server-side counters and limits
+      - Fraud-rate monitoring that disables TRA when exceeded
+      - SCA required to manage trusted beneficiaries
+    checks: [missing-rate-limiting]
+    artifacts: [risk-management-file]
+    crosswalk: ["pci-dss:Req12.3.1"]
+
+  - ref: "RTS-Art.22"
+    title: Protection of personalised security credentials
+    requirement: >
+      Keep personalised security credentials confidential and intact through creation,
+      association with the user, delivery, renewal and revocation: mask them on entry, never
+      store them in plain text, protect secret cryptographic material, and create and bind
+      them in secure environments (RTS Articles 22 to 27).
+    category: secrets-management
+    severity: high
+    fixability: code
+    guidance: >
+      Check that PINs and passwords are masked in input fields and never logged, that they
+      are stored only as strong salted hashes or verified by secure hardware, that
+      activation codes and enrolment links are single use and expire, that device binding
+      happens over an authenticated channel, and that credentials and device keys can be
+      revoked immediately (lost device flow). Flag credentials or OTPs in logs, analytics
+      events or crash reports, plaintext storage, and enrolment flows without
+      verification.
+    evidence:
+      - Masked entry, hashed storage and no logging of credentials
+      - Secure enrolment, binding and revocation flows
+    checks: [pii-in-logs, weak-password-hash, hardcoded-secret]
+    artifacts: []
+    crosswalk: ["pci-dss:Req8.6.2", "owasp-masvs:MASVS-STORAGE-1"]
+
+  - ref: "RTS-Art.35"
+    title: Secure communication sessions and third-party provider access
+    requirement: >
+      Encrypt data exchanged over the internet with strong, widely recognised techniques
+      throughout each session, make sessions traceable with unique identifiers and
+      timestamps, identify third-party providers with eIDAS qualified certificates, and
+      provide a secure dedicated or adapted interface for account information and payment
+      initiation providers with contingency measures (RTS Articles 28 to 36).
+    category: communications-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check TLS 1.2 or higher with verification on all APIs, certificate pinning or
+      at least strict validation in mobile banking apps, mutual TLS with eIDAS QWAC
+      validation for third-party provider access (PSD2 roles in the certificate), consent
+      and token scoping for account information and payment initiation (Berlin Group,
+      STET or Open Banking style APIs), unique session and correlation IDs logged with
+      timestamps, and monitoring of interface availability. Flag disabled certificate
+      validation, screen scraping fallbacks without controls, and missing session
+      traceability.
+    evidence:
+      - Strong TLS everywhere with certificate validation
+      - eIDAS certificate validation for third-party provider access
+      - Session identifiers and timestamps in logs
+    checks: [tls-verification-disabled, cleartext-transport, weak-cipher, mobile-cleartext-allowed]
+    artifacts: [architecture-doc]
+    crosswalk: ["pci-dss:Req4.2.1", "hipaa-security:164.312(e)(1)", "owasp-masvs:MASVS-NETWORK-1"]

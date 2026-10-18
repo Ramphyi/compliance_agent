@@ -1,0 +1,31 @@
+id: consumer-iot-device
+title: Consumer IoT device (EU and UK)
+description: >
+  A connected consumer device with firmware that we manufacture and sell under
+  our own name in the EU and UK: Wi-Fi and Bluetooth, cloud telemetry and
+  over-the-air updates. Brings the EU Radio Equipment Directive and Cyber
+  Resilience Act product-security duties, ETSI EN 303 645 baseline IoT security
+  and GDPR for the data the device sends to the cloud.
+examples: [examples/apps/smart-thermostat-fw]
+answers:
+  productTypes: [iot-device, embedded-firmware]
+  sector: [consumer-retail]
+  markets: [EU, UK]
+  audience: [consumers]
+  orgRole: manufacturer
+  orgSize: medium
+  dataCategories: [personal, location]
+  aiUsage: none
+  safetyCritical: "no"
+  sil: none
+  connectivity: [wifi, bluetooth, internet]
+  updates: ota
+  distribution: [preinstalled-hardware, web]
+  regulatedEntity: [none]
+  certificationsTarget: [cyber-trust-mark]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify:
+  - make all
+  - make test

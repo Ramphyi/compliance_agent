@@ -1,0 +1,411 @@
+id: iec-62443-4-2
+title: Security for industrial automation and control systems - Part 4-2 Technical security requirements for IACS components
+shortTitle: IEC 62443-4-2
+version: Edition 1.0 (2019-02)
+authority: IEC / ISA
+kind: standard
+jurisdictions: [global, EU, US]
+url: https://webstore.iec.ch/en/publication/34421
+textPolicy: paraphrased
+summary: >
+  IEC 62443-4-2 sets the technical security capabilities that an IACS component must
+  provide to reach a capability security level (SL-C 1 to 4). Requirements are grouped
+  under seven foundational requirements (FR1 identification and authentication, FR2 use
+  control, FR3 system integrity, FR4 data confidentiality, FR5 restricted data flow, FR6
+  timely response to events, FR7 resource availability) as component requirements (CR)
+  with requirement enhancements (RE), plus device-type specific requirements for software
+  applications (SAR), embedded devices (EDR), host devices (HDR) and network devices (NDR).
+applicability:
+  any:
+    - { fact: productTypes, in: [industrial-control] }
+    - { fact: certificationsTarget, in: [iec-62443] }
+    - { fact: sector, in: [industrial-energy] }
+applicabilityNote: >
+  Applies to component suppliers of controllers, embedded devices, HMIs, gateways, network
+  devices and software applications used in industrial automation. Decide the target
+  SL-C with the customer or system integrator; base requirements apply from SL1 and
+  enhancements add up at higher levels. Embedded device requirements (EDR) apply to
+  firmware-based components. Development process requirements come from IEC 62443-4-1
+  (the CCSC 4 constraint). SL notes below are indicative; confirm the exact SL mapping
+  in the licensed standard.
+keyDates:
+  - { date: "2019-02-27", note: Edition 1.0 published (Corrigendum 1 followed in August 2022) }
+controls:
+  - ref: CR 1.1
+    title: Human user identification and authentication
+    requirement: >
+      The component must identify and authenticate every human user on all interfaces
+      that give human access. Unique identification and authentication of each user is
+      expected from SL2, and multifactor authentication is added at higher security levels.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Enumerate every human interface in the code: web management UI routes, SSH or telnet
+      daemons, serial or UART consoles (shell over USART), local HMI screens, vendor
+      configuration tools. Each must require authentication before any state-changing or
+      sensitive action. Flag shared accounts (a single "admin" role baked in), unauthenticated
+      debug shells, telnet servers, and HTTP handlers registered without an auth check.
+    evidence:
+      - Authentication enforced on every human-access interface
+      - Individual user accounts rather than shared ones (SL2 and above)
+    checks: [default-credentials, cleartext-transport]
+    crosswalk: ["en-18031:AUM-1", "eu-cra:AnnexI.I.2(d)", "nist-ir-8259:8259A-4"]
+
+  - ref: CR 1.2
+    title: Software process and device identification and authentication
+    requirement: >
+      From SL2 the component must identify and authenticate software processes and devices
+      that connect to it, such as engineering stations, peer controllers and cloud
+      services, before accepting their commands or data.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check machine-to-machine interfaces: OPC UA security policy (reject None, use
+      Basic256Sha256 or Aes256_Sha256_RsaPss with Sign or SignAndEncrypt), MQTT with mutual
+      TLS client certificates, Modbus/TCP Security (TLS, port 802) or a gateway that adds
+      it, DNP3 Secure Authentication. Plain Modbus/TCP on port 502 or PROFINET without
+      network-level protection must be justified by documented compensating
+      countermeasures.
+    evidence:
+      - Mutual authentication on machine-to-machine interfaces
+      - Documented compensating countermeasures for legacy fieldbus protocols
+    checks: [cleartext-transport, tls-verification-disabled]
+    crosswalk: ["en-18031:AUM-1"]
+
+  - ref: CR 1.5
+    title: Authenticator management
+    requirement: >
+      The component must support initial authenticator content, allow changing of default
+      authenticators, and protect stored authenticators from disclosure and modification.
+      Hardware-backed protection of authenticators applies at higher SL.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Look for hard-coded passwords, shared default credentials and keys in firmware
+      (const char *password, DEFAULT_PASSWORD, admin/admin in config files), credentials in
+      plaintext NVS or EEPROM, and password storage without a slow salted hash. Good looks
+      like per-device credentials provisioned at manufacture or forced change at first use,
+      password hashes with PBKDF2, bcrypt or argon2, and keys in a secure element (ATECC608,
+      SE050, TPM) or protected storage (ESP-IDF NVS encryption, TrustZone secure storage).
+    evidence:
+      - No universal default credentials
+      - Stored authenticators hashed or held in protected storage
+    checks: [default-credentials, hardcoded-secret, weak-password-hash]
+    crosswalk: ["etsi-en-303-645:5.1-1", "uk-psti:Sch1.1", "en-18031:AUM-5"]
+
+  - ref: CR 1.7
+    title: Strength of password-based authentication
+    requirement: >
+      From SL2, password-based authentication must enforce configurable strength rules
+      (length and character variety); at higher SL, password lifetime and reuse rules for
+      human users also apply.
+    category: authentication-access
+    severity: medium
+    fixability: code
+    guidance: >
+      Find password set and change handlers and check for minimum length (at least 8, ideally
+      12 or more), rejection of common passwords, and configurability of the policy. Flag
+      handlers that accept empty or very short passwords.
+    evidence:
+      - Configurable password policy enforced in code
+    checks: [weak-password-hash]
+    crosswalk: ["en-18031:AUM-5", "etsi-en-303-645:5.1-3"]
+
+  - ref: CR 1.11
+    title: Unsuccessful login attempts
+    requirement: >
+      The component must limit consecutive failed authentication attempts within a time
+      window, for example by lockout or increasing delay, on all access interfaces.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Look for attempt counters, exponential back-off or lockout in login handlers for the
+      web UI, SSH, console and protocol-level authentication. Lockout must not create an
+      easy denial of service for safety-relevant operator access; time-based delays are
+      often preferred.
+    evidence:
+      - Rate limiting or lockout on every authentication interface
+    checks: [missing-rate-limiting]
+    crosswalk: ["etsi-en-303-645:5.1-5", "en-18031:AUM-6"]
+
+  - ref: CR 2.1
+    title: Authorization enforcement
+    requirement: >
+      The component must enforce authorizations for all human users according to assigned
+      roles, with role-based permission mapping from SL2 and dual approval or supervisor
+      override capabilities at higher levels.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check that state-changing operations (setpoint writes, logic download, firmware
+      update, configuration change, user management) are checked against a role or
+      permission model at the handler, not only hidden in the UI. Look for a central
+      authorization function and tests per role.
+    evidence:
+      - Role-based access control enforced server-side for all operations
+      - Tests that lower roles cannot perform privileged operations
+    crosswalk: ["en-18031:ACM-1", "owasp-top10:A01"]
+
+  - ref: CR 2.8
+    title: Auditable events
+    requirement: >
+      The component must generate audit records for security-relevant events such as access
+      control, request errors, control system events, backup and restore, configuration
+      changes and audit log events, with timestamp, source, category, type, event ID and
+      result.
+    category: logging-monitoring
+    severity: medium
+    fixability: code
+    guidance: >
+      Search for a security event log API and check it is called for login success and
+      failure, permission denials, configuration and firmware changes, and user
+      management. Records should include a timestamp (CR 2.11), the user or process, and
+      the outcome. Flag logs that include passwords or keys.
+    evidence:
+      - Security audit log covering the required event classes
+      - Logs exclude secrets
+    checks: [pii-in-logs]
+    crosswalk: ["eu-cra:AnnexI.I.2(l)", "en-18031:LGM-1"]
+
+  - ref: CR 3.1
+    title: Communication integrity
+    requirement: >
+      The component must protect the integrity of transmitted information; from SL2 it
+      must also authenticate communications, which in practice means cryptographic
+      mechanisms.
+    category: communications-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check that remote protocols use TLS 1.2 or later, SSH, or protocol-native signing
+      (OPC UA Sign, DNP3 SA, MQTT over TLS). For mbedTLS check mbedtls_ssl_conf_authmode is
+      MBEDTLS_SSL_VERIFY_REQUIRED, not NONE or OPTIONAL; for OpenSSL check
+      SSL_CTX_set_verify with SSL_VERIFY_PEER. Flag cleartext management or telemetry
+      channels.
+    evidence:
+      - Authenticated, integrity-protected communication on all external channels
+    checks: [cleartext-transport, tls-verification-disabled]
+    crosswalk: ["etsi-en-303-645:5.5-1", "en-18031:SCM-2"]
+
+  - ref: CR 3.4
+    title: Software and information integrity
+    requirement: >
+      The component must detect unauthorised changes to software and configuration
+      information, and at higher SL verify authenticity and report integrity violations.
+    category: hardware-security
+    severity: high
+    fixability: code
+    guidance: >
+      Look for integrity verification of firmware partitions and configuration (signed
+      images, hash checks of configuration blocks, read-only root filesystems such as
+      dm-verity or squashfs, secure boot measurement). Check that integrity failures are
+      logged and surfaced to the operator rather than silently ignored.
+    evidence:
+      - Integrity verification of executable code and configuration
+      - Integrity violations reported
+    checks: [secure-boot-disabled, firmware-update-unsigned]
+    crosswalk: ["eu-cra:AnnexI.I.2(f)"]
+
+  - ref: CR 3.5
+    title: Input validation
+    requirement: >
+      The component must validate the syntax, length and content of any input used as an
+      industrial process control input or that affects the component directly.
+    category: input-validation
+    severity: high
+    fixability: code
+    guidance: >
+      Inspect protocol parsers and command handlers: Modbus function code and register
+      range checks, length fields checked against buffer sizes before memcpy, OPC UA and
+      HTTP request bodies validated, setpoints range-checked against engineering limits.
+      Flag memcpy or array indexing with lengths taken from packets without bounds checks,
+      and unbounded string functions.
+    evidence:
+      - Bounds and range checks on all external input
+      - Fuzz tests for protocol parsers
+    checks: [unsafe-c-functions, command-injection-risk, path-traversal-risk]
+    crosswalk: ["cert-c:ARR30-C", "owasp-top10:A05"]
+
+  - ref: CR 3.7
+    title: Error handling
+    requirement: >
+      The component must identify and handle error conditions without giving information
+      that could be exploited by an adversary.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that return values of I/O, memory and crypto calls are checked, that error
+      responses to remote clients are generic, and that faults lead to a defined safe
+      state. Flag stack traces or memory dumps returned over the network and ignored
+      return codes from mbedtls_* or HAL_* functions.
+    evidence:
+      - Consistent error handling with safe states
+      - Generic error messages on external interfaces
+    checks: [error-details-leak]
+    crosswalk: ["cert-c:ERR33-C", "owasp-top10:A10"]
+
+  - ref: CR 4.1
+    title: Information confidentiality
+    requirement: >
+      The component must protect the confidentiality of information for which explicit read
+      authorisation is supported, both at rest and in transit.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Check encryption of sensitive data at rest (credentials, keys, recipes, process data
+      classed as confidential) using flash encryption (CONFIG_SECURE_FLASH_ENC_ENABLED),
+      encrypted filesystems or secure elements, and in transit using TLS. Flag keys and
+      credentials stored in plaintext configuration files.
+    evidence:
+      - Encryption at rest for confidential data
+      - Encrypted transport for confidential data
+    checks: [cleartext-transport, hardcoded-crypto-key]
+    crosswalk: ["eu-cra:AnnexI.I.2(e)", "etsi-en-303-645:5.4-1"]
+
+  - ref: CR 4.2
+    title: Information persistence
+    requirement: >
+      The component must be able to erase information for which explicit read authorisation
+      is supported, from components to be released from active service or decommissioned.
+    category: data-protection
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for a factory reset or decommission function that erases credentials, keys,
+      certificates, logs and configuration, including flash wear-levelled areas and NVS
+      partitions, not just a flag that hides them. Check the hardening guide explains it.
+    evidence:
+      - Secure erase or factory reset that removes all sensitive data
+    crosswalk: ["eu-cra:AnnexI.I.2(m)", "etsi-en-303-645:5.11-1"]
+
+  - ref: CR 4.3
+    title: Use of cryptography
+    requirement: >
+      Where cryptography is used, the component must use algorithms, key sizes and key
+      management mechanisms that follow internationally recognised and proven practices.
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Flag MD5, SHA-1, DES, 3DES, RC4, ECB mode, RSA below 2048 bits, hard-coded keys and
+      IVs, and non-cryptographic random sources for keys or nonces (rand(), srand(time())).
+      Good looks like AES-GCM or ChaCha20-Poly1305, SHA-256 or better, ECDSA P-256 or
+      Ed25519, a hardware TRNG or mbedtls_ctr_drbg seeded from an entropy source, and keys
+      provisioned per device.
+    evidence:
+      - Approved algorithms and key lengths
+      - No hard-coded keys and a cryptographic RNG
+    checks: [weak-hash, weak-cipher, hardcoded-crypto-key, insecure-random]
+    crosswalk: ["en-18031:CRY-1", "etsi-en-303-645:5.4-1"]
+
+  - ref: CR 7.1
+    title: Denial of service protection
+    requirement: >
+      The component must keep essential functions operating in a degraded mode during a
+      denial of service event, and at higher levels manage communication load.
+    category: resilience-availability
+    severity: high
+    fixability: code
+    guidance: >
+      Check that network handling cannot starve control tasks: separate RTOS task
+      priorities for control and communication, bounded queues, connection limits,
+      packet rate limiting, and a watchdog (IWDG, ESP task WDT, Linux watchdog daemon) that
+      restores operation. Flag unbounded allocations per connection and a main loop with no
+      watchdog.
+    evidence:
+      - Control functions isolated from communication load
+      - Connection and rate limits
+      - Watchdog supervision
+    checks: [missing-watchdog, missing-rate-limiting]
+    crosswalk: ["eu-cra:AnnexI.I.2(h)", "etsi-en-303-645:5.9-2"]
+
+  - ref: CR 7.7
+    title: Least functionality
+    requirement: >
+      The component must be able to restrict the use of unnecessary functions, ports,
+      protocols and services.
+    category: secure-development
+    severity: medium
+    fixability: code
+    guidance: >
+      Enumerate listeners and services started by the firmware or OS image (socket bind
+      calls, systemd units, inetd, Yocto IMAGE_INSTALL lists, Buildroot config). Flag
+      telnet, FTP, TFTP, SNMPv1 or v2c, debug HTTP endpoints, and test services enabled in
+      release builds. Good looks like disabled-by-default services and configuration to
+      turn each one off.
+    evidence:
+      - Only necessary services enabled in release builds
+      - Configuration to disable optional services
+    checks: [debug-enabled, cleartext-transport]
+    crosswalk: ["eu-cra:AnnexI.I.2(j)", "etsi-en-303-645:5.6-1"]
+
+  - ref: EDR 2.13
+    title: Use of physical diagnostic and test interfaces
+    requirement: >
+      From SL2 an embedded device must protect against unauthorised use of physical factory
+      diagnostic and test interfaces such as JTAG and SWD, and at higher levels actively
+      monitor attempts to use them.
+    category: hardware-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check production build configuration: STM32 readout protection (RDP level 1 or 2 in
+      option bytes, HAL_FLASHEx_OBProgram with OB_RDP_LEVEL_1 or 2), nRF APPROTECT enabled,
+      ESP32 eFuse JTAG disable (CONFIG_SECURE_BOOT_ALLOW_JTAG off, DIS_PAD_JTAG burned),
+      i.MX secure JTAG mode, and UART bootloaders or console shells disabled or
+      authenticated. Flag release configs that leave SWD or JTAG open or ship an
+      unauthenticated root shell on the serial port.
+    evidence:
+      - Debug ports locked or authenticated in production
+      - Serial console disabled or authenticated
+    checks: [debug-interface-enabled, debug-enabled]
+    crosswalk: ["etsi-en-303-645:5.6-4A", "en-18031:GEC-2"]
+
+  - ref: EDR 3.10
+    title: Support for updates
+    requirement: >
+      An embedded device must support being updated and upgraded; from SL2 the
+      authenticity and integrity of any update must be verified before installation.
+    category: updates-maintenance
+    severity: critical
+    fixability: code
+    guidance: >
+      Inspect the bootloader and OTA code. Good looks like MCUboot with signature
+      verification and image confirmation (boot_set_confirmed) and downgrade prevention
+      (MCUBOOT_DOWNGRADE_PREVENTION), ESP-IDF esp_https_ota with secure boot v2 signature
+      checks, or SWUpdate or RAUC with signed bundles. Flag OTA handlers that write
+      received data to flash and reboot without verifying a signature, and update
+      downloads over HTTP or with certificate verification disabled.
+    evidence:
+      - Signed updates verified before install
+      - Rollback protection
+    checks: [firmware-update-unsigned, cleartext-transport, tls-verification-disabled]
+    crosswalk: ["iec-62443-4-1:SUM-4", "etsi-en-303-645:5.3-2", "en-18031:SUM-2"]
+
+  - ref: EDR 3.14
+    title: Integrity of the boot process
+    requirement: >
+      An embedded device must verify the integrity of its firmware, software and
+      configuration during boot, and from SL2 verify their authenticity using the
+      supplier's root of trust before use.
+    category: hardware-security
+    severity: high
+    fixability: code
+    guidance: >
+      Look for secure boot enabled in build configuration: ESP-IDF CONFIG_SECURE_BOOT and
+      CONFIG_SECURE_BOOT_V2_ENABLED with CONFIG_SECURE_FLASH_ENC_ENABLED, MCUboot as first
+      stage with signature validation of every slot (MCUBOOT_VALIDATE_PRIMARY_SLOT), STM32
+      SBSFU or TF-M secure boot, NXP HAB or AHAB, U-Boot verified boot with signed FIT
+      images, or UEFI secure boot. Flag development configurations used for release builds.
+    evidence:
+      - Secure boot chain anchored in hardware root of trust
+      - Release configuration with secure boot enabled
+    checks: [secure-boot-disabled]
+    crosswalk: ["etsi-en-303-645:5.7-1", "en-18031:SSM-2"]

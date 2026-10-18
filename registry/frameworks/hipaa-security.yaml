@@ -1,0 +1,426 @@
+id: hipaa-security
+title: HIPAA Security Rule (45 CFR Part 164 Subpart C) and Breach Notification Rule (Subpart D)
+shortTitle: HIPAA Security Rule
+version: 45 CFR 164.302-164.318 and 164.400-164.414 as currently in force
+authority: U.S. Department of Health and Human Services, Office for Civil Rights
+kind: regulation
+jurisdictions: [US]
+url: https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C
+textPolicy: open
+summary: >
+  The HIPAA Security Rule requires covered entities and their business associates to
+  protect electronic protected health information (ePHI) with administrative (164.308),
+  physical (164.310) and technical (164.312) safeguards: risk analysis, access control,
+  unique user IDs, emergency access, automatic logoff, encryption, audit controls,
+  integrity, authentication and transmission security. The Breach Notification Rule
+  requires notice to individuals, HHS and sometimes the media after a breach of unsecured
+  PHI.
+applicability:
+  all:
+    - { fact: markets, in: [US] }
+    - any:
+        - { fact: regulatedEntity, in: [hipaa-covered-entity, hipaa-business-associate] }
+        - all:
+            - { fact: dataCategories, in: [health] }
+            - { fact: audience, in: [healthcare-providers] }
+applicabilityNote: >
+  Applies to health plans, clearinghouses and providers that conduct standard electronic
+  transactions (covered entities), and to vendors that create, receive, maintain or
+  transmit ePHI on their behalf (business associates, including SaaS, cloud and AI
+  vendors). A consumer health app that is not offered on behalf of a covered entity is
+  usually outside HIPAA but may fall under the FTC Health Breach Notification Rule and
+  state laws such as Washington's My Health My Data Act. "Addressable" specifications
+  are not optional: implement them when reasonable and appropriate, or document why not
+  and what equivalent measure is used. HHS published a proposed rule to strengthen the
+  Security Rule on 6 January 2025 (for example removing the addressable distinction and
+  requiring encryption, multi-factor authentication, asset inventories, and regular
+  vulnerability scanning and penetration testing). It had not been finalised when this
+  file was written and the projected date in HHS's regulatory agenda has slipped, so
+  audit against the current rule and treat the proposals as good practice. Confirm
+  covered entity or business associate status with counsel.
+keyDates:
+  - { date: "2025-01-06", note: "HHS proposed rule to strengthen the Security Rule published in the Federal Register (not final at the time of writing)" }
+controls:
+  - ref: "164.308(a)(1)(ii)(A)"
+    title: Security risk analysis and risk management
+    requirement: >
+      Conduct an accurate and thorough assessment of the risks and vulnerabilities to the
+      confidentiality, integrity and availability of ePHI, and implement security
+      measures that reduce them to a reasonable and appropriate level (required,
+      164.308(a)(1)(ii)(A) and (B)).
+    category: risk-assessment
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a documented risk analysis that inventories where ePHI lives and flows in
+      this system: databases, object storage buckets, caches, search indexes, message
+      queues, logs, analytics, backups, mobile device storage, and third-party APIs
+      (email, SMS, LLM providers). Compare it with the code and infrastructure files
+      (Terraform, Kubernetes manifests, docker-compose, ORM models with PHI fields). Check
+      that identified risks map to implemented controls and a risk management plan.
+      Flag data stores or vendors that hold ePHI but are missing from the analysis.
+    evidence:
+      - Risk analysis covering every ePHI store, flow and vendor
+      - Risk management plan with implemented measures
+      - Periodic review records
+    artifacts: [risk-management-file, threat-model, processing-records]
+    crosswalk: ["iso-iec-27001:6.1.2", "soc2:CC3.2", "nis2:Art.21(2)(a)"]
+
+  - ref: "164.308(a)(1)(ii)(D)"
+    title: Information system activity review
+    requirement: >
+      Regularly review records of information system activity such as audit logs, access
+      reports and security incident tracking reports (required).
+    category: logging-monitoring
+    severity: medium
+    fixability: process
+    guidance: >
+      Check that audit and security logs are centralised (SIEM, CloudWatch, Datadog,
+      Elastic, Splunk) with alerts for suspicious patterns: bulk record access or export,
+      access to VIP or employee patient records, repeated failed logins, privilege
+      changes, access outside normal hours. Look for a documented review cadence and
+      evidence that alerts are routed to someone. Flag logs that are written but never
+      reviewed or alerted on.
+    evidence:
+      - Centralised logging with alert rules for ePHI access anomalies
+      - Documented review cadence and review records
+    artifacts: [incident-response-plan]
+    crosswalk: ["soc2:CC7.2", "iso-iec-27001:A.8.16"]
+
+  - ref: "164.308(a)(4)"
+    title: Information access management and minimum necessary
+    requirement: >
+      Implement policies and procedures for authorising access to ePHI consistent with
+      the Privacy Rule, including access authorisation and establishment and modification
+      of access, so users get only the access their role needs.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Look for role-based or attribute-based access control enforced server side
+      (middleware, policy engines such as OPA or Casbin, row-level security in Postgres)
+      that limits clinicians to their patients or organisation, separates administrative
+      functions, and denies by default. Check that API endpoints returning patient data
+      verify the caller's relationship to the patient (no insecure direct object
+      references through /patients/{id}), that multi-tenant queries are scoped by tenant,
+      and that access grants and changes are logged. Flag client-side-only authorisation
+      and endpoints that return whole records when a summary would do.
+    evidence:
+      - Server-side role and relationship checks on every ePHI endpoint
+      - Tenant scoping and deny-by-default policies
+      - Logged access provisioning and changes
+    checks: [jwt-unverified]
+    artifacts: [architecture-doc]
+    crosswalk: ["owasp-asvs:V8.2.1", "owasp-top10:A01", "soc2:CC6.1"]
+
+  - ref: "164.308(a)(5)(ii)(D)"
+    title: Password management and log-in monitoring
+    requirement: >
+      Implement procedures for creating, changing and safeguarding passwords, and for
+      monitoring log-in attempts and reporting discrepancies (addressable,
+      164.308(a)(5)(ii)(C) and (D)).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check password storage (argon2id, scrypt, bcrypt or PBKDF2 with per-user salt),
+      password rules that follow NIST SP 800-63B (length over complexity, breached-password
+      checks), secure reset flows with expiring single-use tokens, account lockout or
+      throttling and rate limiting on login and reset endpoints, and logging and alerting
+      on failed logins. Flag weak hashing, missing rate limiting, and passwords or tokens
+      written to logs.
+    evidence:
+      - Strong password hashing and password policy
+      - Rate limiting or lockout on authentication endpoints
+      - Failed log-in monitoring and alerts
+    checks: [weak-password-hash, missing-rate-limiting, pii-in-logs, insecure-random]
+    artifacts: []
+    crosswalk: ["owasp-asvs:V6.2.1", "pci-dss:Req8.3.6", "nist-ssdf:PW.5.1"]
+
+  - ref: "164.308(a)(6)"
+    title: Security incident procedures
+    requirement: >
+      Identify and respond to suspected or known security incidents, mitigate harmful
+      effects as far as practicable, and document incidents and their outcomes
+      (required).
+    category: logging-monitoring
+    severity: high
+    fixability: process
+    guidance: >
+      Look for an incident response plan (docs/incident-response.md, runbooks) that covers
+      ePHI exposure scenarios: leaked credentials, misconfigured public bucket, compromised
+      vendor, ransomware. Check that detection exists in the product (alerts on anomalous
+      access, integrity failures), that logs retain enough detail to scope which patients
+      were affected, and that the plan links to breach notification assessment. Flag no
+      plan, or logs too sparse to determine affected records.
+    evidence:
+      - Incident response plan with ePHI scenarios
+      - Detection and alerting in production
+      - Incident records with scope and mitigation
+    artifacts: [incident-response-plan]
+    crosswalk: ["soc2:CC7.4", "nis2:Art.23", "iso-iec-27001:A.5.24"]
+
+  - ref: "164.308(a)(7)"
+    title: Contingency plan - backup, disaster recovery and emergency mode
+    requirement: >
+      Establish a data backup plan to keep retrievable exact copies of ePHI, a disaster
+      recovery plan to restore data, and an emergency mode operation plan to keep
+      critical processes running, and test and revise them (backup, recovery and
+      emergency mode are required; testing and criticality analysis are addressable).
+    category: resilience-availability
+    severity: high
+    fixability: code
+    guidance: >
+      Check infrastructure code for automated, encrypted backups of ePHI stores (RDS
+      automated backups and snapshots, point-in-time recovery, object versioning and
+      replication), backups held in a separate account or immutable storage to resist
+      ransomware, documented restore procedures with recovery time and point objectives,
+      and records of restore tests. Flag databases with backups disabled, unencrypted
+      snapshots, and backups never test-restored.
+    evidence:
+      - Automated, encrypted and isolated backups of all ePHI stores
+      - Disaster recovery runbook with RTO and RPO
+      - Restore test records
+    artifacts: [backup-restore, incident-response-plan]
+    crosswalk: ["dora:Art.12", "soc2:A1.2", "iso-iec-27001:A.8.13"]
+
+  - ref: "164.308(b)(1)"
+    title: Business associate agreements with vendors handling ePHI
+    requirement: >
+      Obtain satisfactory written assurances (business associate agreements) from every
+      business associate, and every subcontractor, that creates, receives, maintains or
+      transmits ePHI on your behalf.
+    category: supply-chain
+    severity: high
+    fixability: process
+    guidance: >
+      Inventory third-party services the code sends ePHI to: cloud hosting, databases as a
+      service, email and SMS providers, error tracking (Sentry), analytics, customer
+      support tools, transcription, and LLM APIs. For each, check that a BAA exists and
+      that only HIPAA-eligible services or configurations are used (for example the
+      provider's HIPAA-eligible tier or zero data retention). Flag ePHI sent to analytics
+      or advertising SDKs, error trackers capturing request bodies, and LLM calls with
+      patient data to providers without a BAA.
+    evidence:
+      - Vendor inventory with BAA status for each ePHI recipient
+      - Configuration limiting ePHI to BAA-covered services
+    checks: [analytics-tracking-sdk, pii-in-logs]
+    artifacts: [processing-records]
+    crosswalk: ["gdpr:Art.28", "soc2:CC9.2", "dora:Art.30"]
+
+  - ref: "164.312(a)(2)(i)"
+    title: Unique user identification
+    requirement: >
+      Assign a unique name or number to identify and track each user's identity
+      (required).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check that every human and service accessing ePHI has its own identity: no shared
+      clinic logins, no generic admin accounts, separate service accounts or workload
+      identities per service, and user IDs propagated into audit logs. Look at seed data,
+      fixtures and deployment scripts for shared default accounts. Flag shared
+      credentials, default accounts, and API keys shared across tenants or services.
+    evidence:
+      - Individual accounts for all users and services
+      - User IDs recorded on every ePHI access
+    checks: [default-credentials, hardcoded-secret]
+    artifacts: []
+    crosswalk: ["pci-dss:Req8.3.6", "soc2:CC6.1"]
+
+  - ref: "164.312(a)(2)(ii)"
+    title: Emergency access procedure
+    requirement: >
+      Establish procedures for obtaining necessary ePHI during an emergency (required).
+    category: authentication-access
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for a break-glass mechanism: an emergency access role or flow that grants
+      time-limited access to records outside a user's normal scope, requires a reason,
+      triggers an alert, and is logged prominently for later review. Also check how
+      clinicians access data during an outage (read-only replica, downtime reports).
+      Flag emergency access implemented by sharing an admin password, or break-glass
+      access with no logging or review.
+    evidence:
+      - Break-glass flow with justification, time limit, alert and audit trail
+      - Downtime or outage access procedure
+    artifacts: [incident-response-plan]
+    crosswalk: ["iec-62443-4-2:CR 1.1"]
+
+  - ref: "164.312(a)(2)(iii)"
+    title: Automatic logoff
+    requirement: >
+      Terminate an electronic session after a predetermined period of inactivity
+      (addressable).
+    category: authentication-access
+    severity: medium
+    fixability: code
+    guidance: >
+      Check session configuration: idle timeout on server sessions (express-session
+      cookie maxAge with rolling expiry, Spring server.servlet.session.timeout, Django
+      SESSION_COOKIE_AGE with SESSION_SAVE_EVERY_REQUEST, identity provider session and
+      refresh token lifetimes), client-side idle detection that clears PHI from the screen
+      and memory, short-lived access tokens with refresh token revocation, and mobile app
+      lock on background. The timeout value should come from the risk analysis; shared
+      clinical workstations usually need short timeouts. Flag sessions or refresh tokens
+      that never expire and PHI left on screen after logout.
+    evidence:
+      - Configured idle and absolute session timeouts
+      - Token lifetimes and revocation
+      - Screen clearing or app lock on inactivity
+    checks: [insecure-cookie]
+    artifacts: []
+    crosswalk: ["owasp-asvs:V7.4.1", "psd2-sca:RTS-Art.4", "pci-dss:Req8.3.6"]
+
+  - ref: "164.312(a)(2)(iv)"
+    title: Encryption of ePHI at rest
+    requirement: >
+      Implement a mechanism to encrypt and decrypt ePHI (addressable). Encryption
+      consistent with HHS guidance also makes PHI "secured" for breach notification.
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Check storage encryption for every ePHI store: database encryption at rest (RDS or
+      Cloud SQL encryption flags, TDE), encrypted volumes and buckets (KMS-managed keys,
+      bucket policies denying unencrypted puts), field-level or application-level
+      encryption for the most sensitive fields (SSN, diagnoses, notes) with keys in a KMS
+      or HSM, encrypted backups and snapshots, and encrypted mobile storage (iOS Data
+      Protection classes, Android EncryptedSharedPreferences or SQLCipher). HHS guidance
+      points to NIST SP 800-111 for data at rest. Flag hardcoded keys, unencrypted
+      buckets or snapshots, and PHI stored in plain local storage on devices.
+    evidence:
+      - Encryption at rest enabled for all ePHI stores and backups
+      - Keys managed in KMS or HSM with rotation
+      - Encrypted on-device storage for mobile apps
+    checks: [hardcoded-crypto-key, weak-cipher, mobile-backup-allowed, hardcoded-secret]
+    artifacts: [backup-restore]
+    crosswalk: ["pci-dss:Req3.5.1", "gdpr:Art.32", "dora:RTS1774-Art.6"]
+
+  - ref: "164.312(b)"
+    title: Audit controls for ePHI access
+    requirement: >
+      Implement hardware, software or procedural mechanisms that record and examine
+      activity in information systems that contain or use ePHI (required).
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Look for an audit log implementation (an audit_events table, an audit middleware or
+      interceptor, FHIR AuditEvent resources, database audit extensions such as pgAudit)
+      that records who (user or service ID), what (view, create, update, delete, export,
+      print), which patient or record ID, when (UTC timestamp), from where (IP, device,
+      client app) and the outcome, for reads as well as writes. Check that audit logs are
+      append-only or tamper-evident (write-once storage, hash chaining, separate account),
+      retained for a defined period (many organisations align with the six-year
+      documentation retention in 164.316), and do not contain the PHI itself beyond
+      identifiers. Flag read access to patient data that is not audited.
+    evidence:
+      - Audit trail of ePHI access with user, action, record ID, time and source
+      - Tamper-resistant storage and defined retention
+      - Reports or queries used to examine the audit trail
+    checks: [pii-in-logs]
+    artifacts: []
+    crosswalk: ["fda-cybersecurity:App1.F", "pci-dss:Req10.2.1", "soc2:CC7.2", "dora:Art.10"]
+
+  - ref: "164.312(c)(1)"
+    title: Integrity of ePHI
+    requirement: >
+      Protect ePHI from improper alteration or destruction, and (addressable) implement
+      electronic mechanisms to corroborate that ePHI has not been altered or destroyed
+      without authorisation.
+    category: data-protection
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for database constraints and transactions on clinical data, versioned records
+      or soft deletes with history (temporal tables, event sourcing, FHIR resource
+      versioning), checksums or signatures on documents and imported files, object
+      versioning and deletion protection on buckets, and authorisation on update and delete
+      endpoints. Flag hard deletes of clinical records without audit, mass-update endpoints
+      without authorisation, and imports without validation.
+    evidence:
+      - Versioned clinical records with change history
+      - Integrity checks on stored documents and transfers
+      - Authorisation and audit on modifications
+    checks: [sql-injection-risk]
+    artifacts: [backup-restore]
+    crosswalk: ["iso-14971:7.1", "eu-mdr:GSPR17.1"]
+
+  - ref: "164.312(d)"
+    title: Person or entity authentication, including MFA
+    requirement: >
+      Verify that a person or entity seeking access to ePHI is the one claimed (required).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check the authentication stack: an established identity provider or framework
+      (OIDC with Auth0, Okta, Entra ID, Cognito, Keycloak), multi-factor authentication
+      for workforce and administrative access (TOTP, WebAuthn or passkeys preferred over
+      SMS), verified JWT signatures with pinned algorithms and audience checks, mutual TLS
+      or signed tokens for service-to-service calls, and patient identity proofing for
+      patient portals. Multi-factor authentication is not explicitly required by the
+      current rule, but the risk analysis usually justifies it and the 2025 proposal
+      would require it. Flag unverified tokens, alg none, and admin consoles without MFA.
+    evidence:
+      - Central authentication with MFA for workforce and admin access
+      - Verified tokens and authenticated service-to-service calls
+    checks: [jwt-unverified, hardcoded-secret, insecure-cookie, missing-rate-limiting]
+    artifacts: []
+    crosswalk: ["owasp-asvs:V6.3.1", "pci-dss:Req8.4.2", "psd2-sca:RTS-Art.9"]
+
+  - ref: "164.312(e)(1)"
+    title: Transmission security
+    requirement: >
+      Guard against unauthorised access to ePHI transmitted over networks, with integrity
+      controls and encryption (both addressable).
+    category: communications-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check that every channel carrying ePHI uses TLS 1.2 or higher with certificate
+      validation: public endpoints (HSTS, TLS policy on load balancers), internal
+      service-to-service traffic, database connections (sslmode=verify-full), message
+      brokers, SFTP instead of FTP, HL7 over TLS rather than plain MLLP, and secure email
+      or portals instead of plain email for PHI. Mobile apps should not allow cleartext
+      traffic. HHS guidance points to NIST SP 800-52, 800-77 and 800-113 for data in
+      motion. Flag http:// endpoints, disabled verification, and weak ciphers.
+    evidence:
+      - TLS with verification on all ePHI channels, including internal ones
+      - HSTS and modern TLS policy on public endpoints
+    checks: [cleartext-transport, tls-verification-disabled, weak-cipher, mobile-cleartext-allowed, missing-security-headers]
+    artifacts: []
+    crosswalk: ["pci-dss:Req4.2.1", "owasp-asvs:V12.2.1", "gdpr:Art.32"]
+
+  - ref: "164.404"
+    title: Breach risk assessment and notification
+    requirement: >
+      After a breach of unsecured PHI, notify affected individuals without unreasonable
+      delay and no later than 60 calendar days after discovery, notify HHS (at the same
+      time as individuals when 500 or more are affected, otherwise in an annual log
+      within 60 days after the end of the calendar year) and prominent media when more
+      than 500 residents of a state or jurisdiction are affected; business associates
+      must notify the
+      covered entity within the same outer limit. Unless the four-factor risk assessment
+      shows a low probability of compromise, an impermissible disclosure is presumed to be
+      a breach (164.402 to 164.414).
+    category: governance
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a breach response procedure linked from the incident response plan, with
+      the four-factor risk assessment, notification templates, and timelines. Check that
+      the system can answer which individuals' records were affected (audit logs with
+      record IDs, data inventory) and whether the data was encrypted to HHS guidance
+      (which makes it secured and outside notification). For business associates, check
+      that BAAs set a notification timeline to the covered entity. Flag no procedure and
+      no ability to scope affected individuals.
+    evidence:
+      - Breach assessment and notification procedure with timelines
+      - Ability to scope affected individuals from logs and inventory
+      - Encryption meeting HHS guidance for safe harbour
+    artifacts: [incident-response-plan]
+    crosswalk: ["gdpr:Art.33", "wa-mhmda:RCW19.373.050"]

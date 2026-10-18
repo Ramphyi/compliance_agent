@@ -1,0 +1,418 @@
+id: misra-cpp
+title: MISRA C++:2023 Guidelines for the use of C++17 in critical systems
+shortTitle: MISRA C++:2023
+version: MISRA C++:2023 (October 2023), current edition incorporating Technical Corrigendum 1 (TC1:2026)
+authority: The MISRA Consortium
+kind: guideline
+jurisdictions: [global]
+url: https://misra.org.uk/product/misra-cpp2023/
+textPolicy: paraphrased
+summary: >
+  MISRA C++:2023 is the coding standard for C++17 in safety- and security-related systems. It
+  replaces MISRA C++:2008 and absorbs the AUTOSAR C++14 guidelines, so new automotive C++ projects
+  use it instead of AUTOSAR C++14. This selection covers key rules on undefined behaviour,
+  unused and unreachable code, conversions and casts, recursion, goto, virtual functions and
+  constructors, exceptions, dynamic memory and unsafe library facilities, plus the deviation
+  process required to claim compliance. Rule texts are paraphrased; the licensed document is the
+  reference.
+applicability:
+  all:
+    - { fact: productTypes, in: [automotive-ecu, embedded-firmware, industrial-control] }
+    - { fact: languages, in: [cpp] }
+applicabilityNote: >
+  Applies only to C++ code: the agent should confirm that the repository contains C++ sources
+  (.cpp, .cc, .hpp) for safety- or security-relevant parts, and use MISRA C for C sources. It is
+  required in practice by ISO 26262 Part 6 (language subset and coding guideline), IEC 61508 and
+  customer contracts. Compliance claims follow MISRA Compliance:2020 (guideline enforcement plan,
+  re-categorisation plan, deviations and compliance summary). The TC1:2026 edition corrects the
+  2023 text without adding guidelines.
+controls:
+  - ref: "Rule 4.1.3"
+    title: No undefined or critical unspecified behaviour
+    requirement: >
+      Code must not rely on undefined behaviour or on unspecified behaviour whose outcome matters
+      (Required).
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      This is enforced mostly through other rules and analysis: signed overflow, out-of-bounds
+      access, null dereference, uninitialised reads, shifts by negative or too large amounts,
+      dangling references, data races. Look for sound static analysis (Polyspace Code Prover,
+      Astree, Helix QAC dataflow) and sanitizer runs in host tests (-fsanitize=undefined,address).
+      Flag unchecked array indexing from received data and arithmetic on int16 or uint8 values
+      without range reasoning.
+    evidence:
+      - Static analysis or sanitizer results with no open undefined-behaviour findings
+    checks: [unsafe-c-functions]
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 1.3", "misra-c:Dir 4.1", "iso-26262:6-8"]
+  - ref: "Rule 0.0.1"
+    title: No unreachable statements
+    requirement: >
+      Functions must not contain statements that can never be executed (Required).
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for code after return, break or infinite loops, branches made impossible by constant
+      conditions, and #if 0 regions (also covered by the commented-out code directive). Dead and
+      unreachable code hides defects and blocks 100 percent structural coverage; ISO 26262 coverage
+      analysis needs it removed or justified. Compiler warnings (-Wunreachable-code in Clang) and
+      analyzer checks help.
+    evidence:
+      - Analyzer report with no unreachable statements or justified deviations
+    artifacts: [static-analysis-config]
+    crosswalk: ["iso-26262:6-9.4.4"]
+  - ref: "Rule 0.1.2"
+    title: Use function return values
+    requirement: >
+      The value returned by a function must be used, unless explicitly discarded by a cast to
+      void as the rule permits (Required).
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for ignored Std_ReturnType results (Rte_Write, Com_SendSignal, NvM_WriteBlock, Csm
+      jobs), ignored error codes from library calls, and ignored results of std::remove or
+      std::unique (Rule 28.6.4). Mark APIs [[nodiscard]] and compile with warnings as errors.
+      Ignoring the result of a crypto or NvM call is a typical safety and security defect.
+    evidence:
+      - Analyzer report with no unused return values on safety and security paths
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 17.7", "misra-c:Dir 4.7", "cert-c:ERR33-C"]
+  - ref: "Rule 0.2.1"
+    title: Unused variables, parameters, types and functions
+    requirement: >
+      Variables, types and functions with limited visibility should be used at least once, and
+      named function parameters must be used (Rules 0.2.1 to 0.2.4).
+    category: code-safety
+    severity: low
+    fixability: code
+    guidance: >
+      Look for unused locals, private members, static functions and named but unused parameters
+      (use unnamed parameters or [[maybe_unused]] when an interface requires them). Unused code
+      often indicates incomplete changes; enable -Wunused and the analyzer checks.
+    evidence:
+      - Analyzer report free of unused entities or with justifications
+    artifacts: [static-analysis-config]
+    crosswalk: ["iso-26262:6-8"]
+  - ref: "Rule 6.8.2"
+    title: Never return references or pointers to automatic objects
+    requirement: >
+      A function must not return a reference or pointer to a local variable with automatic
+      storage duration (Mandatory).
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for functions returning T& or T* to locals, returning std::string_view or spans over
+      local buffers, and lambdas capturing locals by reference that outlive the scope. Compiler
+      warnings (-Wreturn-local-addr, -Wreturn-stack-address, -Wdangling) catch many cases.
+      Mandatory guidelines cannot be deviated.
+    evidence:
+      - No violations of this mandatory rule in the analyzer report
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 18.6"]
+  - ref: "Rule 11.6.2"
+    title: No read before an object is set
+    requirement: >
+      The value of an object must not be read before it has been set (Mandatory).
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for locals declared without initialiser and read on some paths, members not
+      initialised by every constructor, and buffers partially filled before use (for example a
+      PDU buffer filled only for some signal groups). Prefer initialisation at declaration (Rule
+      11.6.1). Use -Wuninitialized, -Wmaybe-uninitialized and dataflow analysis.
+    evidence:
+      - No violations of this mandatory rule in the analyzer report
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 9.1", "cert-c:EXP33-C"]
+  - ref: "Rule 7.0.5"
+    title: No signedness or type-category changes from promotions and conversions
+    requirement: >
+      Integral promotion and the usual arithmetic conversions must not change the signedness or
+      type category of an operand, and assignments between numeric types must be appropriate
+      (Rule 7.0.6).
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for mixed signed and unsigned arithmetic (uint16 minus int16 sensor offsets), implicit
+      narrowing in assignments (uint32 to uint8 for CAN signals), float to integer conversions
+      without range checks, and comparisons between signed and unsigned. Compile with -Wconversion
+      -Wsign-conversion -Wsign-compare and check the analyzer's essential-type style findings.
+      Explicit, range-checked conversions are expected at signal boundaries.
+    evidence:
+      - Analyzer report free of implicit conversion findings on safety paths
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 10.4", "misra-c:Rule 10.3", "cert-c:INT31-C", "iso-26262:6-8"]
+  - ref: "Rule 8.2.2"
+    title: No C-style or functional-notation casts
+    requirement: >
+      C-style casts and functional notation casts must not be used (Required).
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Search for (Type)expr and Type(expr) conversions of non-class types; replace with
+      static_cast, const_cast is separately restricted (Rule 8.2.3). clang-tidy
+      cppcoreguidelines-pro-type-cstyle-cast and google-readability-casting find them.
+    evidence:
+      - No C-style casts in C++ sources or justified deviations
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 11.3"]
+  - ref: "Rule 8.2.5"
+    title: Do not use reinterpret_cast
+    requirement: >
+      reinterpret_cast must not be used, apart from the narrow exceptions the rule allows for
+      byte-level access and pointer-to-integer conversion (Required).
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Search for reinterpret_cast. Hardware register access in drivers is a common reason; it
+      should be isolated in a small, reviewed MCAL or HAL layer with a documented deviation
+      rather than spread through application code. Type punning of received byte buffers into
+      structs should be replaced with explicit deserialisation or std::memcpy alternatives
+      permitted by the project.
+    evidence:
+      - reinterpret_cast confined to documented hardware-access deviations
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 11.3"]
+  - ref: "Rule 8.2.10"
+    title: No recursion
+    requirement: >
+      Functions must not call themselves directly or indirectly (Required).
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Recursion makes stack usage unbounded and breaks worst-case stack analysis. Use the
+      analyzer call graph, clang-tidy misc-no-recursion, or GCC -fstack-usage plus a call-graph
+      tool to find cycles, including indirect ones through callbacks. Replace with iterative
+      algorithms with fixed bounds.
+    evidence:
+      - Call graph without cycles and stack analysis results
+    artifacts: [static-analysis-config]
+    crosswalk: ["misra-c:Rule 17.2", "iso-26262:6-8"]
+  - ref: "Rule 9.6.1"
+    title: Avoid goto
+    requirement: >
+      The goto statement should not be used (Advisory); where it is used, Rules 9.6.2 and 9.6.3
+      restrict it to forward jumps within an enclosing block.
+    category: code-safety
+    severity: low
+    fixability: code
+    guidance: >
+      Search for goto in C++ sources. Error-cleanup gotos should be replaced with RAII or
+      structured returns. Any remaining use needs to follow the forward-jump rules and, if the
+      project raised the rule's category, a deviation.
+    evidence:
+      - No goto in C++ sources or a recorded deviation
+    checks: [goto-statement]
+    crosswalk: ["misra-c:Rule 15.1", "iso-26262:6-8"]
+  - ref: "Rule 13.3.1"
+    title: Use virtual, override and final appropriately
+    requirement: >
+      User-declared member functions must use the virtual, override and final specifiers
+      appropriately, so that overriding is explicit and checked (Required).
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for overriding functions without override, redundant virtual on overriders, missing
+      virtual destructors in polymorphic bases (Rule 15.0.1 area), and default arguments that
+      differ between base and override (Rule 13.3.2). clang-tidy modernize-use-override and
+      -Wsuggest-override help. Also check that virtual dispatch is acceptable in the
+      timing-critical paths per the architecture.
+    evidence:
+      - All overriders marked override or final, analyzer clean
+    artifacts: [static-analysis-config]
+    crosswalk: ["iso-26262:6-5.4.3"]
+  - ref: "Rule 15.1.1"
+    title: No dynamic type use in constructors and destructors
+    requirement: >
+      An object's dynamic type must not be used from within its constructor or destructor, for
+      example through virtual calls or typeid (Required).
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Search constructors and destructors for calls to virtual member functions (directly or via
+      helper functions) and for typeid or dynamic_cast on this. Such calls dispatch to the base
+      version, which is a frequent latent defect in component frameworks. clang-tidy
+      clang-analyzer-optin.cplusplus.VirtualCall detects many.
+    evidence:
+      - No virtual dispatch from constructors or destructors
+    artifacts: [static-analysis-config]
+    crosswalk: ["iso-26262:6-8"]
+  - ref: "Rule 15.1.3"
+    title: Explicit single-argument constructors and conversion operators
+    requirement: >
+      Conversion operators and constructors callable with a single argument must be explicit
+      (Required), preventing silent implicit conversions.
+    category: code-safety
+    severity: low
+    fixability: code
+    guidance: >
+      Look for constructors with one parameter (or defaulted extras) and operator T() members
+      without explicit. Strong types for physical units and identifiers (for example a Speed or
+      CanId wrapper) rely on this to prevent mix-ups. clang-tidy google-explicit-constructor
+      finds them.
+    evidence:
+      - No implicit converting constructors or operators
+    artifacts: [static-analysis-config]
+    crosswalk: ["iso-26262:6-8"]
+  - ref: "Rule 18.3.1"
+    title: Defined exception policy with a catch-all handler
+    requirement: >
+      Where exceptions are used there should be a handler that catches all otherwise unhandled
+      exceptions (Advisory), with related rules: no pointer-type exception objects (18.1.1),
+      catch class types by reference (18.3.2), exception-unfriendly functions marked noexcept
+      (18.4.1) and noexcept functions not propagating exceptions (18.5.1).
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    guidance: >
+      First identify the project policy: many embedded projects compile with -fno-exceptions,
+      in which case check that throwing library facilities (std::vector::at, operator new,
+      std::stoi, std::function) are not used or are wrapped, and that the decision is documented
+      in the coding standard. If exceptions are enabled, check for try and catch(...) at thread
+      or task entry points and main, catch by reference, noexcept on destructors, move
+      operations and swap, and no throws across C or interrupt boundaries.
+    evidence:
+      - Documented exception policy matching compiler flags
+      - Handlers at task entry points or verified absence of exceptions
+    artifacts: [static-analysis-config]
+    crosswalk: ["iso-26262:6-7"]
+  - ref: "Rule 18.5.2"
+    title: Avoid program-terminating functions
+    requirement: >
+      Program-terminating functions such as std::abort, std::exit, std::quick_exit and
+      std::terminate should not be used (Advisory).
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    guidance: >
+      Search for abort, exit, quick_exit, terminate and assert in production code paths. In an
+      ECU, termination must be replaced by a defined fault reaction (Dem event, safe state,
+      controlled reset through the watchdog or EcuM) so that the system reaches a known state.
+    evidence:
+      - Fault reactions instead of terminating calls in production code
+    artifacts: [static-analysis-config]
+    crosswalk: ["iso-26262:4-6.4.2"]
+  - ref: "Rule 21.6.1"
+    title: Avoid dynamic memory
+    requirement: >
+      Dynamic memory should not be used (Advisory); this covers new and delete, the C
+      allocation functions and standard containers that use the default allocator.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Search for new, delete, malloc, calloc, realloc, free, std::make_unique, std::make_shared
+      and standard containers such as std::vector, std::string, std::map and std::function that
+      allocate. For ECUs the usual policy is static allocation, fixed-capacity containers
+      (etl, static_vector) or allocation only during initialisation with a pool allocator, with
+      the policy documented as a deviation or re-categorisation. Check that the linker script has
+      no heap or a heap sized to the documented budget.
+    evidence:
+      - Documented memory policy and analyzer report for allocation sites
+      - Linker map showing heap size consistent with the policy
+    checks: [dynamic-memory-embedded]
+    crosswalk: ["misra-c:Rule 21.3", "misra-c:Dir 4.12", "iso-26262:6-8"]
+  - ref: "Rule 21.6.2"
+    title: Dynamic memory managed automatically
+    requirement: >
+      Where dynamic memory is used it must be managed automatically (smart pointers, containers)
+      rather than by raw new and delete or the C allocation functions (Required); advanced memory
+      management such as explicit destructor calls and placement new is also prohibited (Rule
+      21.6.3).
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Search for raw new and delete expressions, malloc and free in C++ code, explicit destructor
+      calls, and placement new outside reviewed infrastructure. Owning raw pointers should become
+      std::unique_ptr or containers; the raw pointer constructors of smart pointers are also
+      discouraged (Rule 23.11.1).
+    evidence:
+      - No raw owning new and delete in C++ sources
+    checks: [dynamic-memory-embedded]
+    crosswalk: ["misra-c:Rule 21.3", "misra-c:Rule 22.1", "iso-26262:6-8"]
+  - ref: "Rule 21.2.2"
+    title: No unsafe C string handling functions
+    requirement: >
+      The string handling functions from cstring, cstdlib, cwchar and cinttypes, such as strcpy,
+      strcat, strlen and strtol families, must not be used (Required); memcpy, memmove and memcmp
+      are restricted by Rule 24.5.2.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Search for strcpy, strncpy, strcat, strlen, strcmp, sprintf (also covered by Rule 30.0.1),
+      atoi (Rule 21.2.1) and memcpy on received buffers. Replace with std::array, std::string_view
+      over known-length data, bounded copies with explicit length checks, and std::from_chars.
+      Bounded parsing of diagnostic and network payloads is a security requirement as well.
+    evidence:
+      - No banned string functions in C++ sources
+    checks: [unsafe-c-functions]
+    crosswalk: ["misra-c:Rule 21.17", "cert-c:STR31-C"]
+  - ref: "Rule 21.10.2"
+    title: No setjmp, signal or variadic argument facilities
+    requirement: >
+      The csetjmp header must not be used (Rule 21.10.2), nor the csignal facilities (21.10.3)
+      or the cstdarg features (21.10.1), all Required.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Search for setjmp, longjmp, signal, raise, va_list, va_start and printf-style variadic
+      wrappers. Logging and tracing wrappers commonly use va_list; replace with type-safe
+      formatting or variadic templates. setjmp or longjmp skip destructors and hide control flow.
+    evidence:
+      - No use of csetjmp, csignal or cstdarg facilities
+    artifacts: [static-analysis-config]
+    crosswalk: ["iso-26262:6-8"]
+  - ref: "Rule 30.0.1"
+    title: No C input and output functions
+    requirement: >
+      The C library input and output functions (printf, scanf, fopen and related) must not be
+      used (Required).
+    category: code-safety
+    severity: low
+    fixability: code
+    guidance: >
+      Search for printf, sprintf, snprintf, scanf, puts, fopen and related functions, typically in
+      debug or trace code. Production ECU code should use the project trace or Dlt facility with
+      bounded, type-safe formatting, and debug output should be compiled out of release builds.
+    evidence:
+      - No C stdio usage in production C++ code
+    checks: [unsafe-c-functions, debug-enabled]
+    crosswalk: ["misra-c:Rule 21.6"]
+  - ref: "Deviations"
+    title: Compliance evidence and deviation process
+    requirement: >
+      A MISRA compliance claim requires a guideline enforcement plan showing how each guideline
+      is checked, any re-categorisation agreed with the customer, a recorded and approved
+      deviation for every violation of a Required guideline, no violations of Mandatory
+      guidelines, and a guideline compliance summary (MISRA Compliance:2020).
+    category: secure-development
+    severity: high
+    fixability: process
+    guidance: >
+      Look for the analyzer configuration (Helix QAC, Polyspace, Parasoft, Coverity, PC-lint
+      Plus, Klocwork, cppcheck Premium, SonarQube MISRA) with the MISRA C++:2023 rule set enabled,
+      a guideline enforcement plan or tool coverage table, a re-categorisation plan, deviation
+      records (rule, location or scope, justification, risk assessment, approver) and in-code
+      suppressions that reference a deviation ID rather than bare suppression comments. Check
+      that CI fails on new violations and that a compliance summary exists for each release.
+    evidence:
+      - Analyzer configuration and guideline enforcement plan
+      - Approved deviation records referenced by in-code suppressions
+      - Guideline compliance summary per release
+    artifacts: [coding-standard, static-analysis-config, ci-pipeline]
+    crosswalk: ["misra-c:GRP", "iso-26262:6-5.4.3", "automotive-spice:SWE.3"]

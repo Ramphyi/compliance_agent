@@ -1,0 +1,327 @@
+id: nis2
+title: Directive (EU) 2022/2555 on measures for a high common level of cybersecurity across the Union (NIS2)
+shortTitle: NIS2
+version: "Directive (EU) 2022/2555; Commission Implementing Regulation (EU) 2024/2690 for digital infrastructure and digital providers"
+authority: European Parliament and Council of the European Union
+kind: regulation
+jurisdictions: [EU, EEA]
+url: https://eur-lex.europa.eu/eli/dir/2022/2555/oj
+textPolicy: paraphrased
+summary: >
+  The EU cybersecurity directive for essential and important entities in critical
+  sectors (energy, transport, banking, health, digital infrastructure, ICT service
+  management, public administration, digital providers and others). It requires
+  management accountability, ten groups of cybersecurity risk-management measures,
+  supply-chain security and staged reporting of significant incidents, applied through
+  national transpositions.
+applicability:
+  all:
+    - { fact: markets, in: [EU] }
+    - { fact: regulatedEntity, in: [nis2-essential, nis2-important] }
+applicabilityNote: >
+  Applies directly to organisations that are essential or important entities under the
+  national transposition (generally medium or large entities in Annex I or II sectors,
+  and some regardless of size, such as DNS, TLD, trust service and public electronic
+  communications providers). The regulatedEntity fact covers both the organisation and
+  the customers it serves: if you supply software or managed services to NIS2 entities,
+  you are not automatically in scope, but customers will flow Art. 21 requirements
+  (especially supply-chain security, secure development, vulnerability handling and
+  incident notification) down to you by contract. Cloud, data centre, managed service,
+  managed security, online marketplace, search engine and social network providers must
+  also meet Implementing Regulation (EU) 2024/2690.
+keyDates:
+  - { date: "2023-01-16", note: NIS2 entered into force }
+  - { date: "2024-10-17", note: Transposition deadline for Member States; Implementing Regulation (EU) 2024/2690 adopted }
+  - { date: "2024-10-18", note: National NIS2 measures apply and NIS1 is repealed }
+  - { date: "2025-04-17", note: Deadline for Member States to establish their lists of essential and important entities }
+controls:
+  - ref: "Art.20(1)"
+    title: Management body approves and oversees cybersecurity measures
+    requirement: >
+      The management body must approve the cybersecurity risk-management measures,
+      oversee their implementation and can be held liable for infringements.
+    category: governance
+    severity: high
+    fixability: process
+    guidance: >
+      Look for an information security policy approved by management (signed or dated
+      approval record), a cybersecurity owner, and periodic management reporting on
+      risks and measures. In the repository, SECURITY.md or a policies folder may record
+      ownership and approval.
+    evidence:
+      - Management-approved security policy
+      - Periodic management reporting on cybersecurity
+    checks: []
+    artifacts: [security-policy]
+    crosswalk: ["iso-iec-27001:9.2", "dora:Art.6"]
+
+  - ref: "Art.20(2)"
+    title: Cybersecurity training for management and staff
+    requirement: >
+      Members of the management body must follow cybersecurity training, and entities
+      should offer similar training to employees regularly.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Check for training records for management and engineering staff, including secure
+      coding training for developers and phishing awareness.
+    evidence:
+      - Training records for management and staff
+    checks: []
+    artifacts: []
+    crosswalk: []
+
+  - ref: "Art.21(2)(a)"
+    title: Risk analysis and information system security policies
+    requirement: >
+      Entities must have policies on risk analysis and information system security,
+      based on an all-hazards approach and proportionate to their exposure.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a risk register or threat model covering the product and its hosting,
+      reviewed at planned intervals or after significant changes, and a security policy
+      that defines the controls in place. Check the threat model reflects the real
+      architecture (entry points, data stores, third-party services).
+    evidence:
+      - Risk register or threat model with review dates
+      - Information security policy
+    checks: []
+    artifacts: [threat-model, security-policy, risk-management-file]
+    crosswalk: ["iso-iec-27001:6.1.2", "ro-national:OUG155-2024"]
+
+  - ref: "Art.21(2)(b)"
+    title: Incident handling
+    requirement: >
+      Entities must be able to prevent, detect, analyse, contain, respond to and recover
+      from incidents.
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Check for centralised logging and alerting (application, authentication, admin
+      actions, infrastructure), log retention, alert rules for suspicious activity,
+      on-call procedures and an incident response plan with roles, severity levels and
+      post-incident reviews. Flag missing audit logs for authentication and privileged
+      actions, and logs containing secrets or personal data.
+    evidence:
+      - Logging and alerting configuration
+      - Incident response plan and post-incident reviews
+    checks: [pii-in-logs, error-details-leak]
+    artifacts: [incident-response-plan]
+    crosswalk: ["iso-iec-27001:A.5.24", "soc2:CC7.4"]
+
+  - ref: "Art.21(2)(c)"
+    title: Business continuity, backups and crisis management
+    requirement: >
+      Entities must manage business continuity, including backup management, disaster
+      recovery and crisis management.
+    category: resilience-availability
+    severity: high
+    fixability: code
+    guidance: >
+      Check infrastructure code for automated backups (database snapshots, point-in-time
+      recovery, object storage versioning), backups stored separately or immutably,
+      documented recovery time and recovery point objectives, multi-zone deployment for
+      critical services, and evidence of restore tests. Flag single points of failure and
+      backups never tested.
+    evidence:
+      - Backup configuration with retention and isolation
+      - Restore test records and RTO and RPO targets
+    checks: []
+    artifacts: [backup-restore, incident-response-plan]
+    crosswalk: ["iso-iec-27001:A.8.13", "dora:Art.12"]
+
+  - ref: "Art.21(2)(d)"
+    title: Supply chain security
+    requirement: >
+      Entities must address security in relationships with direct suppliers and service
+      providers, taking into account each supplier's vulnerabilities, product quality and
+      secure development practices.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Check dependency management: lockfiles committed, versions pinned, automated
+      dependency updates, vulnerability scanning of dependencies and container images,
+      an SBOM generated in CI, and review of new dependencies. For services, check a
+      supplier inventory with security assessments and contractual security and
+      notification clauses. As a supplier to NIS2 entities, be ready to provide SBOMs,
+      security documentation and incident notification commitments.
+    evidence:
+      - Lockfiles, pinned versions and dependency scanning
+      - SBOM generation
+      - Supplier inventory and security clauses
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile, dependency-update-automation, vulnerability-scanning]
+    crosswalk: ["eu-cra:AnnexI.II.1", "iso-iec-27001:A.5.23", "nist-ssdf:PW.4.1", "nist-ssdf:PS.3.2", "gdpr:Art.28", "dora:Art.28"]
+
+  - ref: "Art.21(2)(e)"
+    title: Secure acquisition, development and vulnerability handling
+    requirement: >
+      Entities must secure the acquisition, development and maintenance of network and
+      information systems, including vulnerability handling and disclosure.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Check for a secure development process: code review required on protected
+      branches, static analysis and secret scanning in CI, security tests, a SECURITY.md
+      or security.txt with a vulnerability reporting contact, a coordinated vulnerability
+      disclosure process with response targets, and timely patching. Deterministic check
+      hits indicate gaps in secure coding practice.
+    evidence:
+      - CI with SAST, secret scanning and dependency scanning
+      - Vulnerability disclosure policy and contact
+      - Branch protection and review rules
+    checks: [sql-injection-risk, command-injection-risk, xss-risk, hardcoded-secret, unsafe-deserialization, debug-enabled]
+    artifacts: [security-policy, static-analysis-config, code-review-process, ci-pipeline, vulnerability-scanning]
+    crosswalk: ["nist-ssdf:PW.7.2", "nist-ssdf:RV.1.3", "eu-cra:AnnexI.II.5", "iec-62443-4-1:SM-1", "iso-iec-27001:A.8.25", "iso-iec-27001:A.8.28", "owasp-asvs:V1.2.4"]
+
+  - ref: "Art.21(2)(f)"
+    title: Assessing the effectiveness of security measures
+    requirement: >
+      Entities must have policies and procedures to assess whether their cybersecurity
+      risk-management measures are effective.
+    category: testing-verification
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for periodic security testing (penetration tests, vulnerability scans,
+      configuration reviews), internal audits, metrics (patch latency, open critical
+      findings) and follow-up of findings in the issue tracker.
+    evidence:
+      - Security test reports and remediation tracking
+      - Security metrics reviewed periodically
+    checks: []
+    artifacts: [vulnerability-scanning, automated-tests]
+    crosswalk: ["iso-iec-27001:9.2", "iso-iec-27001:A.8.29", "soc2:CC4.1"]
+
+  - ref: "Art.21(2)(g)"
+    title: Basic cyber hygiene and training
+    requirement: >
+      Entities must apply basic cyber hygiene practices and provide cybersecurity
+      training.
+    category: secure-development
+    severity: medium
+    fixability: code
+    guidance: >
+      Check hygiene in the repository and infrastructure: no default credentials, debug
+      disabled in production, secure configuration baselines, containers not running as
+      root, security headers, timely updates, least privilege for CI tokens and cloud
+      roles.
+    evidence:
+      - Secure configuration baselines
+      - Hardened containers and deployment settings
+    checks: [default-credentials, debug-enabled, docker-root-user, missing-security-headers, cors-wildcard]
+    artifacts: []
+    crosswalk: ["iso-iec-27001:A.8.9"]
+
+  - ref: "Art.21(2)(h)"
+    title: Cryptography and encryption policies
+    requirement: >
+      Entities must have policies and procedures on the use of cryptography and, where
+      appropriate, encryption.
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Check encryption in transit (TLS 1.2 or higher, verification enabled, no
+      cleartext endpoints), encryption at rest for databases, backups and object
+      storage, approved algorithms only (no MD5, SHA-1, DES, RC4, ECB), strong password
+      hashing, secure random generation for tokens, and key management in a KMS or
+      secret manager with rotation.
+    evidence:
+      - Cryptography policy listing approved algorithms
+      - TLS and at-rest encryption configuration
+      - Key management with rotation
+    checks: [weak-hash, weak-cipher, insecure-random, hardcoded-crypto-key, tls-verification-disabled, cleartext-transport, weak-password-hash]
+    artifacts: [security-policy]
+    crosswalk: ["gdpr:Art.32", "iso-iec-27001:A.8.24", "owasp-asvs:V11.3.2", "owasp-asvs:V12.3.2"]
+
+  - ref: "Art.21(2)(i)"
+    title: Human resources security, access control and asset management
+    requirement: >
+      Entities must apply human resources security, access control policies and asset
+      management.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check role-based access control in the application and infrastructure (IAM
+      policies in Terraform, Kubernetes RBAC), least privilege, joiner-mover-leaver
+      processes for admin accounts, an asset inventory (services, repositories, cloud
+      accounts, domains), and authorisation checks on every API object access.
+    evidence:
+      - Access control model and least-privilege IAM
+      - Asset inventory
+      - Access review records
+    checks: [jwt-unverified, hardcoded-secret]
+    artifacts: [architecture-doc]
+    crosswalk: ["iso-iec-27001:A.8.2", "iso-iec-27001:A.8.3", "soc2:CC6.1"]
+
+  - ref: "Art.21(2)(j)"
+    title: Multi-factor authentication and secured communications
+    requirement: >
+      Entities must use multi-factor or continuous authentication solutions, secured
+      voice, video and text communications, and secured emergency communication systems
+      where appropriate.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check MFA is enforced for administrative and privileged access (admin panels,
+      cloud consoles, CI, code hosting) and offered to users where risk warrants it
+      (TOTP, WebAuthn passkeys). Check authentication endpoints are rate limited and
+      internal communication channels for incident response are defined.
+    evidence:
+      - MFA enforcement for admin and privileged access
+      - Rate limiting on authentication
+    checks: [missing-rate-limiting]
+    artifacts: []
+    crosswalk: ["owasp-asvs:V6.3.3", "iso-iec-27001:A.8.5"]
+
+  - ref: "Art.23"
+    title: Staged reporting of significant incidents
+    requirement: >
+      Entities must notify their CSIRT or competent authority of significant incidents
+      with an early warning within 24 hours of awareness, an incident notification within
+      72 hours, an intermediate report on request, and a final report within one month,
+      and inform service recipients where appropriate.
+    category: logging-monitoring
+    severity: high
+    fixability: process
+    guidance: >
+      Check the incident response plan has the 24-hour, 72-hour and one-month steps,
+      the national CSIRT or authority contact (for example DNSC in Romania), the
+      significance criteria (including the thresholds in Implementing Regulation
+      2024/2690 for digital providers), templates, and a process to inform affected
+      customers. Suppliers should have contractual notification timelines that let the
+      customer meet the 24-hour deadline.
+    evidence:
+      - Incident plan with 24h, 72h and one-month reporting steps
+      - Significance criteria and authority contacts
+    checks: []
+    artifacts: [incident-response-plan]
+    crosswalk: ["gdpr:Art.33", "ro-national:OUG155-2024", "dora:Art.19", "eu-cra:Art.14"]
+
+  - ref: "Art.27"
+    title: Registration with the competent authority
+    requirement: >
+      Entities must register with the national competent authority or registry and keep
+      their information current; digital infrastructure and digital provider entities
+      register with the Member State of their main establishment.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Check the entity has determined its status (essential or important, sector, main
+      establishment) and registered with each relevant authority, with a process to
+      update contact details and service lists.
+    evidence:
+      - Registration confirmation and entity classification
+    checks: []
+    artifacts: []
+    crosswalk: ["ro-national:OUG155-2024"]

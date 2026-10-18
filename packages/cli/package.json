@@ -1,0 +1,16 @@
+{
+  "name": "@assay/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "assay": "./dist/assay.mjs" },
+  "dependencies": {
+    "@assay/core": "0.1.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "express": "^5.1.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3"
+  }
+}

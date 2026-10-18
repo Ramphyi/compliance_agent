@@ -1,0 +1,420 @@
+id: unece-r155
+title: UN Regulation No. 155 - Uniform provisions concerning the approval of vehicles with regards to cyber security and cyber security management system
+shortTitle: UN R155 (CSMS)
+version: Original version (00 series) with its supplements; adopted text ECE/TRANS/WP.29/2020/79
+authority: UNECE WP.29 (World Forum for Harmonization of Vehicle Regulations)
+kind: regulation
+jurisdictions: [UNECE, EU, JP]
+url: https://unece.org/transport/documents/2021/03/standards/un-regulation-no-155-cyber-security-and-cyber-security
+textPolicy: open
+summary: >
+  UN R155 makes vehicle type approval conditional on two things: a certified Cyber Security
+  Management System (CSMS) at the vehicle manufacturer covering development, production and
+  post-production, and a vehicle type that is protected against the risks identified in its
+  risk assessment, including the threats in Annex 5 Part A and the mitigations in Annex 5 Parts
+  B and C. ECU suppliers are not approved directly, but OEMs flow the obligations down to them by
+  contract (TARA input, mitigations, test evidence, vulnerability handling).
+applicability:
+  all:
+    - { fact: productTypes, in: [automotive-ecu] }
+    - { fact: markets, in: [UNECE, EU] }
+applicabilityNote: >
+  The regulation binds the vehicle manufacturer (type-approval holder). In the EU it is mandatory
+  through the General Safety Regulation (EU) 2019/2144 for new vehicle types since 6 July 2022 and
+  for all newly registered vehicles since 7 July 2024; Japan applies it on a similar timeline.
+  An extension to L-category vehicles (two- and three-wheelers) is being introduced, so confirm the
+  dates for your category. For a Tier-1 or Tier-2 supplier the obligations arrive through the OEM
+  contract and the cybersecurity interface agreement: the supplier must deliver component TARA
+  inputs, implement the Annex 5 mitigations allocated to the ECU, provide test evidence, and
+  support post-production monitoring and vulnerability response for the vehicle lifetime. Confirm
+  with the OEM which Annex 5 mitigations are allocated to your ECU.
+keyDates:
+  - { date: "2021-01-22", note: UN R155 entered into force under the 1958 Agreement }
+  - { date: "2022-07-06", note: EU - mandatory for new vehicle types (M and N categories) via Regulation (EU) 2019/2144 }
+  - { date: "2024-07-01", note: "End of the transitional relief in paragraphs 7.3.1 and 7.3.4 (development before the CSMS, technically infeasible Annex 5 mitigations)" }
+  - { date: "2024-07-07", note: EU - mandatory for all newly registered vehicles (M and N categories) }
+controls:
+  - ref: "7.2.2.2"
+    title: CSMS processes across the vehicle lifecycle
+    requirement: >
+      The manufacturer must show that its CSMS processes cover organisational cyber security
+      management, risk identification (including the Annex 5 Part A threats), risk assessment and
+      treatment, verification that risks are managed, security testing, keeping the risk
+      assessment current, monitoring and response to attacks and vulnerabilities, and providing
+      data to analyse attacks. The CSMS must cover development, production and post-production
+      (7.2.2.1).
+    category: governance
+    severity: high
+    fixability: process
+    guidance: >
+      This is an organisational control, but a supplier repository should show the supplier side
+      of these processes. Look for a cybersecurity plan or CSMS process description
+      (docs/cybersecurity/, docs/csms/), a TARA, security requirements with IDs, security test
+      reports, a PSIRT or vulnerability handling procedure (SECURITY.md, docs/psirt.md), and a
+      production key-provisioning procedure. Check that these artefacts reference the ECU part
+      numbers and software versions in this repository and are maintained (dates, revision
+      history). Good looks like a supplier cybersecurity management process mapped to ISO/SAE
+      21434 clauses 5 to 15, with named roles and a link to the OEM's CSMS.
+    evidence:
+      - Cybersecurity plan and process description mapped to ISO/SAE 21434
+      - Records showing the processes were applied to this ECU (TARA, tests, reviews)
+      - Post-production monitoring and incident response procedure
+    artifacts: [security-policy, threat-model, incident-response-plan]
+    crosswalk: ["iso-sae-21434:5.4.1", "iso-sae-21434:6.4.2", "iec-62443-4-1:SM-1"]
+  - ref: "7.2.2.5"
+    title: Supplier dependencies and flow-down
+    requirement: >
+      The manufacturer must show how its CSMS manages dependencies on contracted suppliers,
+      service providers and sub-organisations, and (7.3.2) must identify and manage
+      supplier-related risks for each vehicle type.
+    category: supply-chain
+    severity: high
+    fixability: document
+    guidance: >
+      For a supplier this is the flow-down. Look for a cybersecurity interface agreement (CIA) or
+      RASIC with the OEM, the list of Annex 5 mitigations allocated to this ECU, and the
+      supplier's own flow-down to its sub-suppliers (MCAL, AUTOSAR BSW, crypto library, RTOS,
+      bootloader vendor). In the repository check that third-party components are identified with
+      versions (SBOM in SPDX or CycloneDX, vendor/ and third_party/ manifests, AUTOSAR BSW
+      release notes), that their security manuals or assumptions of use are referenced, and that
+      vulnerability notification duties are defined in both directions. Good looks like every
+      third-party component having an owner, a version, a source and a vulnerability-monitoring
+      entry.
+    evidence:
+      - Signed cybersecurity interface agreement listing responsibilities and work products
+      - SBOM of the ECU software including BSW, crypto and bootloader components
+      - Sub-supplier security requirements and vulnerability notification terms
+    artifacts: [sbom, third-party-notices]
+    crosswalk: ["iso-sae-21434:7.4.3", "iso-26262:8-5", "iec-62443-4-1:SM-9", "automotive-spice:ACQ.4"]
+  - ref: "7.3.3"
+    title: Risk assessment of the vehicle type and its elements
+    requirement: >
+      The manufacturer must identify the critical elements of the vehicle type, perform an
+      exhaustive risk assessment that considers individual elements, their interactions and
+      external systems, and treat the risks; all threats in Annex 5 Part A must be considered.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a TARA covering this ECU (docs/tara/, *.tara, ISO/SAE 21434 clause 15 work
+      products, exports from tools such as ANSYS medini analyze, ECU.TEST, Yakindu Security
+      Analyst, ThreatGet or itemis SECURE). Check that the asset list matches what the code
+      actually exposes: every UDS service enabled in the Dcm configuration (DcmDsdService,
+      DcmDspRoutine, DcmDspDid), every CAN or Ethernet PDU received (Com, CanIf, SoAd, SOME/IP
+      service interfaces in ARXML and .dbc/.arxml communication matrices), debug and flashing
+      interfaces, OTA paths, stored keys and personal data. Check that each Annex 5 Part A threat
+      group (4.3.1 to 4.3.7) is either analysed or justified as not applicable. A TARA that does
+      not mention diagnostic services or the bootloader is incomplete.
+    evidence:
+      - TARA with assets, threat scenarios, impact and feasibility ratings and risk treatment
+      - Mapping of Annex 5 Part A threats to the TARA
+      - Interface inventory consistent with Dcm, Com and SoAd configuration
+    artifacts: [threat-model]
+    crosswalk: ["iso-sae-21434:15", "iso-sae-21434:9.4", "iec-62443-4-1:SR-2", "eu-cra:Art.13(2)"]
+  - ref: "7.3.4"
+    title: Proportionate mitigations including Annex 5 Parts B and C
+    requirement: >
+      The vehicle type must be protected against the identified risks with proportionate
+      mitigations, including every Annex 5 Part B and C mitigation relevant to those risks; where
+      a listed mitigation is not relevant or not sufficient, another appropriate mitigation must
+      be implemented.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Trace each TARA risk-treatment decision to cybersecurity requirements and then to code.
+      Look for requirement IDs in code comments or annotations (for example
+      /* CSR-042 */ next to the SecOC configuration or the SecurityAccess callout) and for a
+      matrix mapping Annex 5 mitigations M1 to M24 to implementation evidence. Spot-check the
+      concrete mitigations in the Annex 5 controls of this framework (M7, M10, M11, M13, M16,
+      M22, M23). Risks accepted or transferred to the OEM must appear as cybersecurity claims in
+      the interface agreement, not silently dropped.
+    evidence:
+      - Traceability from TARA risks to requirements, code and tests
+      - Annex 5 mitigation coverage matrix with justification for non-applicable items
+    artifacts: [threat-model, requirements-traceability]
+    crosswalk: ["iso-sae-21434:15", "iso-sae-21434:10.4.1", "iec-62443-4-1:SR-3"]
+  - ref: "7.3.6"
+    title: Security testing before type approval
+    requirement: >
+      Before type approval the manufacturer must perform appropriate and sufficient testing to
+      verify that the implemented security measures are effective.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for security test suites in the repository or CI: negative tests for UDS SecurityAccess
+      (invalid key gives NRC 0x35, exceeded attempts NRC 0x36, delay timer NRC 0x37), SecOC
+      verification-failure tests (wrong MAC, replayed freshness value), bootloader tests with a
+      tampered or unsigned image, fuzzing of parsers and protocol stacks (libFuzzer or AFL++
+      harnesses for UDS, DoIP, SOME/IP and ISO-TP reassembly; commercial fuzzers such as Defensics
+      or beSTORM), and penetration test reports. Check that results are tied to a software version
+      and that findings are tracked to closure.
+    evidence:
+      - Security verification and penetration test reports for the released software version
+      - Fuzzing harnesses and campaign results
+      - Closed or risk-accepted findings with rationale
+    artifacts: [automated-tests, vulnerability-scanning]
+    crosswalk: ["iso-sae-21434:10.4.2", "iso-sae-21434:11", "iec-62443-4-1:SVV-3", "iec-62443-4-1:SVV-4", "nist-ssdf:PW.8.2"]
+  - ref: "7.3.7"
+    title: Attack detection, monitoring support and forensic data
+    requirement: >
+      The vehicle type must implement measures to detect and prevent cyber-attacks, support the
+      manufacturer's monitoring of threats, vulnerabilities and attacks, and provide forensic data
+      to analyse attempted or successful attacks (Annex 5 M15 suggests detecting malicious
+      internal messages).
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Look for an intrusion detection function: AUTOSAR IdsM (Intrusion Detection System Manager)
+      configuration with security events (SEv) and qualification filters, an IdsR or reporting
+      path to the OEM backend or vehicle security operations centre, or a host or network IDS on
+      Linux and Ethernet ECUs. Security events worth reporting include SecOC MAC failures, failed
+      SecurityAccess or Authentication attempts, unexpected diagnostic session changes, messages
+      with unexpected IDs or frequencies on CAN, secure-boot failures and update signature
+      failures. Check that security events are stored in a protected security event memory (Dem
+      event memory or dedicated NvM block with integrity protection), carry timestamps and
+      counters, cannot be cleared by an unauthenticated diagnostic request (0x14 ClearDTC), and
+      avoid personal data.
+    evidence:
+      - IdsM or equivalent security event configuration and reporting path
+      - Protected security event log with integrity and retention rules
+      - Tests showing events are raised for representative attacks
+    checks: [pii-in-logs]
+    artifacts: [incident-response-plan]
+    crosswalk: ["iso-sae-21434:8.3", "iec-62443-4-2:CR 2.8", "eu-cra:AnnexI.I.2(l)"]
+  - ref: "7.3.8"
+    title: Cryptographic modules in line with consensus standards
+    requirement: >
+      Cryptographic modules used for the purposes of the regulation must follow consensus
+      standards; any deviation must be justified by the manufacturer.
+    category: cryptography
+    severity: medium
+    fixability: code
+    guidance: >
+      Inspect the Csm, CryIf and Crypto driver configuration (ARXML CsmJob, CsmPrimitives,
+      CryptoKeyElement) and any software crypto library (mbedTLS, wolfSSL, OpenSSL, vendor HSM
+      firmware). Accept established algorithms with adequate key length (AES-128 or AES-256 with
+      CMAC or GCM, SHA-256 or stronger, ECDSA P-256 or Ed25519, RSA 3072 or more for new designs)
+      and certified or well-reviewed implementations (HSM or SHE firmware with security
+      certification, FIPS 140-3 or Common Criteria where available). Flag home-made ciphers, XOR
+      obfuscation, CRC used as a MAC, DES, 3DES, RC4, MD5, SHA-1 for signatures, ECB mode, and rand()
+      used for nonces or seeds. Annex 5 threats 26.1 to 26.3 cover short keys and deprecated
+      algorithms.
+    evidence:
+      - Inventory of algorithms, key lengths and crypto implementations with their references
+      - Justification for any non-standard primitive
+    checks: [weak-cipher, weak-hash, insecure-random]
+    crosswalk: ["iso-sae-21434:10.4.1", "etsi-en-303-645:5.5-1", "iec-62443-4-2:CR 4.3"]
+  - ref: "7.2.2.3"
+    title: Timely response to threats and vulnerabilities
+    requirement: >
+      CSMS processes must ensure that threats and vulnerabilities needing a response are mitigated
+      within a reasonable timeframe, and (7.2.2.4) that monitoring is continual, includes vehicles
+      after registration and can analyse vehicle data and logs while respecting privacy. The
+      manufacturer reports monitoring outcomes to the approval authority at least yearly (7.4.1).
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      For the supplier side, look for a vulnerability management procedure with intake (PSIRT
+      contact, SECURITY.md), triage with a scoring method (CVSS plus automotive impact), defined
+      response times, and notification of the OEM. Check that the third-party components in the
+      ECU are monitored for CVEs (SBOM fed into a scanner such as Dependency-Track, Black Duck or
+      the OEM's tool) and that fixes can be shipped through the update path. Good looks like a
+      tracked vulnerability register per ECU software version and agreed SLAs with the OEM.
+    evidence:
+      - Vulnerability handling procedure with response times
+      - Vulnerability register linked to SBOM components and software versions
+    artifacts: [incident-response-plan, sbom, vulnerability-scanning]
+    crosswalk: ["iso-sae-21434:8.6", "iso-sae-21434:13.3", "iec-62443-4-1:DM-1", "eu-cra:AnnexI.II.2"]
+  - ref: "Annex5.B.M10"
+    title: Verify authenticity and integrity of received messages
+    requirement: >
+      Annex 5 mitigation M10: the vehicle verifies the authenticity and integrity of the messages
+      it receives. It applies to spoofing, replay, man-in-the-middle, code injection through
+      communication channels and malicious V2X, diagnostic and proprietary messages.
+    category: communications-security
+    severity: high
+    fixability: code
+    when:
+      { fact: connectivity, in: [can-bus, automotive-ethernet, cellular, wifi, bluetooth, nfc-uwb, internet] }
+    guidance: >
+      For CAN and CAN FD look for AUTOSAR SecOC: SecOCRxPduProcessing and SecOCTxPduProcessing
+      entries for every security-relevant PDU (actuator commands, mode requests, immobiliser,
+      odometer), a MAC from Csm (AES-128-CMAC is typical), SecOCAuthInfoTruncLength not shorter
+      than agreed with the OEM (24 to 64 bits are common), a freshness value from a Freshness Value
+      Manager (FvM) with synchronisation messages, and handling of verification failures (drop the
+      PDU, raise a security event, do not use stale data). Compare the .dbc or ARXML communication
+      matrix with the SecOC configuration and flag security-relevant signals without
+      authentication. For automotive Ethernet look for MACsec, IPsec or TLS on SOME/IP and DoIP.
+      Hand-written C that accepts commands from Com_ReceiveSignal or a CanIf callback without any
+      MAC or counter check is a gap. E2E protection (CRC and alive counter) protects against
+      faults, not attackers, and does not satisfy M10.
+    evidence:
+      - SecOC configuration covering all security-relevant PDUs with MAC and freshness parameters
+      - Freshness value management and resynchronisation design
+      - Tests for MAC failure, replay and truncated MAC handling
+    checks: [can-unauthenticated]
+    artifacts: [threat-model]
+    crosswalk: ["iso-sae-21434:10.4.1", "iec-62443-4-2:CR 3.1", "etsi-en-303-645:5.5-1"]
+  - ref: "Annex5.B.M22"
+    title: Security controls on external interfaces and diagnostics
+    requirement: >
+      Annex 5 mitigation M22: security controls are applied to external interfaces such as USB,
+      the OBD port and diagnostic access, which can otherwise be used to inject code or to
+      manipulate vehicle parameters (threats 18.1 to 18.3).
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Inspect the UDS stack (AUTOSAR Dcm configuration or a hand-written handler). For
+      SecurityAccess (0x27) check that the seed comes from a cryptographic RNG (Csm random job,
+      HSM TRNG), is never constant or a counter, and that the key is derived with a secret-keyed
+      algorithm (CMAC, HMAC or asymmetric signature) rather than XOR, bit rotation or a static
+      table; check DcmDspSecurityNumAttDelay and DcmDspSecurityDelayTime (attempt counter and
+      delay that survive a reset), and that the secret is not in source. Prefer Authentication
+      (0x29) with PKI certificates (ISO 14229-1:2020) for new designs. Check which services each
+      security level unlocks: WriteDataByIdentifier (0x2E) for coding and calibration,
+      RoutineControl (0x31), RequestDownload (0x34), TransferData (0x36), RequestTransferExit
+      (0x37), InputOutputControl (0x2F) and ECUReset (0x11) must require an unlocked level in the
+      appropriate session (0x10 programming or extended). Flag supplier or end-of-line backdoor
+      DIDs and routines that bypass security, and USB or serial consoles enabled in production.
+    evidence:
+      - Dcm configuration showing security levels per service, DID and routine
+      - Seed and key or certificate-based authentication design without static secrets
+      - Tests for invalid key, attempt limits and delay timer
+    checks: [uds-weak-security-access, default-credentials, hardcoded-secret]
+    crosswalk: ["iso-sae-21434:10.4.1", "iec-62443-4-2:CR 1.2", "iec-62443-4-2:CR 1.11", "etsi-en-303-645:5.1-5", "etsi-en-303-645:5.6-1"]
+  - ref: "Annex5.B.M11"
+    title: Protected storage of cryptographic keys
+    requirement: >
+      Annex 5 mitigation M11: security controls are implemented for storing cryptographic keys,
+      for example hardware security modules, to counter key extraction and compromise of the
+      software provider's keys (threats 4.2, 12.4, 19.3).
+    category: secrets-management
+    severity: critical
+    fixability: code
+    guidance: >
+      Keys must live in an HSM or SHE key slot (Infineon AURIX HSM, NXP HSE or CSEc, Renesas
+      ICU-M, ST HSM) or a protected key store, and be referenced by key ID through Csm and
+      CryIf (CryptoKeyElement, KeyM), never as byte arrays in C files, headers, ARXML default
+      values, A2L or test fixtures that ship. Look for literal 16 or 32 byte arrays named key,
+      MAC_KEY, SECOC_KEY, MASTER_ECU_KEY, AES_KEY. Check that keys are unique per ECU or
+      diversified from a backend master key, provisioned at end of line through the SHE
+      M1 to M5 protocol or an HSM import with authenticated wrapping, and that firmware signing
+      private keys stay in the backend HSM and are absent from the repository and CI secrets in
+      plain form.
+    evidence:
+      - Key management concept (lifecycle, diversification, provisioning, revocation)
+      - Csm and KeyM configuration using key slots instead of literal keys
+      - No key material in the repository history
+    checks: [hardcoded-crypto-key, hardcoded-secret]
+    crosswalk: ["iso-sae-21434:10.4.1", "etsi-en-303-645:5.4-1", "etsi-en-303-645:5.4-3", "etsi-en-303-645:5.4-4"]
+  - ref: "Annex5.B.M16"
+    title: Secure software update procedures
+    requirement: >
+      Annex 5 mitigation M16: secure software update procedures are used against compromise of
+      over-the-air and local update procedures, fabricated firmware and software manipulated
+      before the update (threats 12.1 to 12.3).
+    category: updates-maintenance
+    severity: critical
+    fixability: code
+    when:
+      { not: { fact: updates, equals: none } }
+    guidance: >
+      Inspect the bootloader and flash driver (FBL, Flash Bootloader, AUTOSAR FlsLoader, vendor
+      bootloader). The bootloader must verify a signature (ECDSA, RSA-PSS or Ed25519) over the
+      whole image and its metadata before activation, with the public key or its hash in
+      write-protected memory or HSM; a CRC or checksum alone is not sufficient. Check that
+      programming requires an unlocked security level (0x27 or 0x29) in the programming session,
+      that RequestDownload (0x34) address ranges are restricted, that the signature is verified
+      after the last TransferData (0x36) and before the image is marked valid (RoutineControl
+      0x31 checkProgrammingDependencies 0xFF01 or an OEM routine), that rollback to older
+      vulnerable versions is prevented (anti-rollback counter in OTP or HSM monotonic counter),
+      and that partial or interrupted programming leaves the ECU in the bootloader, not in a
+      corrupted application.
+    evidence:
+      - Bootloader signature verification design and code path
+      - Anti-rollback mechanism and key handling for the verification key
+      - Tests with tampered, unsigned, truncated and downgraded images
+    checks: [firmware-update-unsigned, hardcoded-crypto-key]
+    artifacts: [update-policy]
+    crosswalk: ["unece-r156:7.2.1.1", "iso-24089:7.3.4", "iso-sae-21434:13.4", "iec-62443-4-2:EDR 3.10", "etsi-en-303-645:5.3-10"]
+  - ref: "Annex5.B.M7"
+    title: Protect system code and data against manipulation
+    requirement: >
+      Annex 5 mitigation M7: access control techniques and designs protect system data and code
+      against extraction, manipulation, fabricated software, unauthorised changes to the
+      electronic ID, configuration parameters and event logs (threats 19.1, 20.1 to 20.5, 21.1,
+      22.2, 23.1, 25.1, 25.2).
+    category: hardware-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check for a secure boot chain: HSM or SHE secure boot (BOOT_MAC on SHE, HSM-verified boot on
+      AURIX, HSE secure boot on S32), or on Linux and QNX ECUs a verified boot chain (U-Boot
+      FIT signatures with CONFIG_FIT_SIGNATURE, dm-verity, IMA). Flag build options that disable
+      it (SECURE_BOOT=0, CONFIG_SECURE_BOOT not set, signature check stubbed for "debug").
+      Check that the flash regions holding code and calibration are write-protected outside the
+      programming session (flash UCB or OTP write protection), that odometer, VIN and
+      configuration values are written only through authenticated paths and stored with integrity
+      protection (NvM blocks with CRC plus a MAC for security-relevant values), and that security
+      event logs cannot be erased by unauthenticated requests.
+    evidence:
+      - Secure boot configuration and chain of trust description
+      - Flash and NvM protection for code, calibration, VIN and odometer data
+    checks: [secure-boot-disabled]
+    crosswalk: ["iec-62443-4-2:EDR 3.14", "iso-sae-21434:10.4.1", "etsi-en-303-645:5.7-1"]
+  - ref: "Annex5.B.M23"
+    title: Secure development practice and no development remainders
+    requirement: >
+      Annex 5 mitigation M23: cybersecurity best practices for software and hardware development
+      are followed, with adequate security testing, so that software bugs, weak cryptography and
+      remainders from development (debug ports, JTAG, development certificates, developer
+      passwords, open ports) cannot be exploited (threats 26 to 29).
+    category: hardware-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check production build configuration for debug access: JTAG and SWD locked or
+      password-protected (AURIX OCDS lock through UCB_DBG, STM32 RDP level 2, NXP S32K flash
+      security byte FSEC, Renesas ID code), trace and XCP or CCP calibration disabled or
+      authenticated, UART consoles and shells removed, test DIDs and EOL routines disabled after
+      production. Look for development certificates, test keys and passwords left in the tree
+      (dev_cert.pem, test_private_key, DEFAULT_PASSWORD) and for Linux ECUs with open debug ports
+      (adb, ssh with root, telnet, gdbserver). Secure coding evidence includes a coding standard
+      (MISRA C or C++, CERT C), static analysis in CI and no use of unbounded string functions.
+      Unprotected gateways between bus segments (threat 29.2) should filter by message ID and
+      direction.
+    evidence:
+      - Production build settings that lock debug interfaces and remove test hooks
+      - Coding standard and static analysis results
+      - Gateway routing and filtering tables reviewed for security
+    checks: [debug-interface-enabled, debug-enabled, default-credentials, unsafe-c-functions, hardcoded-secret]
+    artifacts: [coding-standard, static-analysis-config]
+    crosswalk: ["iso-sae-21434:10.4.1", "iec-62443-4-2:EDR 2.13", "etsi-en-303-645:5.6-4A", "misra-c:Dir 4.1"]
+  - ref: "Annex5.B.M13"
+    title: Detect and recover from denial of service
+    requirement: >
+      Annex 5 mitigation M13: measures detect and recover from denial-of-service attacks, such as
+      flooding a CAN bus, provoking ECU faults with a high message rate or disrupting vehicle
+      communication (threats 8.1, 8.2, 24.1).
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    when:
+      { fact: connectivity, in: [can-bus, automotive-ethernet, cellular, wifi, bluetooth, internet] }
+    guidance: >
+      Check that receive paths are bounded: CanIf and Com buffers with overflow handling, PDU
+      deadline monitoring with substitute values, CanSM bus-off recovery with backoff, rate
+      limiting of diagnostic requests and DoIP connections, Ethernet switch rate limits and
+      firewall rules, bounded queues in SOME/IP daemons. The safety reaction to lost messages
+      should be a defined degraded mode (FiM inhibition, Dem event) rather than a reset loop.
+      Security events for floods should be reported to IdsM.
+    evidence:
+      - Bus-off and timeout handling with defined degradation
+      - Rate limits on diagnostic and network services
+    checks: [missing-watchdog]
+    crosswalk: ["iec-62443-4-2:CR 7.1", "iso-26262:6-D"]

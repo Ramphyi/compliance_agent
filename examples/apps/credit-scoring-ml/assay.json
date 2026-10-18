@@ -1,0 +1,1 @@
+{"verify": ["python3 tools/make_model.py", "python3 -m unittest discover -s tests"]}

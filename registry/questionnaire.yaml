@@ -1,0 +1,307 @@
+# Assay compliance questionnaire.
+#
+# Each question's `id` is a profile *fact*. Framework applicability and control
+# conditions in registry/frameworks/*.yaml refer to these ids and option values
+# exactly. Answers are prefilled from the code scan where possible, but a human
+# confirms them before the audit relies on them.
+version: 1
+questions:
+  - id: productTypes
+    section: Product
+    type: multi
+    text: What kind of product is this?
+    why: Product type decides which families of standards apply (web and SaaS security, embedded or IoT product security, automotive or medical safety).
+    options:
+      - { value: web-app, label: "Web application" }
+      - { value: saas, label: "Hosted SaaS operated by us" }
+      - { value: backend-api, label: "Backend service or API" }
+      - { value: mobile-app, label: "Mobile app (iOS or Android)" }
+      - { value: desktop-app, label: "Desktop application" }
+      - { value: embedded-firmware, label: "Embedded firmware" }
+      - { value: iot-device, label: "Connected (IoT) device" }
+      - { value: automotive-ecu, label: "Automotive ECU or vehicle software" }
+      - { value: industrial-control, label: "Industrial control or OT component" }
+      - { value: medical-device, label: "Medical device software (SaMD or SiMD)" }
+      - { value: ai-system, label: "AI or ML system" }
+      - { value: library-sdk, label: "Library, SDK or developer tool" }
+  - id: languages
+    section: Product
+    type: multi
+    text: Which programming languages is the product written in?
+    why: Coding standards are language-specific (MISRA C, MISRA C++, CERT C). Detected from the code; confirm or correct.
+    options:
+      - { value: c, label: "C" }
+      - { value: cpp, label: "C++" }
+      - { value: rust, label: "Rust" }
+      - { value: js-ts, label: "JavaScript / TypeScript" }
+      - { value: python, label: "Python" }
+      - { value: java-kotlin, label: "Java / Kotlin" }
+      - { value: swift-objc, label: "Swift / Objective-C" }
+      - { value: go, label: "Go" }
+      - { value: csharp, label: "C#" }
+      - { value: dart, label: "Dart" }
+      - { value: php-ruby, label: "PHP / Ruby" }
+      - { value: other, label: "Other" }
+
+  - id: sector
+    section: Product
+    type: multi
+    text: Which sectors will use it?
+    why: Sector rules (health, finance, automotive, industrial) add obligations that general software does not have.
+    options:
+      - { value: general, label: "General purpose" }
+      - { value: healthcare, label: "Healthcare and life sciences" }
+      - { value: finance, label: "Finance, banking, insurance or payments" }
+      - { value: automotive, label: "Automotive and mobility" }
+      - { value: industrial-energy, label: "Industrial, energy or utilities" }
+      - { value: public-sector, label: "Public sector or government" }
+      - { value: education, label: "Education" }
+      - { value: consumer-retail, label: "Consumer goods, retail or e-commerce" }
+      - { value: telecom, label: "Telecommunications" }
+      - { value: employment-hr, label: "Employment and HR" }
+  - id: markets
+    section: Market
+    type: multi
+    text: Where will you sell or make it available?
+    why: Law applies by market. EU, UK and US rules differ, and some apply even without an establishment there.
+    options:
+      - { value: EU, label: "European Union / EEA" }
+      - { value: RO, label: "Romania (adds Romanian national rules)" }
+      - { value: UK, label: "United Kingdom" }
+      - { value: US, label: "United States" }
+      - { value: US-CA, label: "California" }
+      - { value: US-WA, label: "Washington State" }
+      - { value: CH, label: "Switzerland" }
+      - { value: CA, label: "Canada" }
+      - { value: UNECE, label: "UNECE vehicle type-approval markets" }
+      - { value: other, label: "Other markets" }
+  - id: audience
+    section: Market
+    type: multi
+    text: Who will use or buy it?
+    why: Consumer products carry consumer-protection and product-security duties; products for children add special protections.
+    options:
+      - { value: consumers, label: "Consumers (B2C)" }
+      - { value: businesses, label: "Businesses (B2B)" }
+      - { value: public-sector, label: "Public authorities" }
+      - { value: healthcare-providers, label: "Hospitals, clinicians or patients" }
+      - { value: children, label: "Children under 16" }
+      - { value: employees-internal, label: "Our own employees only" }
+      - { value: oem-integrators, label: "OEMs or integrators who build it into their product" }
+  - id: orgRole
+    section: Market
+    type: single
+    text: What is your role for this product?
+    why: Manufacturers, importers, suppliers and operators have different legal duties.
+    options:
+      - { value: manufacturer, label: "Manufacturer or publisher under our own name" }
+      - { value: oem, label: "Vehicle or device OEM" }
+      - { value: tier1-supplier, label: "Tier-1 supplier" }
+      - { value: tier2-supplier, label: "Tier-2 supplier or component vendor" }
+      - { value: importer-distributor, label: "Importer or distributor" }
+      - { value: service-provider, label: "Service provider or processor for customers" }
+      - { value: in-house, label: "Internal tool for our own organisation" }
+  - id: orgSize
+    section: Market
+    type: single
+    text: How large is your organisation?
+    why: Some laws use size thresholds, for example NIS2 entity size and CCPA revenue or volume thresholds.
+    options:
+      - { value: micro, label: "Under 10 people and 2 M EUR turnover" }
+      - { value: small, label: "Under 50 people and 10 M EUR turnover" }
+      - { value: medium, label: "Under 250 people and 50 M EUR turnover" }
+      - { value: large, label: "Large enterprise" }
+  - id: dataCategories
+    section: Data
+    type: multi
+    text: What data does the product process?
+    why: Personal data triggers privacy law; health, genetic, biometric, payment and children's data carry stricter rules.
+    options:
+      - { value: none, label: "No personal data" }
+      - { value: personal, label: "Personal data (names, emails, IDs, IPs)" }
+      - { value: health, label: "Health or medical data" }
+      - { value: genetic-biometric, label: "Genetic or biometric data" }
+      - { value: payment-cards, label: "Payment card data" }
+      - { value: financial, label: "Other financial data" }
+      - { value: children, label: "Children's data" }
+      - { value: location, label: "Precise location" }
+      - { value: vehicle, label: "Vehicle or telematics data" }
+      - { value: credentials, label: "User credentials" }
+      - { value: other-sensitive, label: "Other special categories (religion, politics, sexual orientation)" }
+  - id: paymentHandling
+    section: Data
+    type: single
+    text: How are card payments handled?
+    why: Storing or transmitting card data puts you in PCI DSS scope; a hosted redirect reduces that scope.
+    showWhen: { fact: dataCategories, in: [payment-cards, financial] }
+    options:
+      - { value: none, label: "No card payments" }
+      - { value: redirect, label: "Hosted payment page or redirect" }
+      - { value: tokenized-sdk, label: "Provider SDK or tokenisation (we never see the PAN)" }
+      - { value: stores-card-data, label: "We store, process or transmit card data" }
+  - id: aiUsage
+    section: AI
+    type: single
+    text: Does the product use AI?
+    why: The EU AI Act, ISO/IEC 42001 and the OWASP LLM risks depend on how AI is used.
+    options:
+      - { value: none, label: "No AI" }
+      - { value: third-party-models, label: "Calls third-party models (OpenAI, Anthropic and similar)" }
+      - { value: own-models, label: "Trains or fine-tunes our own models" }
+      - { value: general-purpose-model, label: "Provides a general-purpose AI model to others" }
+  - id: aiRiskAreas
+    section: AI
+    type: multi
+    text: Which of these describe the AI use?
+    why: Some AI uses are prohibited, high-risk or carry transparency duties under the EU AI Act.
+    showWhen: { not: { fact: aiUsage, in: [none] } }
+    options:
+      - { value: none, label: "None of these" }
+      - { value: chatbot, label: "Talks directly with people" }
+      - { value: synthetic-content, label: "Generates images, audio, video or text shown to the public" }
+      - { value: biometric, label: "Biometric identification or categorisation" }
+      - { value: emotion-recognition, label: "Emotion recognition" }
+      - { value: critical-infrastructure, label: "Safety component of critical infrastructure" }
+      - { value: education, label: "Education access or grading" }
+      - { value: employment, label: "Hiring, HR or worker management" }
+      - { value: essential-services, label: "Credit scoring, insurance pricing or access to public benefits" }
+      - { value: law-enforcement-justice, label: "Law enforcement, migration or justice" }
+      - { value: medical, label: "Medical diagnosis or treatment decisions" }
+      - { value: safety-component, label: "Safety component of a regulated product (vehicle, machine, medical device)" }
+  - id: safetyCritical
+    section: Safety
+    type: single
+    text: Could a malfunction injure people?
+    why: Safety-relevant software needs functional-safety processes (ISO 26262, IEC 61508, IEC 62304).
+    options:
+      - { value: "no", label: "No" }
+      - { value: injury-possible, label: "Yes, injury is possible" }
+      - { value: life-critical, label: "Yes, it could be life-critical" }
+  - id: asil
+    section: Safety
+    type: single
+    text: What is the highest ASIL (ISO 26262) of the software?
+    why: ASIL sets the required rigour for coding, testing and coverage.
+    showWhen: { any: [ { fact: productTypes, in: [automotive-ecu] }, { fact: sector, in: [automotive] } ] }
+    options:
+      - { value: QM, label: "QM (no safety requirement)" }
+      - { value: A, label: "ASIL A" }
+      - { value: B, label: "ASIL B" }
+      - { value: C, label: "ASIL C" }
+      - { value: D, label: "ASIL D" }
+  - id: sil
+    section: Safety
+    type: single
+    text: What safety integrity level (IEC 61508) applies?
+    why: SIL sets the required rigour for industrial safety software.
+    showWhen: { fact: productTypes, in: [industrial-control, embedded-firmware] }
+    options:
+      - { value: none, label: "None" }
+      - { value: SIL1, label: "SIL 1" }
+      - { value: SIL2, label: "SIL 2" }
+      - { value: SIL3, label: "SIL 3" }
+      - { value: SIL4, label: "SIL 4" }
+  - id: medicalClass
+    section: Safety
+    type: single
+    text: What is the medical-device status?
+    why: Software with a medical purpose can be a medical device (MDR or FDA), which needs IEC 62304 and ISO 14971.
+    showWhen: { any: [ { fact: sector, in: [healthcare] }, { fact: productTypes, in: [medical-device] } ] }
+    options:
+      - { value: not-medical, label: "Not a medical device" }
+      - { value: wellness, label: "Wellness only, no medical purpose" }
+      - { value: class-I, label: "Class I (MDR) / Class I (FDA)" }
+      - { value: class-IIa, label: "Class IIa (MDR) / Class II (FDA)" }
+      - { value: class-IIb, label: "Class IIb (MDR)" }
+      - { value: class-III, label: "Class III (MDR) / Class III (FDA)" }
+
+  - id: swSafetyClass
+    section: Safety
+    type: single
+    text: What is the IEC 62304 software safety class?
+    why: Class B and C software need more documentation, design detail and verification.
+    showWhen: { fact: medicalClass, in: [class-I, class-IIa, class-IIb, class-III] }
+    options:
+      - { value: A, label: "Class A: no injury possible" }
+      - { value: B, label: "Class B: non-serious injury possible" }
+      - { value: C, label: "Class C: death or serious injury possible" }
+
+  - id: connectivity
+    section: Technology
+    type: multi
+    text: How does the product connect?
+    why: Network, radio and vehicle-bus interfaces bring product-security duties (RED, CRA, UNECE R155).
+    options:
+      - { value: none, label: "Not connected" }
+      - { value: internet, label: "Internet or cloud" }
+      - { value: wifi, label: "Wi-Fi" }
+      - { value: bluetooth, label: "Bluetooth or BLE" }
+      - { value: cellular, label: "Cellular (LTE, 5G, NB-IoT)" }
+      - { value: nfc-uwb, label: "NFC or UWB" }
+      - { value: can-bus, label: "CAN, CAN FD or LIN" }
+      - { value: automotive-ethernet, label: "Automotive Ethernet or SOME/IP" }
+      - { value: fieldbus, label: "Industrial fieldbus (Modbus, PROFINET, OPC UA)" }
+      - { value: usb-serial, label: "USB, UART or debug ports" }
+  - id: updates
+    section: Technology
+    type: single
+    text: How is the software updated?
+    why: Update mechanisms must be secure. Some rules require them (CRA, UNECE R156, ETSI EN 303 645).
+    options:
+      - { value: none, label: "Cannot be updated" }
+      - { value: manual, label: "Manual or workshop update" }
+      - { value: ota, label: "Over-the-air (OTA)" }
+      - { value: app-store, label: "Through app stores" }
+      - { value: continuous-deployment, label: "Continuous deployment of our hosted service" }
+  - id: distribution
+    section: Technology
+    type: multi
+    text: How is it distributed?
+    why: App stores have their own policies, and on-premise or OEM supply changes who is responsible for what.
+    options:
+      - { value: apple-app-store, label: "Apple App Store" }
+      - { value: google-play, label: "Google Play" }
+      - { value: web, label: "Public website" }
+      - { value: direct-download, label: "Direct download or installer" }
+      - { value: preinstalled-hardware, label: "Pre-installed on hardware we sell" }
+      - { value: on-premise, label: "Installed in customer infrastructure" }
+      - { value: oem-supply, label: "Supplied to OEMs" }
+      - { value: internal-only, label: "Internal use only" }
+  - id: regulatedEntity
+    section: Organisation
+    type: multi
+    text: Does your organisation, or the customer you serve, fall into any of these?
+    why: Entity-level regimes (NIS2, DORA, HIPAA) add organisational and supplier duties.
+    options:
+      - { value: none, label: "None or unknown" }
+      - { value: nis2-essential, label: "NIS2 essential entity" }
+      - { value: nis2-important, label: "NIS2 important entity" }
+      - { value: dora-financial-entity, label: "DORA financial entity" }
+      - { value: ict-provider-to-finance, label: "ICT provider to financial entities" }
+      - { value: hipaa-covered-entity, label: "HIPAA covered entity" }
+      - { value: hipaa-business-associate, label: "HIPAA business associate" }
+      - { value: public-body, label: "Public body" }
+  - id: certificationsTarget
+    section: Organisation
+    type: multi
+    text: Which certifications or attestations do you have or want?
+    why: Target certifications add their controls to the audit even where no law requires them.
+    options:
+      - { value: none, label: "None" }
+      - { value: iso-27001, label: "ISO/IEC 27001" }
+      - { value: soc2, label: "SOC 2" }
+      - { value: iso-42001, label: "ISO/IEC 42001" }
+      - { value: iec-62443, label: "IEC 62443" }
+      - { value: aspice, label: "Automotive SPICE" }
+      - { value: iso-13485, label: "ISO 13485" }
+      - { value: tisax, label: "TISAX" }
+      - { value: cyber-trust-mark, label: "US Cyber Trust Mark" }
+  - id: openSource
+    section: Organisation
+    type: single
+    text: How is the code licensed?
+    why: Open-source stewardship and licensing obligations differ from proprietary distribution (the CRA has a steward regime).
+    options:
+      - { value: proprietary, label: "Proprietary" }
+      - { value: open-source, label: "Open source" }
+      - { value: mixed, label: "Proprietary with open-source components" }

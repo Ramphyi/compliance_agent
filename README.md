@@ -1,188 +1,185 @@
-# Clearance
+# ◆ Assay — compliance audit agent
 
-A React + Node.js compliance workspace with PostgreSQL persistence, explicit agent activity, MCP tools, scoped integration keys, and CI/CD evidence gates. Orange, navy and warm neutral UI; responsive landing page and product workspace. Fonts are served locally.
+Assay audits a codebase against regulations and standards, with a person deciding every step.
 
-## Run the interactive preview
+You point it at a repository. It works out what the product is, for example a web SaaS, embedded firmware, an automotive ECU, medical software or an AI system. It asks the compliance questions that decide which rules apply, such as where you sell, to whom, what data you handle and the safety level. It then maps the code to the applicable frameworks and lists the problems. A reviewer confirms, rejects, modifies or sends each finding back for re-investigation. Assay fixes the confirmed findings on a separate branch, compiles and tests every fix, and waits for the reviewer to accept or revert it. The audit trail is hash-chained.
 
-Requires Node.js 22.12+ and npm.
+It is self-hosted and local-first: no SaaS, no accounts and no database. All state is plain JSON in `<repo>/.assay/`.
 
-```powershell
-cd D:\Coding\Compliance_platform_and_agents\compliance_agent
+```
+understand ─▶ ask / preset ─▶ scope ─▶ audit ─▶ human review ─▶ fix + verify ─▶ accept / revert ─▶ report ─▶ re-audit
+               (questionnaire)  (48 frameworks)  (detectors +   (confirm, reject,  (branch, build,   (decisions carry over)
+                                                  agent)         modify, re-check)  tests, recheck)
+```
+
+## Four ways to run it
+
+| Surface | Use it for | Who does the reasoning |
+| --- | --- | --- |
+| **CLI agent:** `assay audit` | An interactive terminal session from start to finish | Assay's own agent (Claude, or an on-premise model) |
+| **MCP server:** `assay mcp` | Inside Claude Code, Cursor, VS Code agent mode or any MCP client | **The host agent and its harness**: its model, file tools, web search and terminal |
+| **Dashboard and service:** `assay serve` or Docker | A team review UI and internal deployment across many repositories | Assay's agent, or MCP hosts connected over HTTP |
+| **VS Code extension** | Findings in the Problems panel and a tree view, the dashboard in a panel, and MCP registration for Copilot agent mode | Either of the above |
+
+With no model configured, Assay still runs its 41 deterministic detectors and 30 evidence checks against the registry, and an MCP host can do the reasoning.
+
+## Quick start
+
+Requires Node.js 22.12 or later, and git.
+
+```sh
 npm ci
-npm run dev
+npm run build                      # builds dist/assay (CLI + server + MCP + dashboard + registry)
+node dist/assay/assay.mjs audit examples/apps/telehealth-api --static
 ```
 
-Open **http://127.0.0.1:5173** and choose **Connect your project**, then **New project**. This opens an empty local workspace, or reuses your signed-in workspace. **Explore the workspace** remains available as a separate sample. The local preview uses `pg-mem` with atomic snapshots in ignored `.local/workspace.json`; accounts, hashed sessions and projects survive API restarts. Production still uses PostgreSQL. Keep `.local` private and backed up; this single-process local store is for development, not production. No API credentials are needed to select a folder and try the browser workflow.
+With a model as the agent:
 
-## Project workflow
-
-1. **Create a project.** Choose GitHub, Bitbucket, a local folder or MCP / IDE agent. For private GitHub/Bitbucket code, save a read-only connection under **Settings → Your connected accounts** during account setup. Tokens are encrypted server-side and reused only when you choose Private repository. Public repositories need no token.
-2. **Connect code.** Scan the repository default branch or select a local folder and review the redacted source before sending it to this server. Source analysis shows file coverage, modules and referenced draft answers. AI synthesis is a separate opt-in. The advanced metadata-only importer and `submit_code_snapshot` remain available.
-3. **Answer project questions.** Review the prefilled purpose, data and access drafts with file/line references. Unknown business facts remain blank. Confirm markets, audience, intended use and data. Questions adapt to the profile and signals such as AI dependencies, mobile configuration and missing privacy/test filenames. The user or MCP agent can save answers; they do not approve evidence. Unknowns should remain explicit.
-4. **Review problems.** Run an assessment. Each finding has a reason and next action. Missing evidence means unverified, not a proven implementation defect. A coding agent can investigate code, help fix it and submit evidence for human review.
-5. **Return and recheck.** Open All projects, choose the same project, refresh its code snapshot and run another assessment. Earlier runs remain available. Changed snapshots, answers, profile or evidence invalidate the old gate.
-
-Collect metadata from a local checkout (run from the Clearance repository):
-
-```powershell
-node scripts/connect-project.mjs "D:\path\to\your-app" > snapshot.json
+```sh
+export ANTHROPIC_API_KEY=...       # Claude, default model claude-opus-5-5
+# or: export OPENAI_API_KEY=...    # OpenAI, default model gpt-5.5
+npx tsx scripts/provider-smoke.ts  # cheap check that the model and tool loop work
+node dist/assay/assay.mjs audit /path/to/your/repo
 ```
 
-Import that JSON under **Connect code → Or import a CLI inventory JSON**. To sync directly, set `CLEARANCE_URL`, `CLEARANCE_PROJECT_ID` and `CLEARANCE_API_KEY` in the local environment, then append `--send`. The key needs `evidence` scope. The command refuses non-HTTPS remote URLs and redirects, uses a timeout, never runs the target's code, and never prints the key. An optional Git revision identifies the checkout; uncommitted source contents are not inspected. Reimport after changes; there is no background repository watcher.
+Dashboard on <http://127.0.0.1:4317>:
 
-For Claude Code or an IDE agent with MCP tool support, open **Connect code → MCP / IDE agent**, create a key with `read`, `assess`, and `evidence` scopes, copy the server configuration into the client's MCP settings, and copy the project-specific continuation prompt. The agent reads the assessment skill, imports metadata, asks/answers the project questions, assesses, submits records, and reruns on the same project. Autocomplete alone cannot call MCP tools. Claude Code's HTTP server format is documented in its [official MCP guide](https://code.claude.com/docs/en/mcp). Keep the real bearer key in local client settings or environment expansion, outside version control.
-
-## What works
-
-- Marketing site: 13 distinct routes with product details, SaaS/AI/mobile/embedded workflows, MCP and CI documentation, security, illustrative pricing, field notes and linked research. Includes an interactive release example and hypothetical time-savings calculator.
-- Product onboarding: industry, SaaS/mobile/embedded/AI type, purpose, countries, audience, sensitive data and external-research consent.
-- Deterministic control mapping: selected GDPR, UK privacy, EU AI Act, ISO/IEC 42001 and 27001 readiness, EU consumer terms, accessibility, DORA, MDR, CRA, HIPAA, COPPA, CCPA, Apple and Google Play scope checks.
-- Assessments: timestamped discovery, mapping, evidence-review, research and release-review events; history and downloadable JSON reports.
-- Evidence vault: text/file import, control mapping, explicit owner approval/rejection; optional local repository inventory script.
-- Memos experiment: a reproducible assessment of a pinned open-source repository, using the real MCP SDK and CI command. Open `/field-notes/memos` and choose **Open the Memos example** to review the same scenario in an isolated workspace, with no pre-approved evidence.
-- Custom policies: create/delete requirements, or describe a software type and prepare a catalog/live-research rule set. Review and apply the draft explicitly; repeated application does not duplicate rules.
-- Source understanding: ephemeral bare clones, local source uploads, bounded file inspection, module map and referenced answer drafts.
-- Floating project assistant: drag anywhere, move with arrow keys on the header, ask about recorded context, run assessments and prepare rule sets. Real AI tool use requires server configuration and per-chat consent. Local tools remain available without a model.
-- Authentication: email/password with scrypt, Brevo confirmation and reset mail, Google OAuth with state/nonce/PKCE, optional Twilio Verify SMS/WhatsApp second factor.
-- MCP: actual stateless Streamable HTTP server, scoped bearer keys, nine tools and two resources.
-- CI/CD: a fail-closed command-line gate; rejects missing, incomplete, changed-input or older-than-seven-days reports, and high-priority controls without owner-approved evidence.
-- Official-source monitor: explicit opt-in, fixed HTTPS source catalog, bounded fetches and page-change fingerprints. Page change is not a legal interpretation.
-- OpenAI Responses web research: opt-in at both deployment and project level, official domains, citations, failure visibility, `store: false`. Only the declared profile and candidate control titles/URLs are sent; evidence text is excluded.
-
-## Reproduce the open-source experiment
-
-For the source-analysis flow, run `npm run experiment:reverse-office`. It clones the public Reverse Office default branch, records its exact revision, reads source, exercises the assistant and rule-set review, and verifies MCP access and a blocked evidence gate. No target application code is executed. See [source analysis and assistant guide](docs/SOURCE-ASSISTANT.md) and `docs/experiments/reverse-office.json`. In the UI use **New project → Try the Reverse Office repository**.
-
-```powershell
-git clone https://github.com/usememos/memos.git .local/memos
-git -C .local/memos checkout 8120a6cee03003ee7968b49b2109f816fa4d96a4
-npm run experiment:memos -- .local/memos
+```sh
+node dist/assay/assay.mjs serve /path/to/repo-a /path/to/repo-b
 ```
 
-The script reads metadata from the pinned repository, starts an isolated Clearance API with `pg-mem`, connects using the MCP client SDK, submits evidence, checks the approval boundary, invokes the actual CI command and revokes its key. It never executes Memos code or sends data to external providers. The resulting `docs/experiments/memos.json` is an engineering workflow record, not a certification of Memos. A blocked release gate is expected because the evidence has not been approved.
+During development you can run the TypeScript directly with `npm run assay -- <command>`.
 
-The local inventory now finds nested JavaScript manifests and Go modules/tests. It skips symlinks, secret directories and generated dependencies; limits traversal to five directory levels, 5,000 files and 10,000 entries; and reads at most 32 manifests under 500,000 bytes each. Truncation is explicit in its output.
+### Inside Claude Code (MCP)
 
-## Connect real services
-
-Copy `.env.example` to `.env` and fill in values locally. Never commit credentials. Revoke any API key previously shared in chat and create a replacement.
-
-| Service        | Configuration                                                                                                     |
-| -------------- | ----------------------------------------------------------------------------------------------------------------- |
-| PostgreSQL     | `DATABASE_URL`, `DB_DRIVER=postgres`                                                                              |
-| Brevo          | `BREVO_API_KEY`, `MAIL_FROM` using a verified sender/domain                                                       |
-| Google         | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`; register `${API_URL}/api/auth/google/callback` exactly                |
-| SMS / WhatsApp | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`; enable the requested channels with Twilio |
-| OpenAI         | A replacement `OPENAI_API_KEY`, a web-search-capable `OPENAI_MODEL`, `ALLOW_EXTERNAL_AI=true`, and project opt-in |
-| Saved repository access | `INTEGRATION_ENCRYPTION_KEY`: 32 random bytes encoded as base64, required in production. Development generates `.local/integration.key`. Back up this key separately; losing it requires reconnecting accounts. |
-| Repository scans | `ALLOW_REPOSITORY_FETCH=true`; Git must be installed (included in Docker image). Enabled by default only in development. |
-| Source checks  | `ALLOW_REGULATORY_FETCH=true`                                                                                     |
-
-For persistent local development, set `APP_URL=http://localhost:5173`, `API_URL=http://localhost:4000`, `DEMO_MODE=false`, `DB_DRIVER=postgres` and your database URL. Run `npm run dev:postgres` and `npm run dev:web` in separate terminals. The API applies the initial idempotent schema on startup; `npm run db:migrate` also applies it.
-
-Confirmation and reset links use URL fragments so raw tokens are not in server access-log URLs. Links expire after 30 minutes and are single use. MFA challenges expire after five minutes and have an attempt limit. A reset invalidates sessions, pending challenges and API keys. Existing email accounts are not silently linked to Google accounts. To enable MFA on a Google-only account, sign in again within ten minutes of enrollment.
-
-## Docker / on-premise
-
-```powershell
-Copy-Item .env.example .env
-# Edit .env: set production HTTPS APP_URL/API_URL and POSTGRES_PASSWORD.
-docker compose up --build -d
+```sh
+claude mcp add assay -- node /abs/path/dist/assay/assay.mjs mcp . --dashboard
 ```
 
-Use a strong URL-safe `POSTGRES_PASSWORD` (e.g. random hex). Keep `APP_URL` and `API_URL` on the same public HTTPS origin for the bundled web/API deployment. Terminate TLS at a trusted reverse proxy forwarding to `127.0.0.1:4000`; preserve the public Host header. Set `TRUST_PROXY=1` only for exactly one trusted proxy hop; default is zero. Do not expose the application port directly. Configure proxy timeouts of at least 120 seconds for optional research.
+Then ask: *"Audit this app for compliance with Assay."* The `audit` prompt and the `assay://playbook` resource tell the host the workflow (see [skills/assay-audit/SKILL.md](skills/assay-audit/SKILL.md)). The host reads the code with its own tools, records findings, and relays your decisions. It must pass `user_confirmed: true`, which the tool descriptions reserve for decisions you made explicitly. It makes fixes with its own edit tools. Assay runs the build and tests, re-runs the detector, and commits on a fix branch. You can also review in the dashboard; `assay_wait_for_review` picks those decisions up.
 
-The production image runs as a non-root user, drops capabilities, uses a read-only root filesystem and serves the compiled React assets. PostgreSQL is on an internal network with a named volume and no host port. Production refuses demo/memory mode and non-HTTPS public URLs. Fonts and assets do not require third-party browser requests. No telemetry is included.
+For HTTP MCP, for example against a shared server, use `{"mcpServers":{"assay":{"type":"http","url":"https://assay.internal/mcp","headers":{"Authorization":"Bearer <token>"}}}}`.
 
-For offline/on-prem operation set ALLOW_EXTERNAL_AI, ALLOW_REGULATORY_FETCH and ALLOW_REPOSITORY_FETCH to false. The Compose app still has an egress network to support configured identity/mail/model providers; enforce actual offline policy with your host firewall/network policy or remove that network. Google, Brevo, Twilio and OpenAI inherently need their respective external services. Local password login and local assessments can operate without model access once accounts are provisioned and confirmed. There is no automatic outbound research or source polling.
+### VS Code
 
-Back up the `pgdata` volume/database with your operational tooling and test restoration. Storage encryption, TLS certificates, backup retention, audit-log retention and secrets management are infrastructure responsibilities. The current release targets a **single API instance**: rate limits and assessment exclusion are process-local. Add shared limits, durable workers and database-backed job locks before horizontal scaling. Audit records are owner-scoped and not advertised as tamper-proof.
-
-## MCP
-
-Create a key in **Integrations**. It is displayed once, SHA-256 hashed in storage, revocable, and valid for 90 days. Select only required scopes. The UI supplies a config for clients supporting remote Streamable HTTP with static bearer headers:
-
-```json
-{
-  "mcpServers": {
-    "clearance": {
-      "type": "http",
-      "url": "https://your-clearance-host/mcp",
-      "headers": { "Authorization": "Bearer YOUR_CLEARANCE_API_KEY" }
-    }
-  }
-}
+```sh
+npm run build:vscode               # produces dist/assay-vscode.vsix
+code --install-extension dist/assay-vscode.vsix
 ```
 
-Some clients use different config field names or require OAuth discovery; static-header MCP clients are the supported integration for this release. This server does not implement an MCP OAuth authorization server or outbound MCP discovery.
+## The workflow in detail
 
-| Tool                 | Scope      | Behavior                                 |
-| -------------------- | ---------- | ---------------------------------------- |
-| `list_projects`      | `read`     | Owned products only                      |
-| `get_code_analysis` | `read` | Latest source scan, coverage, module map and referenced drafts |
-| `get_project_questions` | `read` | Profile, code snapshot, questions and saved answers |
-| `submit_code_snapshot` | `evidence` | Import bounded code metadata; invalidates prior gate |
-| `answer_project_questions` | `evidence` | Save question answers; never approves controls |
-| `get_assessment`     | `read`     | Latest run, findings and events          |
-| `check_release_gate` | `read`     | Current fail-closed gate result          |
-| `run_assessment`     | `assess`   | New assessment; respects research opt-in |
-| `submit_evidence`    | `evidence` | Submit for human review; cannot approve  |
+1. **Understand.** A bounded, symlink-safe scan classifies the product from code signals: embedded C and RTOS, CAN and UDS, AUTOSAR, OTA, BLE and Wi-Fi, web servers, mobile manifests, LLM and ML libraries, and health, payment, children's or location data. It drafts answers with their reasons and file references. With a model, the agent also reads the README and entry points and writes a description of the product's purpose.
+2. **Ask.** The questionnaire covers [these questions](registry/questionnaire.yaml): product type, sector, languages, markets (EU, Romania, UK, US, California, UNECE…), audience, role, data categories, payment handling, AI use and EU AI Act risk areas, ASIL, SIL, medical class and IEC 62304 class, connectivity, updates, distribution, regulated-entity status and target certifications. You can also start from a [preset](registry/presets). Drafted answers stay *unconfirmed* until a person confirms them.
+3. **Scope.** Each framework's applicability is a condition over those answers, evaluated in three values. A framework that depends on an unanswered fact shows as *undecided* with the missing facts, rather than being guessed. You can include or exclude any framework by hand.
+4. **Audit.** Detectors report file and line. Missing evidence becomes "evidence gap" findings, such as a TARA, a safety case, a DPIA, an SBOM or a vulnerability-disclosure policy. With a model, the agent then investigates each in-scope control in eight batches, using each control's guidance. It records findings with evidence, annotates detector hits it disagrees with, and marks controls it verified. Prompts treat repository content as data, never as instructions.
+5. **Review** (human in the loop). For each finding you can:
+   - **Confirm** it.
+   - **Reject** it, with a reason: false positive, accepted risk, not applicable, duplicate or other.
+   - **Modify** it: change the severity, text or fix instructions, and optionally confirm in the same step.
+   - **Re-investigate** it: the agent looks again with your note and concludes *still valid*, *revised* or *withdraw*.
+   - **Reopen** or **resolve** it.
 
-Resources: `clearance://skills/assessment` and `clearance://sources`. Instructions: `skills/compliance-assessment/SKILL.md`, `skills/regulatory-research/SKILL.md`, and `agents/AGENTS.md`. The app uses deterministic workflow roles with optional model-assisted research, not five independent models. API keys cannot approve evidence, manage keys or change account settings.
+   Agents cannot make these decisions; the state machine is in [review.ts](packages/core/src/review.ts).
+6. **Fix and verify.** These steps need git and a clean working tree.
+   1. A person approves the build and test commands, because they execute project code. Assay detects them from `assay.json`, `package.json`, the Makefile, CMake, Cargo, Go, Gradle and other build files.
+   2. Fixes go to `assay/fixes-<audit>`, one commit per finding, with `Assay-Finding` trailers.
+   3. Every fix must build, pass the tests and make the detector stop matching. Otherwise Assay feeds the failure back to the agent for another attempt, up to the configured maximum, and then rolls the change back.
+   4. Missing documents are drafted with `[OWNER TO CONFIRM]` placeholders, never with invented facts.
+   5. You **accept** the fix or **revert** it; reverting runs `git revert`.
+7. **Report and repeat.** Reports come as Markdown, JSON or SARIF. Re-audits carry decisions over by fingerprint: rejected findings stay rejected, and a finding that was fixed and reappears is reopened.
 
-## Pipeline and repository integration
+## Rule registry
 
-Copy `scripts/compliance-gate.mjs` and adapt `examples/compliance-gate.yml` in the repository you want to assess. Set `CLEARANCE_URL`, `CLEARANCE_PROJECT_ID` and a read-scoped `CLEARANCE_API_KEY` secret. Run a fresh assessment first, in the UI or with an `assess` key via `POST /api/projects/:id/assess`.
+[registry/](registry) is plain YAML, validated by `npm run registry:validate`: 48 frameworks with 798 controls. Each control has a paraphrased requirement, guidance on what to check in code, the evidence that demonstrates it, linked detectors and artifacts, and crosswalks to other frameworks. Licensed standards (ISO, IEC, SAE, MISRA, PCI) are paraphrased with clause references and are never copied.
 
-```powershell
-npm run compliance:gate
+- **Privacy and consumer:** GDPR, UK GDPR + DPA 2018, ePrivacy, Romanian national rules (Law 190/2018, Law 506/2004, OUG 34/2014, ANPC), CCPA/CPRA, COPPA, Washington MHMDA, European Accessibility Act
+- **AI:** EU AI Act (with the 2026 amendments), ISO/IEC 42001, NIST AI RMF + GenAI profile, OWASP Top 10 for LLM applications
+- **Security:**
+  - ISO/IEC 27001:2022, SOC 2, NIS2, DORA
+  - OWASP ASVS 5.0, OWASP Top 10:2025, OWASP MASVS
+  - NIST SSDF
+  - HIPAA Security Rule
+  - PCI DSS 4.0.1, PSD2 SCA
+- **Products and IoT:** EU Cyber Resilience Act, ETSI EN 303 645, EN 18031 (RED), UK PSTI, NIST IR 8259/8425
+- **Industrial:** IEC 62443-4-1 and 4-2, IEC 61508-3
+- **Automotive:** ISO 26262, ISO/SAE 21434, UN R155, UN R156, ISO 24089, Automotive SPICE, ISO 21448 (SOTIF), MISRA C:2025, MISRA C++:2023, CERT C
+- **Medical:** IEC 62304, ISO 14971, EU MDR (software), FDA premarket cybersecurity / 524B, IEC 81001-5-1
+- **Platforms:** Apple App Review, Google Play policy
+
+**Research.** With the Anthropic provider, `assay research` (or the dashboard) searches official sources for guardrails beyond the registry. An MCP host can do the same with its own web search through `assay_propose_rules`. A person accepts or rejects each proposed rule. Accepted rules become a project-local framework in `.assay/rules/`.
+
+**Dates and versions** were checked against official sources in October 2026 where possible; each framework's `keyDates` and notes say what was verified. Re-check anything you rely on with counsel.
+
+## Example applications
+
+[examples/apps](examples/apps) has four small, realistic products with planted defects. The answer keys are in [examples/expected](examples/expected), outside the apps so neither the scanner nor the agent sees them.
+
+| App | Product | Preset |
+| --- | --- | --- |
+| `smart-thermostat-fw` | C99 consumer IoT thermostat (Wi-Fi, BLE, MQTT, OTA), EU and UK | `consumer-iot-device` |
+| `brake-ecu` | C99 ABS/brake ECU, ASIL B, CAN and UDS, Tier-1 supplier, EU and UNECE | `automotive-ecu-asil-b` |
+| `telehealth-api` | Node.js telehealth API with LLM triage, health data, Romania and Germany | `telehealth-platform-eu` |
+| `credit-scoring-ml` | Python credit-scoring service, a high-risk AI system under the EU AI Act | `ai-credit-scoring-eu` |
+
+All four build and test with only `cc`, `make`, `node` and `python3`. `npx tsx scripts/eval-detectors.ts` measures detector recall against the answer keys: currently 100% (62/62) of the detector-findable defects. Design and process defects in the keys are for the agent and reviewers.
+
+## Models and data handling
+
+| Setting | Effect |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | Claude via the Messages API. Default model `claude-opus-5-5`, adaptive thinking, effort `high` (`ASSAY_EFFORT`), streaming tool loop, server-side refusal fallback, web search for research. |
+| `OPENAI_API_KEY` | OpenAI via the Responses API. Default model `gpt-5.5` (`ASSAY_MODEL`), reasoning effort `medium` (`ASSAY_EFFORT`), web search for research. Runs with `store: false`, so OpenAI keeps no conversation state. |
+| `ASSAY_PROVIDER=openai-compatible` with `ASSAY_OPENAI_BASE_URL` and `ASSAY_MODEL` | A self-hosted model (vLLM, Ollama, LM Studio, an internal gateway), for fully on-premise operation. No web research. |
+| neither | Detectors and evidence checks only. MCP hosts can still do the reasoning. |
+
+Ollama, vLLM and LM Studio go through `openai-compatible`; OpenAI's own API uses the `openai` provider, which Assay picks automatically when only `OPENAI_API_KEY` is set.
+
+**What leaves the machine:** only when you run agent features, Assay sends file excerpts the agent asks to read, with secrets redacted. `.env`, key and keystore files are never sent. Detectors, scoping, verification and reports run locally. Commands that verify fixes run with model and Assay credentials removed from their environment.
+
+## Internal deployment
+
+```sh
+cp .env.example .env                       # set ASSAY_TOKENS=alice:<random>,bob:<random>, model settings
+mkdir repos && git clone <repo> repos/<name>
+docker compose up -d --build               # dashboard and /mcp on 127.0.0.1:4317
 ```
 
-Exit codes: `0` passed, `1` blocked, `2` configuration/network/server error. Errors always fail the pipeline. A passing evidence gate does not authorize deployment or certify legality.
+- **Authentication and network.** Without tokens the server binds to localhost only and rejects requests whose `Host` header isn't local, which blocks DNS rebinding. Listening on any other interface requires `ASSAY_TOKENS`: per-reviewer tokens, so every decision is attributed to a named person. `ASSAY_TOKEN` (one shared token) also works.
+- **Requests.** Mutating API calls need the `X-Assay-Request` header, so a browser cannot send them cross-site.
+- **Approvals and paths.** Approving build and test commands lets them run on the server, which is the point of fix verification, so it is equivalent to shell access. `ASSAY_APPROVERS=alice` limits who may approve. Adding projects by path from the dashboard requires `ASSAY_PROJECT_ROOTS`. The file viewer resolves symlinks and never serves credential files.
+- **TLS.** Put a TLS reverse proxy in front of the server and set `ASSAY_TRUST_PROXY=1`.
+- **Container hardening.** The container runs as a non-root user, with a read-only root filesystem and all capabilities dropped.
+- **Adding repositories.** Mount repositories under `/workspace`, or set `ASSAY_ALLOW_CLONE=true` to add them by URL in the dashboard.
+- **Persistence.** State lives in each repository's `.assay/`, which you can commit as an audit record. The project list lives in the `/data` volume.
+- **Toolchains.** Fix verification runs project builds inside the container. The image includes git, make, gcc and python3; derive your own image for other toolchains.
 
-Generate a **local, read-only metadata inventory**:
+## CI
 
-```powershell
-node scripts/inspect-repository.mjs D:\path\to\your\product
+```sh
+node dist/assay/assay.mjs ci . --fail-on high --sarif assay.sarif
 ```
 
-This lists known technology hints and discovered policy/test/pipeline files, skips symlinks and sensitive/generated directories, never executes code, and does not upload anything. Review the output and import it as evidence if relevant. It is not a static security scanner and does not prove that tests pass. This metadata-only CLI is separate from the source scanner. Neither executes target code.
+`assay ci` runs a detector audit with the profile and decisions committed in `.assay/`. It exits with code 1 while unresolved findings remain at or above the threshold, and writes SARIF for code-scanning upload.
 
-## Validation
+## Repository layout
 
-```powershell
-npm run check
-npx playwright install chromium
-npm run test:e2e
-npm audit --omit=dev
+```
+packages/core       engine: registry, scanner, classifier, detectors, scoping, review state machine,
+                    store and journal, agent (Claude or OpenAI-compatible), fix and verify, reports
+packages/cli        `assay` CLI, terminal HITL, HTTP API + SSE, MCP server (stdio and HTTP)
+packages/dashboard  React review UI
+packages/vscode     VS Code extension
+registry/           questionnaire, frameworks, presets
+examples/           example apps and answer keys
+skills/assay-audit  the playbook for host agents (generated from packages/cli/src/playbook.ts)
+tests/              vitest: registry, detectors, the full review→fix→verify flow, MCP, HTTP security, provider loop
 ```
 
-The unit/integration suite can target a dedicated PostgreSQL test database via `TEST_DATABASE_URL`. **It truncates the tables in that database. Never point it at production.** CI runs both the in-memory suite and the real PostgreSQL suite. To use the isolated Docker test database:
-
-```powershell
-docker compose -p clearance-verification -f compose.test.yaml up -d db
-$env:TEST_DATABASE_URL='postgresql://clearance:isolated-test-only@localhost:15432/clearance_test'
-npm test
-Remove-Item Env:\TEST_DATABASE_URL
-docker compose -p clearance-verification -f compose.test.yaml down
+```sh
+npm run check        # registry validation, typecheck, tests, build
 ```
 
-`compose.test.yaml` also supports building the production image for a local Host-header smoke test; its `https://clearance.local` URLs are test identity only, not installed certificates. See `docs/VERIFICATION.md` for the validation performed on this workstation.
+## Scope and limits
 
-## Important product scope
-
-This is a working initial release, not an assertion of complete legal coverage or a finished enterprise certification platform. Controls are candidate applicability and evidence-readiness checks. Owner approval is a recorded human judgment, not independent legal verification. Licensed ISO text is not included. Review with qualified legal/security specialists before relying on a deployment decision.
-
-Pricing is a labeled proposed launch offer; there is no billing integration or plan enforcement. Organizations, invitations, role separation, SAML, recovery codes, account deletion/retention workflows and support-assisted MFA recovery are not implemented. Live Google sign-in, Brevo delivery, SMS/WhatsApp and paid OpenAI calls require deployment credentials; tests cover adapters with mocks, not actual vendor delivery. Real external sources may refuse automated requests; these checks are shown as unavailable instead of successful.
-
-## Source references
-
-- [OpenAI Responses web search](https://developers.openai.com/api/docs/guides/tools-web-search)
-- [MCP TypeScript server](https://ts.sdk.modelcontextprotocol.io/server)
-- [Google server-side OAuth](https://developers.google.com/identity/protocols/oauth2/web-server)
-- [Brevo transactional email](https://developers.brevo.com/docs/send-a-transactional-email)
-- [Twilio Verify](https://www.twilio.com/docs/verify/api/verification)
-- [ISO/IEC 42001](https://www.iso.org/standard/42001)
-- [EU AI Act overview](https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai)
-- [IBM’s 2025 research used on the landing page](https://newsroom.ibm.com/2025-07-30-ibm-report-13-of-organizations-reported-breaches-of-ai-models-or-applications,-97-of-which-reported-lacking-proper-ai-access-controls)
-- [EDPB breach notification guidance](https://www.edpb.europa.eu/sme/assess-the-risks/data-breaches_en)
+Assay maps code and repository evidence to requirements and records human decisions. It is not legal advice and not a certification. A "verified" control means a reviewer or the agent saw a compliant implementation; it is not a conformity assessment. Detectors are heuristics: expect some false positives (reject them with a reason, and the decision carries over) and gaps that only the agent investigation or a reviewer will find.

@@ -1,0 +1,227 @@
+id: eprivacy
+title: Directive 2002/58/EC on privacy and electronic communications (ePrivacy Directive), as amended by Directive 2009/136/EC
+shortTitle: ePrivacy Directive
+version: Directive 2002/58/EC as amended by Directive 2009/136/EC (consolidated)
+authority: European Parliament and Council of the European Union
+kind: regulation
+jurisdictions: [EU, EEA]
+url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
+textPolicy: paraphrased
+summary: >
+  The EU directive on confidentiality of communications. Art. 5(3) requires consent
+  before storing or reading information on a user's device (cookies, local storage,
+  SDKs, device identifiers, fingerprinting) unless strictly necessary, and Art. 13
+  requires prior consent for electronic direct marketing. It applies through national
+  transpositions (for example Romanian Law 506/2004) alongside the GDPR.
+applicability:
+  all:
+    - { fact: markets, in: [EU] }
+    - { fact: productTypes, in: [web-app, saas, mobile-app, desktop-app, iot-device, backend-api] }
+applicabilityNote: >
+  Art. 5(3) applies to any website, app or connected device that stores or reads
+  information on users' terminal equipment in the EU, whether or not the information is
+  personal data, and regardless of where the provider is established. Art. 13 applies
+  to anyone sending electronic marketing to EU recipients. Art. 4 and Art. 5(1) bind
+  providers of publicly available electronic communications services, which since the
+  European Electronic Communications Code include number-independent messaging and VoIP
+  services. Enforcement follows national transpositions, which differ in details;
+  check each target market. The proposed Digital Omnibus would move device-access rules
+  into the GDPR, but as of this registry version it is not adopted.
+keyDates:
+  - { date: "2009-11-25", note: "Directive 2009/136/EC adopted, turning the cookie rule into a consent requirement" }
+  - { date: "2011-05-25", note: Transposition deadline for the 2009 amendments }
+controls:
+  - ref: "Art.5(3)"
+    title: Prior consent before non-essential storage or device access
+    requirement: >
+      Storing information on, or reading information from, a user's device is allowed
+      only with the user's prior, informed GDPR-standard consent, unless it is strictly
+      necessary for transmission or for a service explicitly requested by the user.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Find every script, SDK and storage access that runs before the user has made a
+      choice. On the web check the HTML head, tag managers (GTM, Segment), analytics
+      (Google Analytics, Meta Pixel, Hotjar, Mixpanel, PostHog, Amplitude),
+      advertising tags, embedded players and chat widgets, plus document.cookie,
+      localStorage and IndexedDB writes. Good looks like: a consent management layer that
+      blocks these until consent (script type="text/plain" with data-category, Google
+      Consent Mode default denied, SDK init inside a consent callback), granular choices
+      per purpose, equally prominent Accept and Reject buttons on the first layer, no
+      pre-ticked purposes, and consent stored with a version and timestamp. Flag
+      tracking that fires on page load, cookie walls, and "by continuing to browse you
+      accept" banners.
+    evidence:
+      - Consent banner with equal accept and reject options
+      - Non-essential tags and SDKs initialised only after consent
+      - Consent records with version and timestamp
+    checks: [analytics-tracking-sdk]
+    artifacts: [cookie-consent, privacy-policy]
+    crosswalk: ["gdpr:Art.7", "uk-gdpr:PECR-reg6", "ro-national:L506-Art.4(5)", "ccpa-cpra:7025"]
+
+  - ref: "Art.5(3)-exemptions"
+    title: Strictly necessary classification and cookie inventory
+    requirement: >
+      Only storage or access strictly necessary for transmitting a communication or for
+      providing a service the user explicitly requested is exempt from consent; each item
+      must be classified and disclosed.
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a cookie and storage inventory (cookie policy table or a generated list)
+      naming each cookie, localStorage key, SDK and identifier with provider, purpose,
+      duration and category. Session, authentication, CSRF, load-balancing, shopping cart,
+      security and user-interface preference items can be strictly necessary; analytics,
+      A/B testing, advertising, social plugins and cross-site identifiers are not under
+      the EU directive. Check cookie lifetimes are proportionate and that the inventory
+      matches what the code actually sets (Set-Cookie headers, cookie libraries, SDK
+      defaults).
+    evidence:
+      - Cookie and storage inventory with category, purpose and duration
+      - Inventory consistent with cookies set in code
+    checks: [insecure-cookie]
+    artifacts: [cookie-consent, privacy-policy]
+    crosswalk: ["uk-gdpr:PECR-reg6", "ro-national:L506-Art.4(5)"]
+
+  - ref: "Art.5(3)-apps"
+    title: Mobile and connected-device SDKs and identifiers need consent
+    requirement: >
+      In apps and connected devices, reading device identifiers or storing tracking data
+      through SDKs is device access under Art. 5(3) and needs prior consent unless
+      strictly necessary for the requested service.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      In mobile code check when analytics, attribution, advertising and crash SDKs are
+      initialised (Application.onCreate, AppDelegate didFinishLaunching, React Native
+      or Flutter main). Firebase Analytics, AppsFlyer, Adjust, Branch, Meta SDK and ad
+      networks should start with collection disabled (for example
+      setAnalyticsCollectionEnabled(false), FirebaseAnalytics deactivation flags in
+      Info.plist or AndroidManifest, the vendor's delay-start or consent APIs) and be
+      enabled only after an in-app consent choice. Reading IDFA or Android Advertising ID,
+      fingerprinting via device properties, and tracking pixels in emails are in scope.
+      A platform prompt such as Apple ATT does not by itself satisfy EU consent
+      requirements.
+    evidence:
+      - SDK initialisation gated on stored consent
+      - Collection disabled by default in manifests and plists
+    checks: [analytics-tracking-sdk]
+    artifacts: [cookie-consent]
+    crosswalk: ["apple-app-review:ATT", "google-play-policy:Advertising ID", "gdpr:Art.25"]
+
+  - ref: "Art.5(3)-withdrawal"
+    title: Easy withdrawal and renewal of cookie consent
+    requirement: >
+      Users must be able to withdraw device-access consent as easily as they gave it, and
+      the withdrawal must take effect immediately.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for a persistent way to reopen consent settings (footer link "Cookie
+      settings", floating icon, app privacy settings) and that withdrawing consent stops
+      the SDKs and deletes or expires their cookies and identifiers (for example by
+      calling the vendor opt-out API and clearing storage). Check consent is re-requested
+      when purposes or vendors change (consent version bump) and after a reasonable
+      period.
+    evidence:
+      - Persistent consent settings entry point
+      - Withdrawal handler that disables SDKs and clears storage
+    checks: []
+    artifacts: [cookie-consent]
+    crosswalk: ["gdpr:Art.7"]
+
+  - ref: "Art.13(1)"
+    title: Prior consent for electronic direct marketing
+    requirement: >
+      Direct marketing by email, SMS, automated calls or fax to natural persons requires
+      their prior consent, except for the soft opt-in in Art. 13(2).
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Check signup and checkout forms for a separate, unticked marketing opt-in (not
+      bundled with terms acceptance), that the opt-in is stored with timestamp and source,
+      and that marketing sends (newsletter jobs, CRM syncs to Mailchimp, Brevo, Customer.io,
+      Braze, push campaigns) filter on that flag. Transactional messages (receipts,
+      password resets, security alerts) must not carry marketing content to users who did
+      not opt in. Flag code that syncs all registered users to a marketing list.
+    evidence:
+      - Unticked marketing opt-in stored with timestamp and source
+      - Marketing sends filtered by opt-in status
+    checks: []
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.21", "ro-national:L506-Art.12"]
+
+  - ref: "Art.13(2)"
+    title: Soft opt-in, opt-out in every message and sender identity
+    requirement: >
+      Existing customers' email addresses obtained in a sale may be used for marketing
+      similar products only if they were given a free, simple way to object at collection
+      and in every message; marketing must not disguise the sender or omit a valid
+      opt-out address.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Check every marketing email template has a one-click unsubscribe link and a
+      List-Unsubscribe header (and List-Unsubscribe-Post for one-click), the sender name
+      and address identify the business, the unsubscribe updates a suppression list that
+      all sending paths check, and that soft opt-in is used only for the business's own
+      similar products with an objection option at checkout.
+    evidence:
+      - Templates with unsubscribe link and headers
+      - Suppression list checked by all sending paths
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.21", "ro-national:L506-Art.12"]
+
+  - ref: "Art.5(1)"
+    title: Confidentiality of communications content and metadata
+    requirement: >
+      Providers of electronic communications services, including messaging and VoIP
+      services, must not listen to, store, scan or otherwise intercept communications or
+      related traffic data without the users' consent, except as legally authorised or
+      technically necessary.
+    category: data-protection
+    severity: high
+    fixability: code
+    guidance: >
+      Relevant if the product provides interpersonal communication (chat, messaging,
+      voice or video calls between users). Check whether message content or metadata is
+      processed for purposes other than delivery: analytics on message text, ad
+      targeting, AI training on conversations, keyword scanning. Prefer end-to-end
+      encryption, minimal metadata retention and documented legal bases. Flag message
+      bodies sent to third-party analytics, LLM or moderation services without consent
+      or a legal basis.
+    evidence:
+      - Data flow showing message content used only for delivery or with consent
+      - Encryption and metadata retention settings
+    checks: [pii-in-logs]
+    artifacts: [dpia]
+    crosswalk: ["gdpr:Art.32"]
+
+  - ref: "Art.4"
+    title: Security and breach notification for communications providers
+    requirement: >
+      Providers of publicly available electronic communications services must secure
+      their services and notify the competent national authority of personal data
+      breaches, and notify affected subscribers when the breach is likely to harm them.
+    category: logging-monitoring
+    severity: high
+    fixability: process
+    when: { fact: sector, in: [telecom] }
+    guidance: >
+      For telecom or communications services check the incident response plan covers the
+      ePrivacy breach notification channel of each national authority (often a separate
+      form from the GDPR one, for example ANSPDCP under Law 506/2004 in Romania), keeps
+      a breach inventory, and that subscriber notification templates exist.
+    evidence:
+      - Incident response plan with ePrivacy breach notification steps
+      - Breach inventory
+    checks: []
+    artifacts: [incident-response-plan]
+    crosswalk: ["gdpr:Art.33", "ro-national:ANSPDCP-breach", "nis2:Art.23"]

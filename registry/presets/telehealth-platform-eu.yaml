@@ -1,0 +1,32 @@
+id: telehealth-platform-eu
+title: Telehealth platform (EU, with AI triage)
+description: >
+  A hosted telehealth service for EU patients (including Romania) with patient
+  accounts, appointment booking, free-text symptom notes and an AI triage
+  assistant built on a third-party LLM. Processes special-category health data,
+  so it brings GDPR (Art. 9 health data, Art. 35 DPIA), the EU AI Act
+  transparency duties for the assistant, the OWASP Top 10 for the API and the
+  OWASP LLM risks for the triage feature.
+examples: [examples/apps/telehealth-api]
+answers:
+  productTypes: [saas, backend-api, web-app, ai-system]
+  sector: [healthcare]
+  markets: [EU, RO]
+  audience: [consumers, healthcare-providers]
+  orgRole: service-provider
+  orgSize: small
+  dataCategories: [personal, health, credentials]
+  aiUsage: third-party-models
+  aiRiskAreas: [chatbot]
+  medicalClass: not-medical
+  safetyCritical: "no"
+  connectivity: [internet]
+  updates: continuous-deployment
+  distribution: [web]
+  regulatedEntity: [none]
+  certificationsTarget: [iso-27001]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify:
+  - npm test

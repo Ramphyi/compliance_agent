@@ -1,0 +1,387 @@
+id: iso-iec-42001
+title: Information technology - Artificial intelligence - Management system
+shortTitle: ISO/IEC 42001
+version: ISO/IEC 42001:2023 (first edition)
+authority: ISO/IEC JTC 1/SC 42
+kind: standard
+jurisdictions: [global]
+url: https://www.iso.org/standard/81230.html
+textPolicy: paraphrased
+summary: >
+  ISO/IEC 42001 specifies requirements for an AI management system (AIMS): how an
+  organisation that develops, provides or uses AI sets AI policy and objectives, assesses
+  AI risks and the impacts of AI systems on people and society, and controls the AI life
+  cycle, data, third parties and information for users. It is certifiable and follows the
+  harmonised ISO management-system structure (clauses 4 to 10) with a normative Annex A of
+  38 reference controls.
+applicability:
+  all:
+    - { not: { fact: aiUsage, in: [none] } }
+    - any:
+        - { fact: certificationsTarget, in: [iso-42001] }
+        - { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+        - { fact: aiUsage, equals: general-purpose-model }
+applicabilityNote: >
+  Voluntary. Included when the organisation targets ISO/IEC 42001 certification, and
+  recommended when the product contains high-risk AI uses or provides a general-purpose
+  model, because the AIMS gives a structured way to produce the risk management, data
+  governance, documentation, logging and oversight evidence the EU AI Act requires and
+  that enterprise customers increasingly ask for. Requirement text is paraphrased; refs
+  are clause numbers (4 to 10) and Annex A control numbers. Consult the licensed standard
+  for exact wording. ISO/IEC 42005 (impact assessment) and ISO/IEC 23894 (AI risk
+  management) give supporting guidance.
+controls:
+  - ref: "4.3"
+    title: Scope of the AI management system and AI roles
+    requirement: >
+      The organisation determines the boundaries of its AI management system, taking into
+      account its context, interested parties and its role with respect to AI systems
+      (for example provider, producer, customer or user), and documents the scope.
+    category: governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a documented AIMS scope that lists the AI systems and teams covered and the
+      organisation's role per system. Compare with the AI features found in code (model
+      SDK calls, model ids in configuration, training pipelines): an AI feature not
+      covered by the scope is a gap. Check that external and internal issues (applicable
+      laws such as the EU AI Act, customer requirements, provider terms) are recorded.
+    evidence:
+      - AIMS scope statement listing AI systems, roles and interested parties
+    artifacts: [ai-documentation]
+    crosswalk: ["nist-ai-rmf:GOVERN 1.1", "iso-iec-27001:4.3"]
+
+  - ref: "5.2"
+    title: AI policy
+    requirement: >
+      Top management establishes an AI policy appropriate to the organisation's purpose
+      that provides a framework for AI objectives, commits to meeting applicable
+      requirements and to continual improvement, and is communicated and available. Annex
+      A.2 adds alignment with other policies and periodic review.
+    category: governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for an AI policy document (docs/policies/ai-policy.md or a linked policy) that
+      states principles for responsible development and use, acceptable and prohibited
+      uses, accountability, and how it relates to the security, privacy and quality
+      policies. Check that it has an owner, approval and review date, and that
+      engineering guidelines for AI features reference it.
+    evidence:
+      - Approved AI policy with owner and review date
+      - References from engineering guidelines to the AI policy
+    artifacts: [ai-documentation, security-policy]
+    crosswalk: ["nist-ai-rmf:GOVERN 1.1", "iso-iec-27001:4.3"]
+
+  - ref: "6.1.2"
+    title: AI risk assessment
+    requirement: >
+      The organisation defines and applies an AI risk assessment process that identifies
+      risks that could prevent achieving AI objectives, analyses their likelihood and
+      consequences, and evaluates them against risk criteria, producing consistent and
+      comparable results. Clause 6.1.3 requires a risk treatment plan and a statement of
+      applicability for Annex A controls, and clause 8 requires performing both at planned
+      intervals.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for an AI risk register or risk management file per AI system that covers
+      technical risks (hallucination, prompt injection, data poisoning, drift, provider
+      outage), legal risks and harms to people, with likelihood, impact, owner and
+      treatment. Check for a statement of applicability listing Annex A controls with
+      justification for inclusion or exclusion. Check that risk reviews are triggered by
+      model, prompt or data changes (link from change records or PR templates).
+    evidence:
+      - AI risk register with analysis, evaluation and treatment
+      - Statement of applicability for Annex A controls
+      - Evidence of reassessment after significant changes
+    artifacts: [risk-management-file, threat-model]
+    crosswalk: ["eu-ai-act:Art.9", "nist-ai-rmf:MAP 5.1", "iso-iec-27001:6.1.2"]
+
+  - ref: "6.1.4"
+    title: AI system impact assessment
+    requirement: >
+      The organisation defines a process to assess the potential consequences of AI
+      systems for individuals, groups and society across the life cycle, documents the
+      results and uses them in risk assessment. Annex A.5 covers the process, its
+      documentation and the assessment of impacts on individuals and on society.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for impact assessments per AI system (docs/ai/impact-assessment.md, a combined
+      DPIA and AI impact assessment, or a fundamental rights impact assessment) that
+      describe affected people, foreseeable misuse, harms such as discrimination, loss of
+      autonomy, safety or privacy, and mitigations. Check that the assessment matches
+      the actual functionality and data used in code and that it is retained and updated.
+    evidence:
+      - Documented AI system impact assessment per system
+      - Link between impact findings and risk treatment
+    artifacts: [dpia, risk-management-file]
+    crosswalk: ["eu-ai-act:Art.26", "nist-ai-rmf:MAP 5.1", "gdpr:Art.35"]
+
+  - ref: "9"
+    title: Performance evaluation, internal audit and management review
+    requirement: >
+      The organisation monitors and measures the AIMS and its AI systems, conducts internal
+      audits at planned intervals and holds management reviews. Clause 10 requires
+      nonconformities to be corrected and the AIMS to be continually improved.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Mostly organisational. In the repository look for AI metrics reviewed periodically
+      (evaluation dashboards, monitoring reports), internal audit reports or checklists for
+      the AIMS, and a corrective action log (issues labelled ai-nonconformity or similar)
+      with root cause and closure.
+    evidence:
+      - Internal audit programme and reports for the AIMS
+      - Management review minutes and corrective action records
+    crosswalk: ["iso-iec-27001:9.2"]
+
+  - ref: A.3.2
+    title: AI roles, responsibilities and reporting of concerns
+    requirement: >
+      Roles and responsibilities for AI are defined and allocated across the life cycle,
+      and a process exists for people to report concerns about the organisation's AI
+      systems (A.3.3).
+    category: ai-governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for CODEOWNERS entries for prompts, model configuration and evaluation code, a
+      RACI or ownership table for each AI system (product owner, model owner, risk owner,
+      human reviewers), and a channel for internal and external concerns (security.txt or
+      SECURITY.md extended to AI issues, a responsible AI contact, in-product reporting of
+      harmful output).
+    evidence:
+      - Ownership table and CODEOWNERS for AI components
+      - Documented channel for reporting AI concerns
+    artifacts: [code-review-process, security-policy]
+    crosswalk: ["nist-ai-rmf:GOVERN 1.1", "soc2:CC2.2"]
+
+  - ref: A.4.2
+    title: Documentation of AI system resources
+    requirement: >
+      The organisation identifies and documents the resources needed for each AI life cycle
+      stage: data, tooling, system and computing resources, and the human competences
+      involved (A.4.2 to A.4.6).
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for an AI inventory or system card that lists, per AI system, the models and
+      versions, data sources, frameworks and tools (training, evaluation, serving, vector
+      stores), compute (GPU instances, provider APIs, regions) and the skills required.
+      Reconcile it with infrastructure as code (Terraform, Helm charts, docker-compose)
+      and AI SDK calls in code.
+    evidence:
+      - AI system inventory listing data, tools, compute and competences
+    artifacts: [ai-documentation, architecture-doc]
+    crosswalk: ["nist-ai-rmf:GOVERN 1.6", "eu-ai-act:Art.11"]
+
+  - ref: A.6.2.2
+    title: AI system requirements and specification
+    requirement: >
+      Requirements for new AI systems or material changes are specified and documented,
+      covering functional, performance, safety, security and responsible-AI objectives
+      (supported by A.6.1.2 and A.6.1.3 on objectives and processes for responsible
+      development).
+    category: secure-development
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for requirement or design documents for AI features (PRDs, ADRs, issues with
+      acceptance criteria) that state accuracy targets, latency, refusal behaviour, safety
+      constraints, data limits and human oversight, and trace them to evaluation tests.
+    evidence:
+      - Documented AI requirements with acceptance criteria
+      - Traceability from requirements to evaluation tests
+    artifacts: [requirements-traceability, architecture-doc]
+    crosswalk: ["nist-ai-rmf:MAP 1.1"]
+
+  - ref: A.6.2.4
+    title: AI system verification and validation
+    requirement: >
+      Verification and validation measures, including evaluation criteria and test data,
+      are defined, documented and applied before an AI system is released and after
+      changes.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for an evaluation suite in the repository (tests/evals, promptfoo configs,
+      deepeval or ragas tests, golden datasets, model evaluation notebooks promoted to
+      scripts) with documented pass criteria, executed in CI for prompt, model and
+      retrieval changes. Check that security tests (prompt injection, jailbreak, data
+      leakage) are part of validation and that results are stored with the release.
+    evidence:
+      - Evaluation suite with pass criteria run in CI
+      - Stored evaluation results per release
+    artifacts: [automated-tests, ci-pipeline, test-coverage-config]
+    crosswalk: ["nist-ai-rmf:MEASURE 2.3", "eu-ai-act:Art.15", "owasp-llm-top10:LLM01"]
+
+  - ref: A.6.2.6
+    title: AI system operation and monitoring
+    requirement: >
+      The organisation defines and documents what is needed for ongoing operation of AI
+      systems, including monitoring of performance, errors and failures, repairs, updates
+      and support. A.6.2.5 adds a documented deployment plan.
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Look for production monitoring of AI features (quality, drift, refusal and safety
+      filter rates, latency, provider errors, cost) with alerts, a deployment process for
+      model and prompt versions (staged rollout, canary, feature flags, rollback), and
+      runbooks for provider outages and model deprecations.
+    evidence:
+      - Monitoring and alerting for AI quality and failures
+      - Deployment and rollback process for models and prompts
+    artifacts: [ci-pipeline, incident-response-plan]
+    crosswalk: ["nist-ai-rmf:MANAGE 4.1", "nist-ai-rmf:MANAGE 2.4", "eu-ai-act:Art.72"]
+
+  - ref: A.6.2.7
+    title: AI system technical documentation
+    requirement: >
+      Technical documentation of the AI system is determined, produced and provided to the
+      relevant interested parties, such as users, partners and authorities. A.6.2.3
+      requires documentation of design and development decisions.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Look for model and system cards, architecture documents and design records covering
+      purpose, architecture, models and versions, training or retrieval data, evaluation
+      results, limitations and operating instructions. Check that the documentation is
+      versioned with the code and matches deployed configuration.
+    evidence:
+      - Versioned AI technical documentation matching the deployed system
+    artifacts: [ai-documentation, architecture-doc]
+    crosswalk: ["eu-ai-act:Art.11", "eu-ai-act:Art.53(1)(a-b)"]
+
+  - ref: A.6.2.8
+    title: Recording of AI event logs
+    requirement: >
+      The organisation determines at which life cycle phases event logging is enabled, at
+      minimum while the AI system is in use, and keeps records needed for traceability.
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Check that each inference writes a structured record with timestamp, request id,
+      model and prompt version, input reference, output, safety filter decisions and any
+      human override, and that training and evaluation runs record data and code versions
+      (MLflow, Weights and Biases, DVC). Check retention, access control and redaction of
+      personal data in these logs.
+    evidence:
+      - Structured inference logs with model and prompt version
+      - Training and evaluation run records
+    checks: [pii-in-logs]
+    crosswalk: ["eu-ai-act:Art.12", "iso-iec-27001:A.8.15"]
+
+  - ref: A.7.5
+    title: Data provenance, quality and preparation
+    requirement: >
+      The organisation records the provenance of data used in its AI systems across the
+      data and system life cycles, defines data quality requirements, and documents data
+      acquisition and preparation methods (A.7.2 to A.7.6).
+    category: data-protection
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for datasheets or data cards, dataset versioning (DVC, LakeFS, Delta tables with
+      history, dataset hashes), ingestion code that records source and licence, data
+      validation (Great Expectations, pandera, schema checks), and documented labelling
+      and preprocessing steps. For RAG, check that ingested documents carry source,
+      timestamp and owner metadata.
+    evidence:
+      - Datasheets with source, licence and preparation steps
+      - Versioned datasets and data validation in pipelines
+    artifacts: [ai-documentation, processing-records]
+    crosswalk: ["eu-ai-act:Art.10", "owasp-llm-top10:LLM04", "nist-ai-rmf:MEASURE 2.11"]
+
+  - ref: A.8.2
+    title: Information for users and interested parties
+    requirement: >
+      Users of the AI system receive the information they need, such as that they are
+      interacting with AI, its intended use, limitations and how to use it appropriately;
+      A.8.5 requires determining what information is provided to other interested parties
+      and A.8.3 enables external reporting of adverse impacts.
+    category: transparency-documentation
+    severity: medium
+    fixability: code
+    guidance: >
+      Check the product for AI disclosure at the point of interaction, help or FAQ content
+      describing what the AI does and does not do, limitations notices next to outputs, and
+      a channel to report problems with AI output. Check that the privacy policy explains
+      AI processing and any use of user data for training.
+    evidence:
+      - In-product AI disclosure and limitations notices
+      - User documentation of AI features and a reporting channel
+    checks: [ai-disclosure-missing]
+    artifacts: [user-documentation, privacy-policy]
+    crosswalk: ["eu-ai-act:Art.50(1)", "eu-ai-act:Art.13"]
+
+  - ref: A.8.4
+    title: Communication of AI incidents
+    requirement: >
+      The organisation determines and documents a plan for communicating incidents
+      involving its AI systems to users and other interested parties.
+    category: logging-monitoring
+    severity: medium
+    fixability: document
+    guidance: >
+      Check that the incident response plan covers AI incidents (harmful or wrong outputs
+      at scale, data exposure through the model, misuse), names who informs customers,
+      users and authorities, and includes timelines and templates. Check status page or
+      customer notification tooling.
+    evidence:
+      - Incident communication plan covering AI incidents
+    artifacts: [incident-response-plan]
+    crosswalk: ["nist-ai-rmf:MANAGE 4.3", "eu-ai-act:Art.72", "iso-iec-27001:A.5.24"]
+
+  - ref: A.9.4
+    title: Intended and responsible use of AI systems
+    requirement: >
+      The organisation ensures AI systems are used according to their intended use and
+      documentation, and defines processes and objectives for responsible use (A.9.2 and
+      A.9.3), including where it uses AI from others.
+    category: ai-governance
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that the product enforces intended-use boundaries: system prompt scope,
+      topic restrictions, input validation, features disabled for unsupported user groups
+      or regions, and acceptable use terms. For AI tools used internally (coding
+      assistants, third-party AI APIs), look for an internal use policy and configuration
+      that prevents sending confidential data to unapproved services.
+    evidence:
+      - Product controls enforcing intended use
+      - Acceptable use terms and internal AI use policy
+    artifacts: [terms-of-service, ai-documentation]
+    crosswalk: ["nist-ai-rmf:MAP 1.1", "eu-ai-act:Art.26"]
+
+  - ref: A.10.3
+    title: Suppliers and third-party AI
+    requirement: >
+      The organisation establishes a process so that services, products or materials from
+      suppliers, including third-party models and data, align with its responsible-AI
+      approach, and allocates responsibilities with suppliers and customers (A.10.2 and
+      A.10.4).
+    category: supply-chain
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for supplier assessments of model providers and AI tools (data retention,
+      training on customer data, security attestations, terms), DPAs, an approved model
+      and provider list, pinned model versions and provider ids in configuration, and
+      customer-facing documentation of responsibilities (who reviews outputs, who is the
+      provider under the AI Act).
+    evidence:
+      - Supplier assessments and agreements for AI providers
+      - Approved provider and model list enforced in configuration
+    checks: [unpinned-dependencies]
+    artifacts: [processing-records, sbom]
+    crosswalk: ["nist-ai-rmf:GOVERN 6.1", "owasp-llm-top10:LLM03", "iso-iec-27001:A.5.23"]

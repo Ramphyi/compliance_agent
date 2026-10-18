@@ -1,0 +1,282 @@
+id: automotive-spice
+title: Automotive SPICE Process Assessment / Reference Model
+shortTitle: Automotive SPICE
+version: PAM 4.1 (August 2026); process IDs unchanged from PAM 4.0 (2023-11-29)
+authority: VDA QMC (Working Group 13)
+kind: standard
+jurisdictions: [global]
+url: https://vda-qmc.de/en/automotive-spice/
+textPolicy: paraphrased
+summary: >
+  Automotive SPICE is the process assessment model OEMs use to rate the capability of supplier
+  development processes. This selection covers the software engineering processes SWE.1 to SWE.6,
+  the supporting processes for quality assurance, configuration, problem and change management,
+  project management, supplier monitoring, machine learning data management, and the
+  bidirectional traceability and consistency expected across all engineering work products.
+applicability:
+  any:
+    - { fact: certificationsTarget, in: [aspice] }
+    - all:
+        - { fact: sector, in: [automotive] }
+        - { fact: orgRole, in: [tier1-supplier, tier2-supplier] }
+applicabilityNote: >
+  Not a law but a common contractual requirement: OEMs usually expect capability level 2 for the
+  processes in the VDA scope, assessed by intacs-certified assessors. PAM 4.1 was published by VDA
+  QMC in August 2026 as an evolutionary update of PAM 4.0 (same processes and capability levels,
+  minor base-practice corrections), and the Automotive SPICE Guidelines 3rd edition accompany it;
+  confirm with the customer which PAM version the next assessment uses. The repository can only
+  show part of the evidence; interviews and project records cover the rest.
+keyDates:
+  - { date: "2023-11-29", note: Automotive SPICE PAM 4.0 published by VDA QMC (now listed as a legacy version) }
+controls:
+  - ref: "SWE.1"
+    title: Software requirements analysis
+    requirement: >
+      Software requirements are specified from system requirements and architecture, structured,
+      analysed for correctness, feasibility and impact on the operating environment, made
+      consistent and traceable, and agreed with stakeholders.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a software requirements specification in a requirements tool export (ReqIF,
+      Polarion, codebeamer, DOORS, Jama) or in the repository (sphinx-needs, Markdown with IDs).
+      Check for unique IDs, attributes (status, release, safety or security relevance), links to
+      system requirements, and evidence of review and agreement. Non-functional requirements
+      (timing, memory, diagnostics, startup and shutdown behaviour) should be present.
+    evidence:
+      - Software requirements with IDs, attributes and links to system requirements
+      - Review and agreement records
+    artifacts: [requirements-traceability]
+    crosswalk: ["iso-26262:6-6"]
+  - ref: "SWE.2"
+    title: Software architectural design
+    requirement: >
+      A software architecture with static and dynamic aspects is specified, analysed against
+      defined criteria (for example timing, resource consumption, interfaces), made consistent
+      and traceable to software requirements, and communicated.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Look for architecture documentation (UML or SysML models, PlantUML, Enterprise Architect
+      exports) and AUTOSAR ARXML (components, ports, runnables, OS tasks and timing). Check that
+      dynamic behaviour (task mapping, state machines, sequence diagrams) is described, that the
+      analysis of resource and timing budgets exists, and that components link to requirements.
+    evidence:
+      - Architecture description with static and dynamic views
+      - Architecture analysis results and traceability to requirements
+    artifacts: [architecture-doc]
+    crosswalk: ["iso-26262:6-7"]
+  - ref: "SWE.3"
+    title: Software detailed design and unit construction
+    requirement: >
+      Static and dynamic aspects of the detailed design are specified for each software unit,
+      the units are developed according to the design, and design and code are consistent and
+      traceable to the architecture.
+    category: secure-development
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for unit-level design (Doxygen with design sections, module design documents, models
+      for generated code), coding guidelines enforced by tools, and traceability from units to
+      architecture components (directory per component, ARXML runnable to C function mapping).
+      Check that code follows the design and the coding standard (static analysis in CI).
+    evidence:
+      - Detailed design per unit and the coding guideline used
+      - Static analysis results for the units
+    checks: [unsafe-c-functions, goto-statement]
+    artifacts: [coding-standard, static-analysis-config]
+    crosswalk: ["iso-26262:6-8", "iso-26262:6-5.4.3"]
+  - ref: "SWE.4"
+    title: Software unit verification
+    requirement: >
+      Verification measures for software units (static verification and unit tests) are
+      specified with criteria, selected per release scope, performed and recorded, made
+      traceable to the detailed design, and the results summarised and communicated.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for unit test frameworks and suites, static analysis and code review as verification
+      measures, defined pass criteria (for example zero new MISRA violations, coverage
+      thresholds), results archived per release, and links from tests to units and design.
+    evidence:
+      - Unit verification specification, results and coverage per release
+    artifacts: [automated-tests, test-coverage-config, static-analysis-config, code-review-process]
+    crosswalk: ["iso-26262:6-9", "iso-26262:6-9.4.4"]
+  - ref: "SWE.5"
+    title: Software component verification and integration verification
+    requirement: >
+      Integration of software units and components follows a defined sequence, and verification
+      measures for integrated software elements and their interactions are specified, performed,
+      recorded and traceable to the architecture.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for an integration strategy and sequence (build order, integration levels), component
+      and integration test suites (SIL, virtual ECU, CANoe), interface and timing tests, and
+      results linked to architecture elements. CI jobs that build and test integration levels
+      separately are good evidence.
+    evidence:
+      - Integration strategy and integration verification results traced to the architecture
+    artifacts: [automated-tests, ci-pipeline]
+    crosswalk: ["iso-26262:6-10"]
+  - ref: "SWE.6"
+    title: Software verification
+    requirement: >
+      The integrated software is verified against the software requirements with specified
+      verification measures, regression handling and recorded results traceable to the
+      requirements.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for software qualification or verification test suites on HIL or target, test cases
+      linked to software requirement IDs, a regression strategy for each release, and release
+      test reports with pass, fail and not-run status explained.
+    evidence:
+      - Software verification report per release with requirement coverage
+    artifacts: [automated-tests, requirements-traceability]
+    crosswalk: ["iso-26262:6-11", "iso-26262:8-9"]
+  - ref: "Traceability"
+    title: Bidirectional traceability and consistency
+    requirement: >
+      Bidirectional traceability and consistency are established between stakeholder, system and
+      software requirements, architecture, detailed design, units, verification measures and
+      verification results, and between change requests and affected work products (base
+      practices in each SWE process).
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Check that requirement IDs appear in code (comment tags, annotations) and in tests, that a
+      trace report can be generated from the repository and the requirements tool, and that it is
+      bidirectional (from requirements to tests and from code back to requirements). Flag
+      requirements with no verification, code modules with no requirement, and tests that trace
+      to deleted requirements. A CI step that regenerates and checks the trace matrix is strong
+      evidence.
+    evidence:
+      - Trace matrix or report covering requirements, design, code, tests and results
+      - Automated consistency checks for orphan and missing links
+    artifacts: [requirements-traceability]
+    crosswalk: ["iso-26262:8-6"]
+  - ref: "SUP.1"
+    title: Quality assurance
+    requirement: >
+      Quality assurance checks work products and processes objectively against defined criteria,
+      reports non-conformities, escalates them and tracks their resolution.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for a QA plan, QA review records or audit checklists, and an issue label or tracker
+      for QA findings with closure evidence. Repository proxies include required approvals by a
+      QA role for releases and automated quality gates (static analysis, coverage, review
+      completion).
+    evidence:
+      - QA plan and records of process and work product checks
+      - Tracked non-conformities and escalations
+    artifacts: [code-review-process]
+    crosswalk: ["iso-26262:2-6.4.12"]
+  - ref: "SUP.8"
+    title: Configuration management
+    requirement: >
+      Configuration items are identified and controlled, baselines are established and
+      reproducible, and the integrity of configuration items and baselines is maintained and
+      verified.
+    category: secure-development
+    severity: medium
+    fixability: process
+    guidance: >
+      Check for a configuration management plan, tagged baselines per release, branching
+      strategy, controlled third-party and generated code, pinned toolchain, and the ability to
+      rebuild a released version bit-for-bit or with explained differences.
+    evidence:
+      - CM plan, baselines and reproducible builds
+    checks: [unpinned-dependencies]
+    artifacts: [ci-pipeline, dependency-lockfile, changelog]
+    crosswalk: ["iso-26262:8-7", "unece-r156:7.1.1"]
+  - ref: "SUP.9"
+    title: Problem resolution management
+    requirement: >
+      Problems are recorded, analysed for cause and impact, resolved, tracked to closure and
+      analysed for trends, with urgent resolution and alert notification where needed.
+    category: vulnerability-management
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for an issue tracker workflow for defects (states, severity, affected versions),
+      links from fix commits to problem reports, regression tests added for fixed defects, and
+      trend reports. Safety and security relevance should be a problem attribute.
+    evidence:
+      - Problem records with analysis, resolution and verification
+    crosswalk: ["iso-sae-21434:8.6"]
+  - ref: "SUP.10"
+    title: Change request management
+    requirement: >
+      Change requests are recorded, analysed for impact, approved, implemented, verified and
+      tracked, with traceability to affected work products.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Check that merges reference change requests or issues, that impact analysis is recorded for
+      significant changes, and that approval happens before implementation for customer-visible
+      changes.
+    evidence:
+      - Change request records with impact analysis and approval
+    artifacts: [code-review-process, changelog]
+    crosswalk: ["iso-26262:8-8"]
+  - ref: "MAN.3"
+    title: Project management
+    requirement: >
+      The project defines scope, lifecycle, work packages, estimates, schedule, resources and
+      interfaces, monitors progress and adjusts plans.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for a project plan or release plan referenced from the repository (milestones,
+      release scope per sample phase such as A, B and C samples and SOP), and evidence of
+      tracking (milestones in the issue tracker, burn-down or status reports).
+    evidence:
+      - Project and release plan with tracking records
+    crosswalk: ["iso-26262:2-6.4.6"]
+  - ref: "ACQ.4"
+    title: Supplier monitoring
+    requirement: >
+      Joint activities, information exchange and agreed deliverables with suppliers are monitored,
+      and deviations are acted upon.
+    category: supply-chain
+    severity: medium
+    fixability: process
+    when:
+      { fact: orgRole, in: [oem, tier1-supplier] }
+    guidance: >
+      Check how deliveries from sub-suppliers (MCAL, BSW, middleware, software components) are
+      received and accepted: delivery notes with versions, incoming acceptance tests, issue
+      exchange with the supplier, and monitoring of agreed milestones.
+    evidence:
+      - Supplier delivery acceptance records and joint review minutes
+    artifacts: [sbom, third-party-notices]
+    crosswalk: ["iso-26262:8-5", "iso-sae-21434:7.4.3"]
+  - ref: "SUP.11"
+    title: Machine learning data management
+    requirement: >
+      Data used for machine learning is managed with defined quality criteria, collection,
+      processing, labelling and verification, and is traceable to the ML requirements and models.
+    category: ai-governance
+    severity: medium
+    fixability: process
+    when:
+      { fact: aiUsage, in: [own-models] }
+    guidance: >
+      Look for dataset specifications, versioned datasets (DVC, LakeFS, data registry), labelling
+      guidelines and label quality checks, data split rules, and links from model versions to
+      dataset versions and ML requirements.
+    evidence:
+      - Dataset specifications, versions and quality checks linked to models
+    artifacts: [ai-documentation]
+    crosswalk: ["iso-21448:7", "eu-ai-act:Art.10"]

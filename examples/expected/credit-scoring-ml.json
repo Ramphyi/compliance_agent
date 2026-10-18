@@ -1,0 +1,19 @@
+[
+  { "check": "unsafe-deserialization", "file": "app/model.py", "line": 43, "issue": "Model loaded with pickle.load() from a path that a request parameter can override (model_path), allowing arbitrary-object deserialisation / RCE", "controls": ["owasp-asvs:5.5.3", "owasp-llm:LLM05"] },
+  { "check": "path-traversal-risk", "file": "app/server.py", "line": 36, "issue": "Client-supplied model_path passed straight to the model loader (open()), controlling which file is read/unpickled", "controls": ["owasp-asvs:12.3.1"] },
+  { "check": null, "file": "app/scoring.py", "line": 17, "issue": "Protected attribute 'gender' used directly as a model feature in a credit decision (discrimination / prohibited special-category use)", "controls": ["eu-ai-act:art-10", "gdpr:art-9", "eu-ai-act:annex-iii-5b"] },
+  { "check": null, "file": "app/scoring.py", "line": 16, "issue": "Applicant 'age' used directly as a scoring feature, risking age discrimination in access to credit", "controls": ["eu-ai-act:art-10", "eu-ai-act:annex-iii-5b"] },
+  { "check": null, "file": "app/scoring.py", "line": 21, "issue": "Fully automated approve/decline decision with no human review / human-in-the-loop path (GDPR Art. 22 and AI Act Art. 14 human oversight)", "controls": ["gdpr:art-22", "eu-ai-act:art-14"] },
+  { "check": null, "file": "app/scoring.py", "line": 35, "issue": "Decision returns no explanation / reasons to the applicant (right to explanation of automated decisions)", "controls": ["gdpr:art-22", "eu-ai-act:art-13", "eu-ai-act:art-86"] },
+  { "check": null, "file": "app/server.py", "line": 38, "issue": "No decision logging or record-keeping of inputs, score and outcome (AI Act Art. 12 automatic logging; auditability of high-risk system)", "controls": ["eu-ai-act:art-12", "eu-ai-act:art-19"] },
+  { "check": "insecure-random", "file": "app/auth.py", "line": 26, "issue": "API session tokens built from random.choice/random.random (non-cryptographic RNG)", "controls": ["owasp-asvs:3.2.2"] },
+  { "check": "weak-hash", "file": "app/auth.py", "line": 12, "issue": "API keys stored/compared with MD5", "controls": ["owasp-asvs:2.4.1", "owasp-asvs:6.2.1"] },
+  { "check": "weak-password-hash", "file": "app/auth.py", "line": 12, "issue": "Secret (API key) hashed with unsalted MD5 instead of a strong KDF", "controls": ["owasp-asvs:2.4.1"] },
+  { "check": "tls-verification-disabled", "file": "app/bureau.py", "line": 10, "issue": "ssl._create_unverified_context() used for the external bureau API call, disabling certificate verification", "controls": ["owasp-asvs:9.2.1", "gdpr:art-32"] },
+  { "check": "debug-enabled", "file": "app/config.py", "line": 5, "issue": "DEBUG = True in service configuration", "controls": ["owasp-asvs:14.1.3"] },
+  { "check": null, "file": ".", "line": 0, "issue": "No model card / technical documentation for the high-risk AI system (AI Act Annex IV, Art. 11)", "controls": ["eu-ai-act:art-11", "eu-ai-act:annex-iv"] },
+  { "check": null, "file": ".", "line": 0, "issue": "No data governance / training-data documentation or bias assessment (AI Act Art. 10)", "controls": ["eu-ai-act:art-10"] },
+  { "check": null, "file": ".", "line": 0, "issue": "No risk management system documented for the high-risk AI system (AI Act Art. 9)", "controls": ["eu-ai-act:art-9"] },
+  { "check": null, "file": "app/bureau.py", "line": 18, "issue": "National ID and application data sent to an external bureau with no documented legal basis, DPA or minimisation", "controls": ["gdpr:art-6", "gdpr:art-28", "gdpr:art-5-1-c"] },
+  { "check": null, "file": "app/config.py", "line": 8, "issue": "Service binds 0.0.0.0 with DEBUG and no authentication hardening documented; combined with no rate limiting on the scoring endpoint", "controls": ["owasp-asvs:1.11.1"] }
+]

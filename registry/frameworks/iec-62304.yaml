@@ -1,0 +1,492 @@
+id: iec-62304
+title: Medical device software - Software life cycle processes
+shortTitle: IEC 62304
+version: Edition 1.1 (2015-06), consolidated IEC 62304:2006+AMD1:2015
+authority: IEC / ISO
+kind: standard
+jurisdictions: [global, EU, US]
+url: https://webstore.iec.ch/en/publication/22794
+textPolicy: paraphrased
+summary: >
+  IEC 62304 defines the life cycle processes for medical device software: development
+  (planning, requirements, architecture, detailed design, unit implementation and
+  verification, integration, system testing, release), maintenance, software risk
+  management, configuration management and problem resolution. The required rigour scales
+  with the software safety class (A, B or C), and third-party code is managed as SOUP
+  (software of unknown provenance).
+applicability:
+  any:
+    - { fact: medicalClass, in: [class-I, class-IIa, class-IIb, class-III] }
+    - { fact: productTypes, in: [medical-device] }
+applicabilityNote: >
+  Applies to software that is a medical device (SaMD) or part of one (SiMD). EU notified
+  bodies and the FDA treat IEC 62304 as the state of the art for the software life cycle
+  (MDR GSPR 17.2, FDA premarket software documentation). Requirements depend on the
+  software safety class: class A needs the fewest activities, and class C needs detailed
+  design per unit and extra unit acceptance criteria. Confirm the class in the risk
+  management file before the audit relies on it. A second edition, retitled "Health
+  software - Software life cycle processes" and extended to all health software, is being
+  developed by IEC SC 62A. It had not been published when this file was written, its
+  forecast date has moved several times, and an earlier second-edition draft was
+  withdrawn around 2021. Until a new edition is published and recognised, audit against
+  the 2006+A1:2015 consolidated edition. Requirement text is paraphrased; consult the
+  licensed standard for exact wording.
+controls:
+  - ref: "4.3"
+    title: Software safety classification
+    requirement: >
+      Assign each software system a safety class (A, B or C) according to the worst harm
+      a software failure could contribute to, after considering risk control measures
+      external to the software, and document the rationale. Software items inherit the
+      class of their parent unless segregation justifies a lower class.
+    category: functional-safety
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a software safety classification record in docs/ (for example
+      docs/regulatory/software-safety-classification.md, a section in the software
+      development plan, or the risk management file) stating the class, the hazardous
+      situations it is based on, and any hardware or clinical risk controls credited
+      outside the software. Check that the class matches the product: software that
+      drives dosing, therapy, alarms or diagnosis where a wrong output can cause serious
+      injury is class C unless an external control is documented. If items are classed
+      lower than the system, look for the architecture showing segregation. Flag a class
+      that is asserted with no hazard reasoning, or no classification at all.
+    evidence:
+      - Documented safety class with rationale tied to hazardous situations
+      - List of external risk control measures credited in the classification
+      - Item-level classes with segregation justification where they differ
+    artifacts: [risk-management-file, safety-case]
+    crosswalk: ["iso-14971:5.4", "eu-mdr:Rule11", "iec-61508:7.2"]
+
+  - ref: "5.1.1"
+    title: Software development plan
+    requirement: >
+      Maintain a software development plan covering the processes, deliverables,
+      traceability between system requirements, software requirements, tests and risk
+      controls, configuration and change management, and problem resolution, and keep it
+      updated as development proceeds.
+    category: governance
+    severity: high
+    fixability: document
+    guidance: >
+      Search for a software development plan (SDP) such as docs/sdp.md, SDP.docx exported
+      to PDF, or a docs/process folder. A good plan names the life cycle model, the
+      deliverables per phase, the tools (version control, CI, issue tracker, test
+      framework), coding standards, verification strategy, how SOUP is managed, and how
+      the plan maps to the other 62304 processes. Cross-check that what the plan says
+      happens is visible in the repository: branch protection and review rules, CI
+      workflows that run the tests it promises, issue templates for problem reports. A
+      plan that names tools or gates the repository does not use is a finding.
+    evidence:
+      - Software development plan under version control with revision history
+      - CI pipeline and review rules that match the plan
+      - Defined deliverables and traceability scheme
+    artifacts: [ci-pipeline, code-review-process, requirements-traceability]
+    crosswalk: ["iec-81001-5-1:4.1", "nist-ssdf:PO.1.1", "eu-mdr:GSPR17.2"]
+
+  - ref: "5.1.12"
+    title: Identification and avoidance of common software defects
+    requirement: >
+      For class B and C software, identify the categories of defects that the chosen
+      languages, frameworks and design could introduce, and show that they are
+      prevented or detected (coding standards, static analysis, reviews, tests).
+    category: code-safety
+    severity: medium
+    fixability: code
+    when: { fact: swSafetyClass, in: [B, C] }
+    guidance: >
+      Look for a coding standard (CODING_STANDARD.md, MISRA or CERT deviations, language
+      style guides) and static analysis configured in CI: ESLint or TypeScript strict
+      mode, clang-tidy, cppcheck, SonarQube, Semgrep, Pylint or mypy, SpotBugs. For C and
+      C++ check that sanitizers (ASan, UBSan) or bounded string functions are used and
+      that unsafe functions are absent. For class C, the plan should also name the
+      standards, methods and tools in use (5.1.4). Good looks like a documented list of
+      defect categories (null handling, overflow, concurrency, unit conversion, time zone
+      and date errors, rounding of doses) mapped to the tool or review step that catches
+      each, with CI failing on new findings.
+    evidence:
+      - Coding standard and documented common-defect list
+      - Static analysis configured and enforced in CI
+      - Review checklist covering the listed defect categories
+    checks: [unsafe-c-functions, sql-injection-risk, dynamic-code-eval]
+    artifacts: [coding-standard, static-analysis-config, ci-pipeline]
+    crosswalk: ["iec-81001-5-1:5.5.1", "misra-c:Dir 4.1", "cert-c:STR31-C", "nist-ssdf:PW.6.2"]
+
+  - ref: "5.2.2"
+    title: Software requirements with unique identifiers
+    requirement: >
+      Define and document software requirements derived from system requirements,
+      including functional and performance requirements, inputs and outputs, interfaces,
+      alarms and warnings, security requirements, usability-related requirements, data
+      definitions, and risk control measures implemented in software, and verify them.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a requirements specification (docs/requirements/, SRS.md, a requirements
+      export from Jama, Polarion, Codebeamer or Jira) where each requirement has a stable
+      ID such as SRS-012. Check that tests reference requirement IDs (test names,
+      docstrings, tags like @req SRS-012 or pytest markers) and that a traceability
+      matrix links system requirements, software requirements, risk controls and tests.
+      Requirements should cover security (authentication, encryption, audit logging),
+      units and ranges for clinical values, alarm behaviour, and data definitions. For
+      class B and C, software risk control measures from the risk file must appear as
+      requirements (5.2.3). Flag requirements that are not testable or not traced.
+    evidence:
+      - Software requirements specification with unique IDs
+      - Traceability matrix from requirements to tests and risk controls
+      - Requirements review record
+    artifacts: [requirements-traceability, risk-management-file]
+    crosswalk: ["iec-81001-5-1:5.2.1", "iso-14971:7.2", "fda-cybersecurity:V.B.1"]
+
+  - ref: "5.3.1"
+    title: Software architecture and interfaces
+    requirement: >
+      For class B and C, describe the software architecture: software items, their
+      interfaces with each other and with external components, and, for class C, the
+      segregation between items that is relied on for risk control. Verify the
+      architecture against the requirements.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    when: { fact: swSafetyClass, in: [B, C] }
+    guidance: >
+      Look for docs/architecture.md, ARCHITECTURE.md, C4 or UML diagrams (PlantUML,
+      Mermaid, Structurizr) that name the software items and how they map to code
+      (services, packages, modules). Check that interfaces are documented: REST or gRPC
+      contracts (OpenAPI, .proto), message schemas, device protocols. Compare the
+      documented decomposition with the real repository layout; a diagram that does not
+      match the code is a finding. For class C, look for the segregation argument
+      (5.3.5): separate processes, memory protection, separate containers or services,
+      and why a failure in a lower-class item cannot affect a class C item.
+    evidence:
+      - Architecture document mapping software items to repository modules
+      - Interface specifications for internal and external interfaces
+      - Segregation rationale for class C items and an architecture review record
+    artifacts: [architecture-doc]
+    crosswalk: ["iec-81001-5-1:5.3.1", "fda-cybersecurity:V.B.2", "eu-mdr:AnnexII"]
+
+  - ref: "5.3.3"
+    title: SOUP functional, performance and platform requirements
+    requirement: >
+      For class B and C, for each SOUP item state the functional and performance
+      requirements the software relies on, and the system hardware and software the SOUP
+      needs to run correctly (5.3.3 and 5.3.4).
+    category: supply-chain
+    severity: high
+    fixability: document
+    when: { fact: swSafetyClass, in: [B, C] }
+    guidance: >
+      Build the SOUP inventory from manifests and lockfiles (package.json with
+      package-lock.json or pnpm-lock.yaml, requirements.txt or poetry.lock, go.sum,
+      Cargo.lock, pom.xml, build.gradle, Podfile.lock, CMake FetchContent, vendored
+      directories, base images in Dockerfiles). Then look for a SOUP list (docs/soup.md,
+      soup.yaml, or a generated SBOM with annotations) that records, for each item the
+      software depends on, why it is used, what functions and performance are required
+      of it, and what runtime, OS or hardware it needs. Good looks like a SOUP register
+      generated from the lockfile in CI so it cannot drift, with requirement notes per
+      item. Flag dependencies in the lockfile that are missing from the register.
+    evidence:
+      - SOUP register covering every direct runtime dependency with its required function
+      - Platform requirements for each SOUP item (OS, runtime, hardware)
+      - CI step that regenerates or checks the register against the lockfile
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile, third-party-notices]
+    crosswalk: ["fda-cybersecurity:524B(b)(3)", "iec-81001-5-1:4.1.5", "eu-cra:AnnexI.II.1"]
+
+  - ref: "5.4.1"
+    title: Detailed design of software units
+    requirement: >
+      For class B, refine the architecture down to software units. For class C, document
+      a detailed design for each unit and its interfaces, sufficient to implement it
+      correctly, and verify the design.
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    when: { fact: swSafetyClass, in: [B, C] }
+    guidance: >
+      Check that the architecture is decomposed to units that correspond to code
+      (classes, modules, functions or components). For class C, look for unit-level
+      design descriptions: module READMEs, design docs per component, doc comments on
+      public interfaces describing preconditions, ranges, error handling and timing, and
+      sequence or state diagrams for safety-relevant logic (alarm state machines, dose
+      calculators). Good looks like design notes stored next to the code and reviewed in
+      the same pull request as the implementation. Flag class C units with no design
+      description.
+    evidence:
+      - Unit decomposition mapped to source files
+      - Detailed design for class C units, including interface contracts
+      - Design verification or review records
+    artifacts: [architecture-doc, code-review-process]
+    crosswalk: ["iec-81001-5-1:5.3.1"]
+
+  - ref: "5.5.5"
+    title: Software unit verification
+    requirement: >
+      For class B and C, define a unit verification approach and acceptance criteria, and
+      verify every unit against them. For class C, add criteria such as correct event
+      sequencing, data and control flow, resource allocation, fault handling,
+      initialisation and boundary conditions.
+    category: testing-verification
+    severity: high
+    fixability: code
+    when: { fact: swSafetyClass, in: [B, C] }
+    guidance: >
+      Look for unit test suites (Jest, Vitest, pytest, JUnit, GoogleTest, Unity, XCTest)
+      run in CI, a coverage configuration (nyc or c8, coverage.py, JaCoCo, gcov or llvm-cov)
+      with thresholds, and code review records as an additional verification method.
+      Check that safety-relevant units (calculations, unit conversions, alarm logic,
+      parsers of device data) have tests for boundaries, invalid input, and error paths.
+      For class C, expect higher coverage targets (branch or MC/DC for critical logic),
+      tests for initialisation and fault handling, and static analysis results attached
+      to the release. Flag safety-relevant modules with no tests or coverage gates that
+      are disabled.
+    evidence:
+      - Unit verification procedure and acceptance criteria
+      - Automated unit tests with coverage thresholds enforced in CI
+      - Unit verification results archived per release
+    artifacts: [automated-tests, test-coverage-config, ci-pipeline]
+    crosswalk: ["iec-81001-5-1:5.5.1", "iec-61508:7.4.7", "nist-ssdf:PW.8.2"]
+
+  - ref: "5.6.3"
+    title: Software integration and regression testing
+    requirement: >
+      For class B and C, integrate software units according to a plan, test the
+      integrated items, run regression tests after changes, and record results including
+      problems found.
+    category: testing-verification
+    severity: medium
+    fixability: code
+    when: { fact: swSafetyClass, in: [B, C] }
+    guidance: >
+      Look for integration tests separate from unit tests (tests/integration, *.it.ts,
+      Testcontainers, docker-compose test environments, hardware-in-the-loop rigs) that
+      exercise interfaces between software items: API contracts, database access,
+      device communication, message queues. Check that CI runs them on every merge and
+      that failures block release. Good looks like contract tests for the interfaces
+      named in the architecture and a full regression suite before each release tag.
+    evidence:
+      - Integration test suite covering documented interfaces
+      - Regression run results attached to release candidates
+      - Integration failures logged as problem reports
+    artifacts: [automated-tests, ci-pipeline]
+    crosswalk: ["iec-81001-5-1:5.7.3"]
+
+  - ref: "5.7.1"
+    title: Software system testing against requirements
+    requirement: >
+      Test the complete software system against every software requirement (all classes
+      since Amendment 1), retest after changes, evaluate the results, and keep test
+      records that identify the version tested, tester, date and outcome.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for system-level or end-to-end tests (Playwright, Cypress, Appium, Robot
+      Framework, scripted manual protocols in docs/verification) mapped to requirement
+      IDs. Check the traceability matrix shows every requirement covered by at least one
+      passing system test, and that test reports record the software version (git SHA or
+      release tag), environment, date and result. Good looks like a CI job that publishes
+      a test report artefact per release and fails when a requirement has no test. Flag
+      requirements with no system test and releases with no archived results.
+    evidence:
+      - System test protocols or automated suites traced to requirement IDs
+      - Test reports identifying version, environment, date and tester
+      - Evaluation of failures and retest records
+    artifacts: [automated-tests, requirements-traceability, ci-pipeline]
+    crosswalk: ["iec-81001-5-1:5.7.3", "eu-mdr:GSPR17.2", "fda-cybersecurity:V.C"]
+
+  - ref: "5.8.2"
+    title: Known residual anomalies evaluated before release
+    requirement: >
+      Before release, confirm verification is complete, list every known residual
+      anomaly, and (class B and C) evaluate each one to show it does not contribute to
+      an unacceptable risk.
+    category: functional-safety
+    severity: high
+    fixability: process
+    guidance: >
+      Look for release notes or a release checklist (RELEASE.md, docs/releases/<version>)
+      that lists open defects at release time, typically exported from the issue tracker
+      with a label such as known-anomaly. Each entry should have a safety and security
+      impact assessment. Check that release tags correspond to a release record and that
+      open issues labelled safety or security at release time were assessed. Flag
+      releases that ship with open high-severity bugs and no recorded evaluation.
+    evidence:
+      - Residual anomaly list per release with risk evaluation
+      - Verification completion sign-off
+      - Link between release tag and release record
+    artifacts: [changelog, risk-management-file]
+    crosswalk: ["fda-cybersecurity:V.A.5", "iec-81001-5-1:5.8.2", "iso-14971:8"]
+
+  - ref: "5.8.4"
+    title: Released versions, build reproducibility, archiving and delivery
+    requirement: >
+      Identify each released version, document how it was built (class B and C), archive
+      the released software and its documentation, and make sure it can be delivered to
+      the point of use without corruption or unauthorised change (5.8.4 to 5.8.8).
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Check that releases are tagged with semantic versions and that the version shown
+      in the product (about screen, API /version endpoint, firmware banner) comes from
+      the build, not a hand-edited string. Look for a CI release workflow that builds
+      from a clean checkout with pinned toolchains and lockfiles, records the build
+      environment, and stores artefacts with checksums or signatures (cosign, GPG,
+      code-signing certificates, app store signing). Archived releases should be
+      retrievable for the product lifetime. Flag manual builds from developer machines,
+      unsigned installers or update packages, and versions that cannot be reproduced.
+    evidence:
+      - Tagged releases with build provenance and recorded toolchain versions
+      - Signed or checksummed release artefacts and archive location
+      - Documented delivery path with integrity checks
+    checks: [unpinned-dependencies, firmware-update-unsigned]
+    artifacts: [ci-pipeline, dependency-lockfile, changelog]
+    crosswalk: ["iec-81001-5-1:5.8.3", "nist-ssdf:PS.2.1", "eu-mdr:AnnexVI-C6.5"]
+
+  - ref: "6.2.1"
+    title: Maintenance plan and feedback monitoring
+    requirement: >
+      Establish a maintenance plan, then monitor, document and evaluate feedback after
+      release (complaints, problem reports, and SOUP anomalies and vulnerabilities), and
+      assess whether each item affects safety before deciding on changes.
+    category: updates-maintenance
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a maintenance plan (docs/maintenance-plan.md or part of the SDP) that
+      names feedback channels: support tickets, issue templates, crash reporting
+      (Sentry, Crashlytics), field logs, and vulnerability sources for SOUP (GitHub
+      Dependabot or Renovate alerts, OSV, NVD, vendor advisories). Check that automated
+      dependency and vulnerability alerts are enabled and that triage records state the
+      safety impact. Good looks like an issue template with a mandatory safety-impact
+      field and a documented route from triage into problem resolution (clause 9) and
+      risk management (7.4).
+    evidence:
+      - Software maintenance plan naming feedback and vulnerability sources
+      - Dependency and vulnerability alerting configured
+      - Triage records with safety impact assessment
+    artifacts: [dependency-update-automation, vulnerability-scanning, update-policy]
+    crosswalk: ["iso-14971:10", "eu-mdr:Art.83", "iec-81001-5-1:6.2.1", "fda-cybersecurity:524B(b)(1)"]
+
+  - ref: "7.1"
+    title: Software contribution to hazardous situations, including SOUP failures
+    requirement: >
+      For class B and C, identify software items that could contribute to hazardous
+      situations, the potential causes (including SOUP failure and published SOUP anomaly
+      lists, hardware failure, and unexpected inputs), and document them in the risk
+      management file.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    when: { fact: swSafetyClass, in: [B, C] }
+    guidance: >
+      Look for a software hazard analysis or software FMEA in the risk management file
+      that names concrete software items (modules, services) and failure modes: wrong
+      calculation, stale or corrupted data, wrong patient association, timing or
+      ordering errors, crash or hang, silent alarm failure, security compromise. Check
+      that SOUP items in the lockfile have been reviewed against their known bug and
+      vulnerability lists (release notes, issue trackers, CVE entries) and that relevant
+      anomalies are recorded with a risk decision. Flag a risk file that never mentions
+      software items or SOUP.
+    evidence:
+      - Software hazard analysis linked to software items
+      - Review of published SOUP anomaly lists with conclusions
+      - Risk control measures traced to software requirements and tests (7.2, 7.3)
+    artifacts: [risk-management-file, sbom, requirements-traceability]
+    crosswalk: ["iso-14971:5.4", "iso-14971:7.2", "iec-81001-5-1:7.2"]
+
+  - ref: "7.4.1"
+    title: Safety analysis of software changes
+    requirement: >
+      Analyse every change to the software, including SOUP updates, for its effect on
+      safety and on existing risk control measures, and repeat risk management activities
+      where needed before release.
+    category: risk-assessment
+    severity: medium
+    fixability: process
+    guidance: >
+      Look at the pull request template and change records: a good template asks whether
+      the change affects safety-relevant items, risk controls, or SOUP, and links the
+      requirement and risk IDs touched. Check that dependency upgrade pull requests
+      (Dependabot, Renovate) are reviewed rather than auto-merged for safety-relevant
+      code, and that release notes reference the risk assessment. Flag auto-merge of
+      dependency updates for class B or C software without an impact note.
+    evidence:
+      - Pull request template with a safety impact section
+      - Impact analysis records for SOUP upgrades
+      - Updated risk management file entries for changed items
+    artifacts: [code-review-process, risk-management-file]
+    crosswalk: ["iso-14971:10", "eu-mdr:GSPR17.2"]
+
+  - ref: "8.1.2"
+    title: SOUP configuration identification
+    requirement: >
+      For every SOUP item in the software, record its title, manufacturer or source, and
+      a unique version designator, as part of configuration identification (all safety
+      classes).
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Check that every dependency resolves to an exact version through a committed
+      lockfile, that vendored code records its upstream source and version, and that
+      container base images are pinned by digest. A machine-readable SBOM (CycloneDX or
+      SPDX, generated by syft, cdxgen, or the build tool) produced per release satisfies
+      this when it includes supplier, name and version. Flag version ranges without a
+      lockfile, latest tags, git dependencies on branches, and copied third-party files
+      with no provenance.
+    evidence:
+      - Committed lockfiles and pinned base images
+      - SBOM per release with supplier, name and version for each component
+      - Provenance notes for vendored code
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile]
+    crosswalk: ["fda-cybersecurity:524B(b)(3)", "iec-81001-5-1:4.1.5", "nist-ssdf:PS.3.2"]
+
+  - ref: "8.2"
+    title: Change control with traceability
+    requirement: >
+      Approve change requests before implementation, implement and verify them, and keep
+      traceability from each change request to the modified configuration items and the
+      verification performed; record configuration status.
+    category: secure-development
+    severity: medium
+    fixability: process
+    guidance: >
+      Inspect repository settings and workflow: protected main or release branches,
+      required pull request reviews, required status checks, and commits or pull
+      requests that reference an issue or change request ID. Look for CODEOWNERS on
+      safety-relevant paths. Good looks like every merged change linked to an approved
+      ticket, reviewed by someone other than the author, and verified by CI before merge.
+      Flag direct pushes to release branches and merges without review.
+    evidence:
+      - Branch protection and required review settings
+      - Change requests linked from commits or pull requests
+      - Configuration status record per release
+    artifacts: [code-review-process, ci-pipeline]
+    crosswalk: ["iec-81001-5-1:5.1.2", "nist-ssdf:PS.1.1"]
+
+  - ref: "9"
+    title: Software problem resolution
+    requirement: >
+      Record each problem found in the software in a problem report with a criticality
+      assessment, investigate causes, inform relevant parties, route fixes through change
+      control, verify the resolution, keep records, and analyse problems for trends.
+    category: vulnerability-management
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for issue templates (.github/ISSUE_TEMPLATE, GitLab templates) for bug and
+      problem reports with fields for affected version, severity, safety impact,
+      root cause and verification of the fix. Check that fixes reference the problem
+      report and add a regression test. Good looks like labels for safety and security
+      impact, periodic trend review notes, and closure only after verification.
+    evidence:
+      - Problem report template with criticality and safety impact fields
+      - Fix pull requests linked to problem reports with regression tests
+      - Trend analysis records
+    artifacts: [code-review-process, automated-tests]
+    crosswalk: ["iec-81001-5-1:9.2", "eu-mdr:Art.87"]

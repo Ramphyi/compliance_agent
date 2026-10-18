@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MediLin — talk to a doctor</title>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7QF2L9MX3P"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-7QF2L9MX3P");
+    </script>
+
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+      textarea { width: 100%; height: 6rem; }
+      button { padding: 0.5rem 1rem; margin-top: 0.5rem; }
+      .result { white-space: pre-wrap; background: #f4f4f7; padding: 1rem; margin-top: 1rem; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>MediLin</h1>
+    <p>Describe your symptoms and get a first orientation, then book an appointment.</p>
+
+    <label for="symptoms">Your symptoms</label>
+    <textarea id="symptoms" placeholder="e.g. headache and fever since yesterday"></textarea>
+    <button id="go">Get triage</button>
+
+    <div class="result" id="result" hidden></div>
+
+    <script>
+      const token = localStorage.getItem("medilin_token") || "";
+      document.getElementById("go").addEventListener("click", async () => {
+        const symptoms = document.getElementById("symptoms").value;
+        const res = await fetch("/api/triage", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: "Bearer " + token },
+          body: JSON.stringify({ symptoms }),
+        });
+        const data = await res.json();
+        const el = document.getElementById("result");
+        el.hidden = false;
+        el.textContent = (data.summary || data.error || "") + "\n\nSuggested: " + (data.action || "-");
+      });
+    </script>
+  </body>
+</html>

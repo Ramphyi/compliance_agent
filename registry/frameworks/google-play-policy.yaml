@@ -1,0 +1,322 @@
+id: google-play-policy
+title: Google Play Developer Program Policy and Play Console requirements
+shortTitle: Google Play Policy
+version: Developer Program Policy as published in the Play Policy Center (2026), including the 2026-04-15 health policy update
+authority: Google LLC
+kind: platform-policy
+jurisdictions: [global]
+url: https://play.google/developer-content-policy/
+textPolicy: paraphrased
+summary: >
+  The policies Google applies to apps on Google Play, with the related Play Console
+  declarations: User Data (privacy policy, prominent disclosure and consent, secure
+  handling), the Data safety form, account deletion, sensitive and background location
+  permissions, Health apps and Health Connect, Families, advertising ID, target API
+  level and the AI-Generated Content policy.
+applicability: { fact: distribution, in: [google-play] }
+applicabilityNote: >
+  Applies to every app distributed on Google Play, including apps built with Flutter,
+  React Native or other cross-platform tools, and to SDKs embedded in them (the
+  developer is responsible for SDK behaviour). Policies and Play Console declarations
+  change often; check the Policy Center and Policy announcements before each release.
+keyDates:
+  - { date: "2022-07-20", note: Data safety section required for all apps }
+  - { date: "2023-12-07", note: Account deletion questions in the Data safety form required (extensions available to 2024-05-31) }
+  - { date: "2024-05-31", note: End of the extension period for the account deletion requirement }
+  - { date: "2026-04-15", note: "Health and fitness data policy updated for Android 16 granular health permissions and new Health Connect data types" }
+  - { date: "2026-08-31", note: "New apps and updates must target Android 16 (API level 36); existing apps must target API 35 to stay available to new users on newer devices" }
+  - { date: "2026-11-01", note: Latest date for an approved target API level extension }
+controls:
+  - ref: "User Data"
+    title: Privacy policy and limited, secure handling of user data
+    requirement: >
+      Apps must post a privacy policy in Play Console and inside the app, limit
+      collection and use of personal and sensitive user data to purposes disclosed and
+      needed for the app's features, and handle it securely, including modern
+      encryption in transit.
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      Check the app shows a privacy policy link in settings or onboarding and that the
+      policy names the developer and lists data accessed, collected, used and shared,
+      including SDKs and AI services. Check network security: no
+      android:usesCleartextTraffic="true" or permissive network_security_config.xml for
+      production domains, no custom TrustManager or HostnameVerifier that accepts all
+      certificates, and HTTPS for every endpoint carrying user data. Flag sale of
+      personal and sensitive data.
+    evidence:
+      - In-app privacy policy link and complete policy
+      - Network security configuration enforcing TLS
+    checks: [mobile-cleartext-allowed, cleartext-transport, tls-verification-disabled, pii-in-logs]
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.13", "gdpr:Art.32", "apple-app-review:5.1.1(i)", "owasp-masvs:MASVS-NETWORK-1"]
+
+  - ref: "Prominent Disclosure"
+    title: Prominent disclosure and consent for unexpected data use
+    requirement: >
+      When an app collects personal and sensitive data in ways users would not
+      reasonably expect, it must show an in-app disclosure, separate from the privacy
+      policy and store listing, describing the data and its use, and obtain affirmative
+      consent before collection; dismissing the dialog is not consent.
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      Check that before runtime permission prompts (ActivityResultContracts.RequestPermission,
+      requestPermissions) and before background collection of contacts, location,
+      installed apps, phone or SMS data, an in-app dialog explains what is collected and
+      why with an explicit accept action, and that the denial path is handled. The
+      disclosure must be shown during normal use, not only in settings.
+    evidence:
+      - In-app disclosure dialog with affirmative consent before sensitive collection
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.7", "apple-app-review:5.1.1"]
+
+  - ref: "Data Safety"
+    title: Accurate Data safety form
+    requirement: >
+      Every app must complete the Data safety form accurately, covering data collected
+      and shared by the app and its SDKs, purposes, whether data is encrypted in transit,
+      and deletion options, and keep it current.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Derive actual collection from AndroidManifest.xml permissions, Gradle dependencies
+      (analytics, crash, ads, attribution, AI SDKs), backend storage and network calls,
+      and compare with the Data safety answers, ideally kept in the repository (for
+      example docs/play-data-safety.md or the exported CSV) and reviewed in the release
+      checklist. Use SDK vendors' Data safety guidance for third-party libraries.
+    evidence:
+      - Documented Data safety answers consistent with code and SDKs
+      - Release checklist step to review the form
+    checks: [analytics-tracking-sdk]
+    artifacts: [privacy-policy]
+    crosswalk: ["apple-app-review:privacy-labels", "apple-app-review:privacy-manifest"]
+
+  - ref: "Account Deletion"
+    title: Account deletion in the app and via a web link
+    requirement: >
+      Apps that let users create accounts must let users request deletion of the account
+      and associated data both from within the app and through a web link declared in
+      Play Console; deactivation does not count, and any data retained for legitimate
+      reasons must be disclosed.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Check for a discoverable in-app deletion action and a public web page (for example
+      /account/delete) that works without installing the app, names the app or developer
+      as on the store listing, explains the steps, which data is deleted or kept and for
+      how long, and leads to real server-side deletion. Check the Data safety deletion
+      answers match.
+    evidence:
+      - In-app deletion flow
+      - Public web deletion page declared in Play Console
+      - Server-side deletion and retention disclosure
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.17", "apple-app-review:5.1.1(v)", "ccpa-cpra:1798.105"]
+
+  - ref: "Permissions"
+    title: Sensitive permissions and restricted APIs
+    requirement: >
+      Apps may request only permissions needed for current, user-facing features;
+      high-risk or sensitive permissions (SMS and Call Log, All files access, package
+      visibility, Accessibility API, photo and video access, exact alarms, full-screen
+      intents, foreground service types) require a qualifying core use and a Play
+      Console declaration.
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      Review AndroidManifest.xml (including merged manifests from libraries) for
+      READ_SMS, RECEIVE_SMS, READ_CALL_LOG, MANAGE_EXTERNAL_STORAGE, QUERY_ALL_PACKAGES,
+      BIND_ACCESSIBILITY_SERVICE, READ_MEDIA_IMAGES and READ_MEDIA_VIDEO,
+      SCHEDULE_EXACT_ALARM, USE_FULL_SCREEN_INTENT, REQUEST_INSTALL_PACKAGES and
+      foreground service types. Remove those not needed (use tools:node="remove" for
+      library permissions), prefer the Android photo picker over broad media
+      permissions, and confirm declarations exist for the rest. Check exported
+      components are protected.
+    evidence:
+      - Minimal permission set in the merged manifest
+      - Play Console declarations for sensitive permissions
+    checks: [mobile-exported-component, debug-enabled]
+    artifacts: []
+    crosswalk: ["apple-app-review:5.1.1", "gdpr:Art.25"]
+
+  - ref: "Background Location"
+    title: Background location only for core features with declaration
+    requirement: >
+      Access to location in the background is allowed only for features that are core
+      to the app and clearly beneficial to the user, with a prominent disclosure and a
+      Play Console declaration including a video of the feature.
+    category: platform-policy
+    severity: high
+    fixability: code
+    when: { fact: dataCategories, in: [location] }
+    guidance: >
+      Check for ACCESS_BACKGROUND_LOCATION and foreground services of type location. If
+      present, verify the feature truly needs background access (otherwise use
+      while-in-use location), a prominent disclosure precedes the request, the request
+      is made separately after foreground permission, and coarse location is used when
+      precise is not needed.
+    evidence:
+      - Justified background location use with disclosure
+      - Coarse location where sufficient
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.5(1)(c)", "ccpa-cpra:1798.121"]
+
+  - ref: "Health Apps"
+    title: Health apps declaration and Health Connect data use
+    requirement: >
+      Health and medical apps must complete the Health apps declaration, post a privacy
+      policy, and either declare regulated medical device status or show a disclaimer
+      that the app is not a medical device; Health Connect data may be requested only for
+      approved use cases and must not be sold, used for advertising, credit decisions or
+      (since the 2026 update) employment or insurance eligibility.
+    category: platform-policy
+    severity: critical
+    fixability: code
+    when:
+      any:
+        - { fact: dataCategories, in: [health] }
+        - { fact: sector, in: [healthcare] }
+    guidance: >
+      Check AndroidManifest.xml for android.permission.health.* permissions and the
+      Health Connect privacy policy activity (intent filter for
+      androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE or the Android 14
+      VIEW_PERMISSION_USAGE handler) showing the same policy as Play Console. Request
+      only the data types used, remove unused ones, and keep Health Connect data out of
+      ads and analytics SDKs. Check the store description contains the medical device
+      disclaimer when not a regulated device. Migrate any Google Fit API use to Health
+      Connect.
+    evidence:
+      - Minimal Health Connect permissions with rationale activity
+      - Health data excluded from ads and analytics
+      - Health apps declaration and disclaimer
+    checks: [analytics-tracking-sdk, pii-in-logs]
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.9", "apple-app-review:5.1.3", "apple-app-review:1.4.1"]
+
+  - ref: "Families"
+    title: Families policy for apps targeting children
+    requirement: >
+      Apps whose target audience includes children must meet the Families policy:
+      comply with children's privacy law, not transmit the advertising ID, device
+      identifiers or precise location from children, use only Families Self-Certified
+      ads SDKs, and present appropriate content and ads.
+    category: platform-policy
+    severity: critical
+    fixability: code
+    when: { any: [ { fact: audience, in: [children] }, { fact: dataCategories, in: [children] } ] }
+    guidance: >
+      Check the declared target audience, remove AD_ID permission and advertising ID
+      access for child users (tools:node="remove" on com.google.android.gms.permission.AD_ID),
+      ensure analytics SDKs are configured without identifiers for children, ads SDKs
+      are on the Families Self-Certified list with child-directed treatment flags set
+      (tagForChildDirectedTreatment), and no precise location is requested from
+      children.
+    evidence:
+      - AD_ID removed or blocked for child users
+      - Families-certified ads SDKs with child-directed flags
+    checks: [analytics-tracking-sdk]
+    artifacts: [privacy-policy]
+    crosswalk: ["coppa:312.5", "gdpr:Art.8", "apple-app-review:5.1.4"]
+
+  - ref: "Advertising ID"
+    title: Advertising ID use and user choice
+    requirement: >
+      The advertising ID may be used only for advertising and analytics, must not be
+      linked to personal information or persistent device identifiers without explicit
+      consent, must respect the user's opt-out or reset, and apps targeting Android 13 or
+      later must declare the AD_ID permission to access it.
+    category: platform-policy
+    severity: medium
+    fixability: code
+    guidance: >
+      Check whether com.google.android.gms.permission.AD_ID is present (often merged from
+      SDKs) and needed. Verify the advertising ID is not stored alongside account
+      identifiers or used as a user key, and that limit ad tracking or deletion of the
+      ID is respected. Combine with EU consent gating for advertising SDKs.
+    evidence:
+      - Justified AD_ID declaration
+      - No linkage of the advertising ID to account identifiers without consent
+    checks: [analytics-tracking-sdk]
+    artifacts: []
+    crosswalk: ["eprivacy:Art.5(3)-apps", "apple-app-review:ATT"]
+
+  - ref: "Target API level"
+    title: Target API level requirement
+    requirement: >
+      From 31 August 2026 new apps and updates must target Android 16 (API level 36),
+      with lower levels for Wear OS, Android Automotive OS, Android TV and Android XR;
+      existing apps must target at least API 35 to remain available to new users on
+      newer devices.
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Check targetSdkVersion or targetSdk in build.gradle(.kts), app.json or
+      app.config for Expo, and Flutter android/app/build.gradle. Check behaviour
+      changes for the new level are handled (for example Android 16 large-screen
+      orientation and resizability rules, edge-to-edge, foreground service and
+      background start restrictions) and tests run on the target API.
+    evidence:
+      - targetSdk set to the required level
+      - CI tests on the target Android version
+    checks: []
+    artifacts: [ci-pipeline]
+    crosswalk: ["owasp-masvs:MASVS-CODE-1"]
+
+  - ref: "AI-Generated Content"
+    title: AI-generated content safeguards and reporting
+    requirement: >
+      Apps that generate content with AI (chatbots, image, voice or video generators)
+      must prevent prohibited content such as sexual content involving minors, deceptive
+      deepfakes and harmful material, and must provide in-app user reporting or flagging
+      of offensive AI output that informs moderation.
+    category: platform-policy
+    severity: high
+    fixability: code
+    when:
+      any:
+        - { fact: aiRiskAreas, in: [chatbot, synthetic-content] }
+        - { fact: aiUsage, in: [third-party-models, own-models, general-purpose-model] }
+    guidance: >
+      Check generated output passes through safety filters (provider safety settings,
+      moderation endpoints, prompt and output classifiers) before display, that each
+      generated item has a report or flag action available in the app without leaving it,
+      that reports reach a moderation queue that feeds filter tuning, and that
+      generated media of real people is restricted. Store listing assets created with
+      AI must be declared in Play Console.
+    evidence:
+      - Output moderation and safety settings
+      - In-app report or flag action on generated content
+    checks: [ai-disclosure-missing, llm-output-execution, llm-prompt-injection-risk]
+    artifacts: [ai-documentation]
+    crosswalk: ["apple-app-review:1.2", "eu-ai-act:Art.50(1)", "eu-ai-act:Art.50(2)", "owasp-llm-top10:LLM05"]
+
+  - ref: "Device and Network Abuse"
+    title: No unauthorised code download and no interference with the device
+    requirement: >
+      Apps distributed on Google Play may not update themselves or download executable
+      code (dex, JAR, .so) from sources other than Google Play, and must not interfere
+      with the device, other apps or Google services.
+    category: platform-policy
+    severity: high
+    fixability: code
+    guidance: >
+      Flag DexClassLoader or PathClassLoader loading downloaded files, System.load of
+      downloaded native libraries, self-update mechanisms that install APKs
+      (REQUEST_INSTALL_PACKAGES used for self-update), and evaluation of remotely
+      fetched code outside a WebView. JavaScript bundle updates for React Native are
+      tolerated when they do not change the app's core purpose or bypass policy.
+    evidence:
+      - No dynamic loading of downloaded executable code
+    checks: [dynamic-code-eval, llm-output-execution]
+    artifacts: []
+    crosswalk: ["apple-app-review:2.5"]

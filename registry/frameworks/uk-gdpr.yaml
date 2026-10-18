@@ -1,0 +1,274 @@
+id: uk-gdpr
+title: UK General Data Protection Regulation and Data Protection Act 2018 (as amended by the Data (Use and Access) Act 2025)
+shortTitle: UK GDPR and DPA 2018
+version: UK GDPR and DPA 2018 as amended by the Data (Use and Access) Act 2025 (main Part 5 changes in force 2026-02-05)
+authority: UK Parliament; regulator Information Commission (formerly the Information Commissioner's Office)
+kind: regulation
+jurisdictions: [UK]
+url: https://www.legislation.gov.uk/eur/2016/679/contents
+textPolicy: paraphrased
+summary: >
+  The UK's retained version of the GDPR, supplemented by the Data Protection Act 2018 and
+  the Privacy and Electronic Communications Regulations (PECR). The Data (Use and Access)
+  Act 2025 (DUAA) amended all three. Most obligations mirror the EU GDPR. These controls
+  cover only what differs or is UK-specific; the EU GDPR controls cover the shared core.
+applicability:
+  all:
+    - { fact: markets, in: [UK] }
+    - { fact: dataCategories, in: [personal, health, genetic-biometric, payment-cards, financial, children, location, vehicle, credentials, other-sensitive] }
+applicabilityNote: >
+  Applies to organisations established in the UK and to non-UK organisations that offer
+  goods or services to people in the UK or monitor their behaviour there. Apply the EU
+  GDPR controls for the shared obligations (principles, rights, security, breach,
+  DPIA), then these UK-specific ones. The DUAA was commenced in stages; check
+  legislation.gov.uk for the commencement status of any provision you rely on.
+keyDates:
+  - { date: "2021-01-01", note: UK GDPR applies as retained law after the Brexit transition period }
+  - { date: "2022-03-21", note: International Data Transfer Agreement and the UK Addendum to the EU SCCs came into force }
+  - { date: "2023-10-12", note: "UK-US data bridge (UK Extension to the EU-US Data Privacy Framework) took effect" }
+  - { date: "2025-06-19", note: Data (Use and Access) Act 2025 received Royal Assent }
+  - { date: "2026-02-05", note: "Most DUAA Part 5 data protection and PECR changes commenced (SI 2026/82)" }
+  - { date: "2026-06-19", note: "DUAA section 103 (complaints by data subjects) commenced (SI 2026/82)" }
+controls:
+  - ref: "Art.27"
+    title: UK representative for non-UK organisations
+    requirement: >
+      A controller or processor not established in the UK that offers goods or services
+      to, or monitors, people in the UK must appoint a representative in the UK in
+      writing, unless processing is occasional, low-risk and excludes large-scale special
+      category data, or it is a public authority.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Determine whether the organisation has a UK establishment. If not, check the
+      privacy notice names a UK representative with contact details and that the
+      appointment exists in writing. An EU representative under EU GDPR Art. 27 does
+      not cover the UK, and vice versa.
+    evidence:
+      - Written appointment of a UK representative
+      - Representative details published in the privacy notice
+    checks: []
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.13"]
+
+  - ref: "ICO-fee"
+    title: Data protection fee paid to the regulator
+    requirement: >
+      Under the Data Protection (Charges and Information) Regulations 2018, UK controllers
+      must pay an annual data protection fee to the regulator unless exempt; the tier
+      depends on staff numbers and turnover.
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Check whether the UK controller entity is registered on the regulator's register
+      of fee payers and the renewal date. The tiers in force since 2025 are about 52 GBP
+      (micro), 78 GBP (small and medium) and 3,763 GBP (large); late or non-payment can
+      lead to a fixed penalty. Record the registration number in the compliance file.
+      Processors acting only on behalf of others and some purely internal processing
+      may be exempt; record the reasoning if relying on an exemption.
+    evidence:
+      - Registration number and renewal date on the public register
+    checks: []
+    artifacts: []
+    crosswalk: ["gdpr:Art.30"]
+
+  - ref: "Art.44"
+    title: UK international transfers (IDTA, Addendum, data bridges)
+    requirement: >
+      Transfers of personal data from the UK to other countries need UK adequacy
+      regulations (data bridges), or appropriate safeguards such as the ICO's
+      International Data Transfer Agreement or the UK Addendum to the EU SCCs, with a
+      transfer risk assessment; the DUAA replaced the essential-equivalence standard
+      with a data protection test (protection not materially lower than in the UK).
+    category: data-protection
+    severity: high
+    fixability: document
+    guidance: >
+      Map UK-origin data flows to recipients outside the UK (US cloud and SaaS vendors,
+      AI model APIs, offshore support). For each, check the mechanism: UK adequacy
+      regulations (the EU/EEA, and the UK-US data bridge for DPF-certified US
+      organisations that opted into the UK Extension), the IDTA, or the UK Addendum
+      attached to EU SCCs, plus a transfer risk assessment. EU SCCs alone are not valid
+      for UK transfers. Check the privacy notice names UK transfers and safeguards.
+    evidence:
+      - Transfer map for UK data with mechanism per recipient
+      - Signed IDTA or UK Addendum, or DPF UK Extension evidence
+      - Transfer risk assessments
+    checks: [analytics-tracking-sdk]
+    artifacts: [processing-records, privacy-policy]
+    crosswalk: ["gdpr:Art.44"]
+
+  - ref: "Art.6(1)(ea)"
+    title: Recognised legitimate interests and new compatible purposes
+    requirement: >
+      The DUAA added a lawful basis for listed recognised legitimate interests (for
+      example crime prevention, safeguarding, emergencies, national security) that does
+      not need a balancing test, and clarified when further processing is compatible; it
+      also gives examples (direct marketing, intra-group transfers, network security)
+      that may rely on ordinary legitimate interests.
+    category: privacy-rights
+    severity: low
+    fixability: document
+    guidance: >
+      Check that the records of processing and privacy notice for UK users reflect any
+      reliance on recognised legitimate interests and that each use fits a listed
+      condition. Ordinary legitimate interests still need a documented balancing test.
+      Do not treat the change as a general relaxation: consent requirements for cookies
+      and electronic marketing under PECR still apply, subject to the new PECR
+      exceptions.
+    evidence:
+      - Lawful basis table updated for UK processing
+      - Balancing tests for ordinary legitimate interests
+    checks: []
+    artifacts: [processing-records]
+    crosswalk: ["gdpr:Art.6"]
+
+  - ref: "Art.22A-22D"
+    title: Automated decision-making safeguards (DUAA regime)
+    requirement: >
+      The DUAA replaced Art. 22 with Articles 22A to 22D: significant decisions based
+      solely on automated processing are generally allowed with safeguards (information
+      about the decision, the ability to make representations, obtain human intervention
+      and contest), but remain restricted when based on special category data.
+    category: ai-governance
+    severity: high
+    fixability: code
+    guidance: >
+      Identify significant decisions made solely by automated means (account
+      termination, eligibility, pricing, fraud blocks, AI moderation). Check users are
+      told a decision was automated, can make representations, request human review and
+      contest it (appeal UI, review queue), and that decisions using health, biometric or
+      other special category data have explicit consent or a qualifying legal basis.
+      Decision logs should record inputs and model versions to support contestation.
+    evidence:
+      - Automated decision inventory
+      - User notice and appeal or human review flow
+      - Decision logs
+    checks: []
+    artifacts: [dpia, ai-documentation]
+    crosswalk: ["gdpr:Art.22", "ccpa-cpra:7200"]
+
+  - ref: "Art.15"
+    title: Subject access requests and the reasonable and proportionate search
+    requirement: >
+      Controllers must answer subject access requests within one month (extendable for
+      complex requests); the DUAA confirms that only a reasonable and proportionate search
+      is required and allows the clock to pause while awaiting identity verification or
+      needed clarification.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Check the access and export implementation (see EU GDPR Art. 15) also records the
+      request date, any pause for verification or clarification, and the response date.
+      The search should cover all systems that a reasonable search would cover
+      (databases, object storage, email and ticketing for the user's identifiers).
+      Document the search scope per request.
+    evidence:
+      - Request log with start, pause and completion dates
+      - Export covering all main data stores
+    checks: []
+    artifacts: [user-documentation]
+    crosswalk: ["gdpr:Art.15", "gdpr:Art.12"]
+
+  - ref: "DPA2018-s164A"
+    title: Complaints handling by controllers
+    requirement: >
+      DUAA section 103 inserted a duty for controllers to facilitate data protection
+      complaints (for example by providing an electronic complaint form), acknowledge them
+      within 30 days, respond without undue delay and, if required by regulations, report
+      complaint numbers; in force from 19 June 2026.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for a dedicated way for UK users to complain about the handling of their
+      personal data (a complaint form in-app or on the website, or a privacy contact
+      that creates a tracked ticket), an automated or manual acknowledgement within 30
+      days, a tracked outcome, and a privacy notice that explains the complaint route
+      before escalation to the regulator.
+    evidence:
+      - Electronic complaint form or tracked channel
+      - Acknowledgement and response tracking
+      - Complaint route described in the privacy notice
+    checks: []
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.12"]
+
+  - ref: "PECR-reg6"
+    title: UK cookies and storage access with the DUAA exceptions
+    requirement: >
+      PECR regulation 6 requires consent for storing or accessing information on a
+      user's device unless an exception applies; the DUAA added exceptions (for example
+      statistical analytics to improve the service, appearance and functionality
+      preferences, security, emergency assistance) subject to clear information and a
+      simple, free way to object, and raised PECR fines to UK GDPR levels.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    guidance: >
+      Inventory cookies, localStorage keys, SDKs and device identifiers. For UK users,
+      advertising, cross-site tracking and profiling still need prior consent through a
+      banner with equal accept and reject. First-party or processor analytics may rely on
+      the statistical-purposes exception only if used solely to improve the service,
+      producing aggregate statistics, with clear information and an easy objection
+      option (an analytics opt-out toggle that is honoured). Check the cookie notice
+      states which exception each non-consented item relies on.
+    evidence:
+      - Cookie and SDK inventory with consent or exception per item
+      - Consent banner and analytics opt-out implementation
+    checks: [analytics-tracking-sdk, insecure-cookie]
+    artifacts: [cookie-consent, privacy-policy]
+    crosswalk: ["eprivacy:Art.5(3)", "eprivacy:Art.5(3)-exemptions"]
+
+  - ref: "AADC"
+    title: Age Appropriate Design Code (Children's code)
+    requirement: >
+      Online services likely to be accessed by children in the UK must conform to the
+      regulator's Age Appropriate Design Code: best interests of the child, high-privacy
+      defaults, geolocation and profiling off by default, no nudge techniques, data
+      minimisation, age assurance proportionate to risk, and parental controls
+      transparency; the DUAA added children's higher protection matters to the design
+      duty.
+    category: privacy-rights
+    severity: high
+    fixability: code
+    when: { any: [ { fact: audience, in: [children] }, { fact: dataCategories, in: [children] } ] }
+    guidance: >
+      Check child or likely-child accounts get high-privacy defaults (private profile,
+      location sharing off, personalised ads and profiling off, non-essential data
+      collection off), no dark patterns pushing them to lower settings, age-appropriate
+      explanations, an obvious signal when parental monitoring is active, and an age
+      assurance approach proportionate to the risk. Look for a DPIA covering children.
+    evidence:
+      - High-privacy defaults for child users in code and configuration
+      - Age assurance approach and DPIA covering children
+    checks: [analytics-tracking-sdk]
+    artifacts: [dpia]
+    crosswalk: ["gdpr:Art.8", "gdpr:Art.25", "coppa:312.5"]
+
+  - ref: "DPA2018-Sch1"
+    title: Special category conditions and appropriate policy document
+    requirement: >
+      Processing special category or criminal offence data under certain DPA 2018
+      Schedule 1 conditions (for example employment, substantial public interest) requires
+      an appropriate policy document describing compliance with the principles and
+      retention and erasure policies.
+    category: data-protection
+    severity: medium
+    fixability: document
+    when: { fact: dataCategories, in: [health, genetic-biometric, other-sensitive] }
+    guidance: >
+      Identify the Art. 9 condition for each use of special category data for UK users.
+      Where it is explicit consent no Schedule 1 condition is needed. Where it relies on
+      a Schedule 1 condition (employment, insurance, preventing fraud, safeguarding),
+      check an appropriate policy document exists and is retained for the processing
+      period plus six months.
+    evidence:
+      - Art. 9 condition per purpose
+      - Appropriate policy document where Schedule 1 is relied upon
+    checks: []
+    artifacts: [processing-records]
+    crosswalk: ["gdpr:Art.9"]

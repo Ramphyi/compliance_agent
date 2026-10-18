@@ -1,0 +1,32 @@
+id: ai-credit-scoring-eu
+title: AI credit scoring (EU, high-risk)
+description: >
+  An automated credit-scoring service that decides consumer loan applications
+  for a lender in the EU. Evaluating the creditworthiness of natural persons is
+  a high-risk use under the EU AI Act (Annex III, 5(b)), so it brings the Art. 9
+  to 15 obligations (risk management, data governance, logging, transparency,
+  human oversight), GDPR Art. 22 on automated decisions, and ISO/IEC 42001 AI
+  management-system controls.
+examples: [examples/apps/credit-scoring-ml]
+answers:
+  productTypes: [ai-system, backend-api]
+  sector: [finance]
+  markets: [EU]
+  audience: [consumers, businesses]
+  orgRole: service-provider
+  orgSize: medium
+  dataCategories: [personal, financial]
+  aiUsage: own-models
+  aiRiskAreas: [essential-services]
+  safetyCritical: "no"
+  connectivity: [internet]
+  updates: continuous-deployment
+  distribution: [web, on-premise]
+  regulatedEntity: [none]
+  certificationsTarget: [iso-42001]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify:
+  - python3 tools/make_model.py
+  - python3 -m unittest discover -s tests

@@ -1,0 +1,388 @@
+id: iso-sae-21434
+title: ISO/SAE 21434:2021 Road vehicles - Cybersecurity engineering
+shortTitle: ISO/SAE 21434
+version: First edition 2021-08
+authority: ISO (ISO/TC 22/SC 32) and SAE International
+kind: standard
+jurisdictions: [global]
+url: https://www.iso.org/standard/70918.html
+textPolicy: paraphrased
+summary: >
+  ISO/SAE 21434 defines cybersecurity engineering for road vehicle E/E systems across concept,
+  development, production, operation, maintenance and decommissioning: organizational and project
+  cybersecurity management, distributed activities with suppliers, continual monitoring and
+  vulnerability management, threat analysis and risk assessment (TARA), and the resulting
+  cybersecurity goals, requirements, verification and validation. It is the engineering basis that
+  OEMs and suppliers use to meet UN R155.
+applicability:
+  any:
+    - { fact: productTypes, in: [automotive-ecu] }
+    - all:
+        - { fact: sector, in: [automotive] }
+        - { fact: connectivity, in: [internet, wifi, bluetooth, cellular, nfc-uwb, can-bus, automotive-ethernet, usb-serial] }
+applicabilityNote: >
+  Voluntary standard, but de facto required by OEMs from every supplier of connected or
+  bus-attached ECUs because it supports UN R155 type approval. It applies to items and components
+  whose development started after its publication; legacy carry-over components are handled
+  through reuse analysis. A second edition is in preparation but not yet published, so audit
+  against the 2021 edition unless the customer contract says otherwise.
+controls:
+  - ref: "5.4.1"
+    title: Cybersecurity governance and policy
+    requirement: >
+      The organization sets a cybersecurity policy and rules, assigns responsibilities and
+      authority, provides resources, and manages the interaction with functional safety and
+      quality; it also fosters a cybersecurity culture with competence management (5.4.2).
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for a cybersecurity policy or organizational process description, defined roles
+      (product security officer, cybersecurity manager for the project), training records or a
+      competence matrix, and a documented interface to the functional safety process (shared
+      change impact analysis, safety and security co-engineering). Repository evidence includes
+      SECURITY.md, CODEOWNERS for security-relevant modules, and process docs referenced from
+      the project plan.
+    evidence:
+      - Cybersecurity policy and organizational rules
+      - Role assignments and competence records
+    artifacts: [security-policy]
+    crosswalk: ["unece-r155:7.2.2.2", "iec-62443-4-1:SM-1"]
+  - ref: "5.4.5"
+    title: Tool management
+    requirement: >
+      Tools that can influence the cybersecurity of an item or component are managed, including
+      their configuration and versions, so that results can be reproduced and tool weaknesses
+      do not introduce vulnerabilities.
+    category: secure-development
+    severity: medium
+    fixability: process
+    guidance: >
+      Check that compilers, linkers, AUTOSAR configurators and code generators, signing tools and
+      security test tools are listed with versions, that the build environment is reproducible
+      (Docker image with pinned toolchain, toolchain files in CMake, lock files), and that tool
+      configuration affecting security (compiler hardening flags, static analysis rule sets) is
+      under version control. Flag "latest" tags and unpinned downloads in CI.
+    evidence:
+      - Tool inventory with versions and configuration
+      - Reproducible build environment definition
+    checks: [unpinned-dependencies]
+    artifacts: [ci-pipeline, dependency-lockfile]
+    crosswalk: ["iso-26262:8-11", "nist-ssdf:PW.6.2", "iec-62443-4-1:SM-7"]
+  - ref: "6.4.2"
+    title: Cybersecurity plan
+    requirement: >
+      A cybersecurity plan is created and maintained for the item or component, with the
+      activities, responsibilities, tailoring with rationale, and work products of the project.
+    category: governance
+    severity: high
+    fixability: document
+    guidance: >
+      Look for docs/cybersecurity/plan or an equivalent section of the project plan listing TARA,
+      cybersecurity requirements, design, verification (static analysis, fuzzing, penetration
+      tests), validation, production, post-development activities and the supplier interfaces.
+      Check consistency with what the repository actually does (planned fuzzing that has no
+      harness, planned static analysis rule set that is not configured).
+    evidence:
+      - Cybersecurity plan with activities, owners, tailoring rationale and work products
+    artifacts: [security-policy]
+    crosswalk: ["iso-26262:2-6.4.6", "unece-r155:7.2.2.2"]
+  - ref: "6.4.6"
+    title: Off-the-shelf and open-source components
+    requirement: >
+      Off-the-shelf components (commercial or open source) used in the item are identified and
+      their cybersecurity-relevant documentation is analysed to confirm they can meet the
+      allocated cybersecurity requirements; reused components are analysed similarly (6.4.4).
+    category: supply-chain
+    severity: high
+    fixability: document
+    guidance: >
+      Identify third-party code: crypto libraries (mbedTLS, wolfSSL, OpenSSL), network stacks
+      (lwIP, vsomeip), RTOS (FreeRTOS, Zephyr, AUTOSAR OS), BSW and MCAL, Linux userland and
+      kernel on high-performance ECUs. Check for an SBOM, recorded versions and licences, a
+      vulnerability check against public CVE data, and an assessment of each component's
+      security documentation (configuration guidance, known limitations). Flag vendored copies
+      with no version information and outdated components with known CVEs.
+    evidence:
+      - SBOM with versions and origin of all third-party components
+      - Assessment of OTS component security documentation and known vulnerabilities
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, third-party-notices, vulnerability-scanning]
+    crosswalk: ["iso-26262:8-12", "iec-62443-4-1:SM-9", "nist-ssdf:PW.4.1", "eu-cra:Art.13(5)", "eu-cra:AnnexI.II.1"]
+  - ref: "6.4.7"
+    title: Cybersecurity case
+    requirement: >
+      A cybersecurity case provides the argument, supported by the work products, that the item
+      or component achieves sufficient cybersecurity; it is assessed (6.4.8) before release for
+      post-development (6.4.9).
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a cybersecurity case document linking each cybersecurity goal or claim to
+      requirements, implementation evidence and verification results, including residual risks
+      and their acceptance. Check that referenced reports exist in the repository or archive and
+      match the released software version.
+    evidence:
+      - Cybersecurity case with argument and evidence references
+      - Cybersecurity assessment report and release decision
+    artifacts: [threat-model]
+    crosswalk: ["iso-26262:2-6.4.8", "unece-r155:7.3.4"]
+  - ref: "7.4.3"
+    title: Cybersecurity interface agreement with customer and suppliers
+    requirement: >
+      Cybersecurity responsibilities between customer and supplier are agreed in a cybersecurity
+      interface agreement (CIA) that allocates activities, work products, shared information and
+      vulnerability handling; supplier capability is evaluated (7.4.1).
+    category: supply-chain
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a CIA or RASIC matrix covering TARA ownership, allocated cybersecurity
+      requirements and claims, key management responsibilities, test responsibilities, incident
+      and vulnerability notification timelines, and end-of-support. For a Tier-1, check both the
+      OEM-facing CIA and the agreements with sub-suppliers (MCAL, BSW, crypto, bootloader).
+    evidence:
+      - Signed CIA or RASIC with responsibilities and contacts
+      - Supplier capability evaluation records
+    crosswalk: ["unece-r155:7.2.2.5", "iso-26262:8-5", "automotive-spice:ACQ.4"]
+  - ref: "8.3"
+    title: Cybersecurity monitoring and event evaluation
+    requirement: >
+      Internal and external sources of cybersecurity information are monitored, and cybersecurity
+      events are evaluated (8.4) to decide whether they affect the item or component.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Check that the SBOM feeds a monitoring tool (Dependency-Track, Black Duck, Snyk, OEM
+      tooling) and that sources such as NVD, vendor advisories (MCAL and HSM vendors, AUTOSAR
+      stack vendors), Auto-ISAC and researcher reports are triaged. Look for an event triage
+      record format and evidence of periodic review. In the ECU, security events from IdsM or the
+      security event memory support this monitoring.
+    evidence:
+      - Monitoring sources and triage records
+      - SBOM-based vulnerability monitoring configuration
+    artifacts: [sbom, vulnerability-scanning, dependency-update-automation]
+    crosswalk: ["unece-r155:7.3.7", "unece-r155:7.2.2.3", "iec-62443-4-1:DM-1", "nist-ssdf:RV.1.1", "iso-iec-27001:A.5.7"]
+  - ref: "8.5"
+    title: Vulnerability analysis
+    requirement: >
+      Weaknesses and events are analysed to determine whether they are exploitable vulnerabilities
+      for the item or component, using attack path analysis and the existing controls.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Look for vulnerability analysis records that reference the affected component and version,
+      check reachability in this code base (is the vulnerable function compiled in, is the
+      interface exposed, is the crypto mode used), and rate feasibility using the TARA method.
+      Static analysis and fuzzing findings should be triaged the same way.
+    evidence:
+      - Vulnerability analysis records with reachability and feasibility rationale
+    artifacts: [vulnerability-scanning]
+    crosswalk: ["iec-62443-4-1:DM-5"]
+  - ref: "8.6"
+    title: Vulnerability management
+    requirement: >
+      Vulnerabilities are managed until closure through risk treatment, such as a fix delivered
+      by update, a mitigation, or a documented risk acceptance, with information shared with
+      affected parties.
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Check for a vulnerability register linked to issues and fixes, with severity, decision,
+      target release and customer notification. Fixes should come with regression tests and be
+      deliverable through the update path. Look for SECURITY.md or a PSIRT contact for external
+      reporters.
+    evidence:
+      - Vulnerability register with decisions, fixes and notifications
+      - Coordinated disclosure contact and procedure
+    artifacts: [security-policy, incident-response-plan]
+    crosswalk: ["unece-r155:7.2.2.3", "iec-62443-4-1:DM-5", "nist-ssdf:RV.2.2", "eu-cra:AnnexI.II.2", "etsi-en-303-645:5.2-1"]
+  - ref: "9.4"
+    title: Cybersecurity goals, claims and concept
+    requirement: >
+      Based on the item definition and TARA, cybersecurity goals are specified for risks to be
+      reduced, cybersecurity claims document retained or shared risks, and the cybersecurity
+      concept (9.5) allocates cybersecurity requirements to the item and its operational
+      environment.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for goals with IDs derived from the TARA, claims for risks transferred to the OEM or
+      the environment (for example "the gateway filters diagnostic traffic from OBD"), and
+      cybersecurity requirements allocated to this ECU. Check that the assumptions on the
+      environment are listed in the integration documentation and that the code relies only on
+      protections that the claims cover.
+    evidence:
+      - Cybersecurity goals and claims traceable to the TARA
+      - Cybersecurity concept with requirements allocated to the component
+    artifacts: [threat-model, requirements-traceability]
+    crosswalk: ["unece-r155:7.3.3", "iso-26262:4-6.4.2"]
+  - ref: "10.4.1"
+    title: Secure design and implementation
+    requirement: >
+      Cybersecurity specifications (requirements and architecture) are refined for the component,
+      secure design principles and secure coding guidelines are applied, established and trusted
+      cryptography is used, and weaknesses in the design and implementation are identified and
+      addressed.
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Inspect the security architecture and code: Csm, CryIf and Crypto driver configuration with
+      established algorithms (AES-CMAC or GCM, SHA-256, ECDSA or Ed25519); keys referenced by HSM
+      key slots, never as literals; SecOC on security-relevant PDUs; Dcm security levels for
+      0x27 and Authentication 0x29 on sensitive services; secure boot and authenticated flashing;
+      debug interfaces locked in production; least privilege in OS-Applications and Linux
+      processes; input validation on every external interface (UDS request length and range
+      checks, DoIP and SOME/IP payload length checks before memcpy, ISO-TP reassembly bounds);
+      memory-safe coding enforced with MISRA C or C++ and CERT C rules; hardening flags on Linux
+      or QNX ECUs (stack protector, FORTIFY_SOURCE, PIE, RELRO, NX). Unused UDS services and
+      network ports should be disabled.
+    evidence:
+      - Security architecture with allocated cybersecurity requirements
+      - Secure coding guideline and static analysis configuration
+      - Configuration evidence for SecOC, Csm, Dcm security levels and secure boot
+    checks: [hardcoded-crypto-key, hardcoded-secret, weak-cipher, weak-hash, insecure-random, unsafe-c-functions, debug-interface-enabled, uds-weak-security-access, can-unauthenticated, secure-boot-disabled]
+    artifacts: [architecture-doc, coding-standard, static-analysis-config]
+    crosswalk: ["unece-r155:Annex5.B.M23", "unece-r155:Annex5.B.M10", "iec-62443-4-1:SD-4", "iec-62443-4-1:SI-2", "nist-ssdf:PW.5.1"]
+  - ref: "10.4.2"
+    title: Integration and verification of cybersecurity requirements
+    requirement: >
+      Integrated components are verified against the cybersecurity specifications using methods
+      such as requirements-based tests, interface tests, static and dynamic analysis, fuzz
+      testing and penetration testing, with rigour proportionate to the risk.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look for security test cases tagged with cybersecurity requirement IDs: negative tests for
+      SecurityAccess and Authentication, SecOC failure and replay tests, tampered-image tests
+      for the bootloader, fuzzing harnesses (libFuzzer, AFL++, Defensics, beSTORM) for UDS,
+      DoIP, SOME/IP and parsers, static analysis with security rule sets (CERT C, CWE) in CI, and
+      penetration test reports. Check coverage of all external interfaces listed in the TARA.
+    evidence:
+      - Security verification report per release
+      - Fuzzing and penetration test results with tracked findings
+    artifacts: [automated-tests, static-analysis-config, vulnerability-scanning]
+    crosswalk: ["unece-r155:7.3.6", "iec-62443-4-1:SVV-1", "iec-62443-4-1:SVV-3", "iec-62443-4-1:SVV-4", "nist-ssdf:PW.8.2"]
+  - ref: "11"
+    title: Cybersecurity validation at vehicle level
+    requirement: >
+      The item is validated in its vehicle context to confirm that the cybersecurity goals are
+      achieved and the claims are valid, for example through penetration testing and review of
+      the cybersecurity case.
+    category: testing-verification
+    severity: medium
+    fixability: process
+    guidance: >
+      This is mainly an OEM activity. A supplier repository should show support for it: test
+      access instructions, release notes listing security functions, residual risks and
+      configuration needed for vehicle-level tests, and the handling of findings from OEM
+      penetration tests.
+    evidence:
+      - Vehicle-level validation results or OEM acceptance of the component
+      - Tracked findings from OEM validation
+    crosswalk: ["unece-r155:7.3.6"]
+  - ref: "12"
+    title: Cybersecurity in production
+    requirement: >
+      Production applies the cybersecurity requirements for post-development, following a
+      production control plan, so that no vulnerabilities are introduced during manufacturing
+      (for example key provisioning, debug locking and flashing of released software).
+    category: hardware-security
+    severity: high
+    fixability: process
+    guidance: >
+      Look for end-of-line scripts and documentation: key injection procedure (SHE M1 to M5 or
+      HSM key import with wrapping), lifecycle state transition to production (debug lock, JTAG
+      password, disabling of test DIDs and EOL routines), flashing of signed released images
+      only, and verification of the final state. Flag EOL tools with hard-coded master keys or
+      passwords and production images built with debug configuration.
+    evidence:
+      - Production control plan with key provisioning and lockdown steps
+      - EOL verification of lifecycle state and software version
+    checks: [debug-interface-enabled, hardcoded-crypto-key, default-credentials, debug-enabled]
+    crosswalk: ["unece-r155:Annex5.B.M23", "unece-r155:Annex5.B.M11", "iec-62443-4-2:EDR 2.13"]
+  - ref: "13.3"
+    title: Cybersecurity incident response
+    requirement: >
+      A cybersecurity incident response is defined and executed when an incident occurs, with
+      remediation actions, communication and closure criteria.
+    category: vulnerability-management
+    severity: high
+    fixability: document
+    guidance: >
+      Look for an incident response plan that covers ECU-specific incidents (key compromise,
+      exploitation of a diagnostic service, malicious update attempt), roles, OEM notification
+      paths and timelines, forensic data sources (security event memory, IdsM reports) and the
+      use of the update path for remediation.
+    evidence:
+      - Incident response plan with roles, timelines and OEM interfaces
+    artifacts: [incident-response-plan]
+    crosswalk: ["unece-r155:7.2.2.3", "iec-62443-4-1:DM-5", "nis2:Art.23"]
+  - ref: "13.4"
+    title: Secure updates in operation and maintenance
+    requirement: >
+      Updates and their delivery during operation and maintenance are developed and released with
+      the same cybersecurity activities as development, and the update capability itself
+      preserves cybersecurity.
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    when:
+      { not: { fact: updates, equals: none } }
+    guidance: >
+      Check that patches go through the same review, testing and TARA impact analysis as new
+      development, and that the update mechanism verifies signatures, prevents rollback and
+      recovers from failure. Look for a documented update policy with support periods.
+    evidence:
+      - Update policy and records of security review for each update
+      - Verified update mechanism in the ECU
+    checks: [firmware-update-unsigned]
+    artifacts: [update-policy]
+    crosswalk: ["unece-r156:7.2.1.1", "unece-r155:Annex5.B.M16", "iso-24089:7.3.4", "etsi-en-303-645:5.3-2", "iec-62443-4-1:SUM-4"]
+  - ref: "14.3"
+    title: End of cybersecurity support and decommissioning
+    requirement: >
+      The end of cybersecurity support is planned and communicated to customers, and
+      decommissioning considers the cybersecurity of data and keys (14.4).
+    category: updates-maintenance
+    severity: low
+    fixability: document
+    guidance: >
+      Look for a stated support period per ECU software line, a procedure to notify the OEM
+      before end of support, and decommissioning guidance (erasing keys and personal data,
+      revoking certificates). For ECUs storing personal data, check for a factory-reset or
+      secure-erase routine.
+    evidence:
+      - Documented support period and end-of-support communication plan
+      - Decommissioning or secure-erase procedure
+    artifacts: [update-policy]
+    crosswalk: ["etsi-en-303-645:5.3-13", "eu-cra:Art.13(8)", "unece-r155:Annex5.B.M7"]
+  - ref: "15"
+    title: Threat analysis and risk assessment (TARA)
+    requirement: >
+      Risks are determined with a TARA method covering asset identification, threat scenarios,
+      impact rating, attack path analysis, attack feasibility rating, risk value determination
+      and risk treatment decisions (15.3 to 15.9).
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a TARA document or tool export for the component. Check that assets include the
+      firmware image, keys, diagnostic services, safety-relevant signals, calibration and coding
+      data, security event logs and personal data; that attack paths cover OBD and diagnostic
+      access, CAN injection through compromised ECUs, OTA, debug ports and physical access; that
+      feasibility uses an accepted method (attack potential, CVSS-based or attack vector-based);
+      and that each risk has a treatment decision traced to requirements. Compare the TARA
+      interface list with the Dcm, Com and SoAd configuration to find unanalysed interfaces.
+    evidence:
+      - TARA with assets, threat scenarios, ratings and treatment decisions
+      - Traceability from treatment decisions to cybersecurity requirements
+    artifacts: [threat-model]
+    crosswalk: ["unece-r155:7.3.3", "iec-62443-4-1:SR-2"]

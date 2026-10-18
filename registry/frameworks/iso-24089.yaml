@@ -1,0 +1,190 @@
+id: iso-24089
+title: ISO 24089:2023 Road vehicles - Software update engineering
+shortTitle: ISO 24089
+version: First edition 2023-02, with Amendment 1 (2024-07)
+authority: ISO (ISO/TC 22/SC 32)
+kind: standard
+jurisdictions: [global]
+url: https://www.iso.org/standard/77796.html
+textPolicy: paraphrased
+summary: >
+  ISO 24089 sets requirements and recommendations for software update engineering of road
+  vehicles at the organizational and project levels, for the update infrastructure, for vehicles
+  and vehicle systems, for software update packages and for software update campaigns. It is
+  commonly used as the engineering basis for meeting UN R156 and complements ISO/SAE 21434 and
+  ISO 26262.
+applicability:
+  any:
+    - all:
+        - { fact: productTypes, in: [automotive-ecu] }
+        - { not: { fact: updates, equals: none } }
+    - all:
+        - { fact: sector, in: [automotive] }
+        - { fact: updates, in: [ota] }
+applicabilityNote: >
+  Voluntary standard, but OEMs often require it from ECU and backend suppliers as evidence for
+  their UN R156 software update management system. Clause 7 (vehicle and vehicle systems) and
+  clause 8 (software update package) are most relevant to ECU code; clause 6 applies to update
+  backends. The standard does not prescribe specific technologies.
+controls:
+  - ref: "4.3.1"
+    title: Governance of software update engineering
+    requirement: >
+      The organization defines and maintains rules, processes, roles and responsibilities for
+      software update engineering, including interaction with functional safety, cybersecurity
+      and quality management, and keeps them under continuous improvement and audit (4.3.2 to
+      4.3.5).
+    category: governance
+    severity: medium
+    fixability: process
+    guidance: >
+      Look for an update engineering process document or update policy that names owners for
+      release, signing and campaign approval, describes how safety (ISO 26262 impact analysis)
+      and cybersecurity (ISO/SAE 21434) reviews are triggered for each update, and defines how
+      vulnerabilities and field issues feed back into update planning. Check for evidence that
+      the process is followed (release checklists, approvals in the merge or release tooling).
+    evidence:
+      - Software update policy with roles and approval gates
+      - Audit or review records of the update process
+    artifacts: [update-policy]
+    crosswalk: ["unece-r156:7.1.1", "iso-sae-21434:5.4.1"]
+  - ref: "5.3.4"
+    title: Integrity of software and update artefacts across the project
+    requirement: >
+      At project level the integrity of software, configuration information and update artefacts
+      is preserved from development to deployment, and interoperability between the parties and
+      systems involved is ensured (5.3.3).
+    category: supply-chain
+    severity: high
+    fixability: process
+    guidance: >
+      Check for controlled build and release: protected branches, reviewed merges, pinned
+      toolchain and dependencies, build provenance, artefact hashes recorded at build time and
+      checked at signing and at packaging, and agreed interface specifications (package format,
+      metadata schema, diagnostic flashing sequence such as ODX-F or VBF) with the OEM. Flag
+      release artefacts produced on developer machines or modified after the CI build.
+    evidence:
+      - CI-produced artefacts with recorded hashes and provenance
+      - Agreed package and flashing interface specification with the OEM
+    checks: [unpinned-dependencies]
+    artifacts: [ci-pipeline, dependency-lockfile, code-review-process]
+    crosswalk: ["unece-r156:7.1.3", "nist-ssdf:PS.2.1", "iso-26262:8-7"]
+  - ref: "6.3.2"
+    title: Vehicle configuration information in the infrastructure
+    requirement: >
+      The update infrastructure manages vehicle configuration information (installed hardware and
+      software versions per vehicle) so that targets can be selected and compatibility assessed,
+      and processes packages securely (6.3.4) after assessing infrastructure risks (6.3.1).
+    category: updates-maintenance
+    severity: medium
+    fixability: code
+    when:
+      { fact: productTypes, in: [backend-api, saas, automotive-ecu] }
+    guidance: >
+      For backend code, look for a vehicle configuration database (VIN to ECU list with hardware
+      and software part numbers), ingestion of configuration reports from vehicles, campaign
+      targeting queries that use it, and access control on who can create or modify campaigns.
+      Check that signing keys are held in an HSM or cloud KMS, that the update server uses
+      authenticated TLS, and that packages are stored immutably with hashes. For ECU-only
+      repositories, check that the ECU reports the data the infrastructure needs.
+    evidence:
+      - Vehicle configuration data model and ingestion path
+      - Access control and key custody for campaign and signing services
+    checks: [hardcoded-secret, tls-verification-disabled, cleartext-transport]
+    crosswalk: ["unece-r156:7.1.1", "unece-r155:7.2.2.2"]
+  - ref: "7.3.1"
+    title: Manage risks of executing updates in the vehicle
+    requirement: >
+      Vehicles and vehicle systems manage the risks of receiving and executing updates, including
+      safety and security risks, vehicle state preconditions and the consequences of failure.
+    category: functional-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Check the ECU or update-master logic for preconditions (vehicle stationary, power mode,
+      battery level), safe-state handling during erase and activation, inhibition of driving when
+      required, and behaviour on failure (fallback image or resident bootloader). Look for a
+      documented hazard analysis of the update process itself (for example loss of a braking
+      function while its ECU is in the bootloader) and the corresponding requirements in code.
+    evidence:
+      - Hazard and threat analysis of the update procedure
+      - Precondition and safe-state implementation with tests
+    artifacts: [threat-model]
+    crosswalk: ["unece-r156:7.2.2.1.3", "unece-r156:7.2.2.5", "iso-26262:4-6.4.2"]
+  - ref: "7.3.2"
+    title: Report vehicle and ECU configuration
+    requirement: >
+      Vehicles and vehicle systems manage and provide their configuration information (hardware
+      and software identification) so that compatibility can be confirmed before and after an
+      update, and communicate campaign information (7.3.3).
+    category: updates-maintenance
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that the ECU exposes identification through UDS ReadDataByIdentifier (0x22) DIDs
+      (0xF187, 0xF188, 0xF189, 0xF191, 0xF195 and OEM-specific DIDs), bound to the active image,
+      and for Adaptive AUTOSAR that UCM reports SoftwareClusters and their versions. The update
+      agent should report installed versions after every update and on request.
+    evidence:
+      - Identification DIDs or UCM reports bound to the running software
+    crosswalk: ["unece-r156:7.2.1.2"]
+  - ref: "7.3.4"
+    title: Process update packages securely on the vehicle
+    requirement: >
+      Vehicles and vehicle systems verify the authenticity, integrity and compatibility of
+      received packages, install and activate them in a controlled way, and handle failures with
+      recovery or a safe state.
+    category: updates-maintenance
+    severity: critical
+    fixability: code
+    guidance: >
+      Inspect bootloader and update agent: asymmetric signature verification against a protected
+      trust anchor before activation, compatibility check before erase, anti-rollback counter,
+      A/B or resident-bootloader recovery, atomic validity flags, and result reporting. Flag
+      checksum-only validation, signature checks disabled by build flags, and keys embedded in
+      source.
+    evidence:
+      - Verified install path with signature, compatibility and rollback protection
+      - Failure-injection tests (tampered, truncated, interrupted, downgraded)
+    checks: [firmware-update-unsigned, secure-boot-disabled, hardcoded-crypto-key]
+    artifacts: [update-policy]
+    crosswalk: ["unece-r156:7.2.1.1", "unece-r156:7.2.2.1.1", "unece-r155:Annex5.B.M16", "iso-sae-21434:13.4"]
+  - ref: "8.3.2"
+    title: Assemble update packages with complete metadata
+    requirement: >
+      Software update packages are assembled for identified targets and contents (8.3.1) with the
+      metadata needed for verification and installation, then verified and validated (8.3.3) and
+      approved for release (8.3.4).
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Look for packaging scripts or tools (VBF or ODX-F generation, Uptane metadata, RAUC bundles,
+      SWUpdate .swu with sw-description, UCM software packages) and check the metadata: target
+      hardware, software identifiers, dependencies, size and hash of each block, signature, and
+      installation instructions. Check that the package is tested on representative hardware
+      before release (flash test, rollback test) and that release approval is recorded.
+    evidence:
+      - Packaging tooling and metadata schema
+      - Package verification and validation records and release approval
+    artifacts: [ci-pipeline, automated-tests, changelog]
+    crosswalk: ["unece-r156:7.1.1.7", "unece-r156:7.1.2"]
+  - ref: "9.3.2"
+    title: Campaign execution, monitoring and completion
+    requirement: >
+      Software update campaigns are prepared (9.3.1), executed with monitoring of progress and
+      failures and with the required user information, and completed with records of the outcome
+      per vehicle (9.3.3).
+    category: logging-monitoring
+    severity: medium
+    fixability: process
+    guidance: >
+      For backend and update-master code, look for campaign state tracking per vehicle, retry and
+      abort logic, staged rollout (canary groups), failure-rate thresholds that pause a campaign,
+      user notification and consent flows, and final status records. For ECUs, check that update
+      results and error codes are reported back. Logs must avoid unnecessary personal data.
+    evidence:
+      - Campaign state model with staged rollout and abort criteria
+      - Per-vehicle outcome records
+    checks: [pii-in-logs]
+    crosswalk: ["unece-r156:7.2.2.2", "unece-r156:7.1.2"]

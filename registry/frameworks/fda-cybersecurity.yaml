@@ -1,0 +1,429 @@
+id: fda-cybersecurity
+title: "FDA Cybersecurity in Medical Devices: Quality Management System Considerations and Content of Premarket Submissions, and FD&C Act section 524B"
+shortTitle: FDA Premarket Cybersecurity
+version: Final guidance, February 2026 revision (supersedes the June 27, 2025 version); FD&C Act section 524B
+authority: U.S. Food and Drug Administration (CDRH and CBER)
+kind: guideline
+jurisdictions: [US]
+url: https://www.fda.gov/regulatory-information/search-fda-guidance-documents/cybersecurity-medical-devices-quality-management-system-considerations-and-content-premarket
+textPolicy: open
+summary: >
+  FDA's premarket cybersecurity guidance sets out what device manufacturers should do and
+  submit for devices with cybersecurity risk: a secure product development framework
+  (SPDF) within the quality system, threat modelling, cybersecurity risk assessment, SBOM
+  and third-party component management, security controls and architecture views,
+  security testing, labelling, and postmarket vulnerability management. Section 524B of
+  the FD&C Act makes a postmarket vulnerability plan, cybersecure design processes with
+  updates and patches, and an SBOM legal requirements for "cyber devices".
+applicability:
+  all:
+    - { fact: markets, in: [US] }
+    - any:
+        - { fact: medicalClass, in: [class-I, class-IIa, class-IIb, class-III] }
+        - { fact: productTypes, in: [medical-device] }
+applicabilityNote: >
+  Applies to medical devices with cybersecurity risk submitted to FDA (510(k), De Novo,
+  PMA, PDP, HDE, and related submissions). Section 524B applies to cyber devices: devices
+  that include software, can connect to the internet, and have technological
+  characteristics that could be vulnerable to cybersecurity threats; FDA reads the
+  connectivity criterion broadly. Guidance is non-binding, but 524B duties are statutory
+  and FDA may refuse to accept submissions without the required cybersecurity content.
+  The February 2026 revision aligns the guidance with the Quality Management System
+  Regulation (QMSR, 21 CFR Part 820 incorporating ISO 13485:2016), effective
+  2 February 2026. FDA's 2016 postmarket cybersecurity guidance remains relevant for
+  devices already on the market.
+keyDates:
+  - { date: "2023-03-29", note: "Section 524B (added by the Consolidated Appropriations Act, 2023) takes effect for cyber device submissions" }
+  - { date: "2023-09-27", note: Final premarket cybersecurity guidance issued }
+  - { date: "2023-10-01", note: FDA begins refusing to accept cyber device submissions that lack 524B information }
+  - { date: "2025-06-27", note: Revised final guidance issued with a section on cyber devices under 524B }
+  - { date: "2026-02-02", note: "QMSR (21 CFR Part 820 incorporating ISO 13485:2016) takes effect" }
+  - { date: "2026-02-03", note: Guidance revised to align with the QMSR; supersedes the June 2025 version }
+controls:
+  - ref: "524B(c)"
+    title: Cyber device determination
+    requirement: >
+      Determine and document whether the device is a cyber device under section 524B(c):
+      it includes software, has the ability to connect to the internet, and has
+      characteristics that could be vulnerable to cybersecurity threats.
+    category: governance
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a documented determination in the regulatory folder. Check the code for
+      any connectivity, including indirect paths: network stacks, HTTP clients, cloud
+      SDKs, Wi-Fi, Bluetooth or cellular modules, USB or serial interfaces to a connected
+      host, and companion mobile or web apps. FDA reads the criterion broadly, so a device
+      that connects through a hospital network, a phone, or a server is in scope. Flag a
+      "not a cyber device" claim when the code contains networking or update clients.
+    evidence:
+      - Documented cyber device determination with rationale
+      - Interface inventory consistent with the code
+    artifacts: [architecture-doc]
+    crosswalk: ["eu-mdr:GSPR18.8"]
+
+  - ref: "IV.A"
+    title: Secure product development framework within the quality system
+    requirement: >
+      Treat cybersecurity as part of device safety and effectiveness and manage it through
+      a secure product development framework (SPDF) integrated with the quality
+      management system, including design controls, risk management, software validation
+      and CAPA (now under the QMSR and ISO 13485:2016).
+    category: secure-development
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a documented SPDF or secure development life cycle (for example one based
+      on IEC 81001-5-1 or IEC 62443-4-1) referenced from the software development plan,
+      with security activities at each phase: security requirements, threat modelling,
+      secure design review, secure coding standard, static analysis and dependency
+      scanning in CI, security testing, release security review, and postmarket
+      vulnerability handling. Check that the CI configuration actually runs the promised
+      security tooling and that security defects flow into CAPA or problem resolution.
+    evidence:
+      - SPDF document mapped to QMS procedures
+      - CI security gates matching the SPDF
+      - Security issues tracked through CAPA or problem resolution
+    artifacts: [security-policy, ci-pipeline, static-analysis-config, vulnerability-scanning]
+    crosswalk: ["iec-81001-5-1:4.1", "nist-ssdf:PO.1.1", "eu-mdr:GSPR17.2", "iec-62443-4-1:SM-1"]
+
+  - ref: "V.A.1"
+    title: Threat modeling
+    requirement: >
+      Perform threat modelling across the system (device, companion apps, cloud services,
+      update infrastructure, and the healthcare network) to identify threats, attack
+      surfaces and mitigations, and keep it current through the life cycle.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a threat model (threat-model.md, a Microsoft Threat Modeling Tool .tm7
+      file, OWASP Threat Dragon JSON, or STRIDE tables) with data flow diagrams showing
+      trust boundaries for every interface found in the code: APIs, BLE characteristics,
+      update channel, cloud storage, third-party services, and maintenance or debug
+      ports. Check that each threat links to a mitigation that exists in code or
+      configuration, and that the model was updated when interfaces changed. Flag
+      interfaces in the code that are absent from the model.
+    evidence:
+      - Threat model with data flow diagrams and trust boundaries
+      - Mitigations traced to requirements and code
+      - Revision history aligned with architecture changes
+    artifacts: [threat-model, architecture-doc]
+    crosswalk: ["iec-81001-5-1:7.2", "iso-14971:5.4", "iec-62443-4-1:SR-2"]
+
+  - ref: "V.A.2"
+    title: Cybersecurity risk assessment
+    requirement: >
+      Assess cybersecurity risks using exploitability rather than probabilistic
+      estimates, evaluate them against defined acceptance criteria, and link security risks
+      that can lead to patient harm into the ISO 14971 safety risk process.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a security risk register separate from, but linked to, the safety hazard
+      log: each threat with an exploitability rating (CVSS or an attack-feasibility
+      scheme), severity of impact, pre- and post-mitigation risk, and the safety hazard it
+      can lead to. Check acceptance criteria are defined and that residual security
+      risks are justified. Flag security risk assessments that use only probability of
+      occurrence, or that never reference patient harm.
+    evidence:
+      - Security risk assessment with exploitability-based ratings
+      - Links to safety hazards and risk controls
+      - Residual security risk justification
+    artifacts: [risk-management-file, threat-model]
+    crosswalk: ["iso-14971:5.5", "iec-81001-5-1:7.2"]
+
+  - ref: "V.A.3"
+    title: Interoperability security considerations
+    requirement: >
+      Address the security of interfaces with other devices and systems (for example
+      EHRs, gateways, hospital networks, companion apps) so that interoperability does
+      not create uncontrolled risks.
+    category: communications-security
+    severity: medium
+    fixability: code
+    guidance: >
+      Check every interoperability interface in the code (HL7 v2 over MLLP, FHIR REST,
+      DICOM, BLE GATT, MQTT, vendor protocols) for authentication of the peer, encryption
+      in transit, input validation and size limits, replay protection where commands
+      change device behaviour, and least-privilege scopes (SMART on FHIR scopes, mutual TLS
+      client certificates). Flag unauthenticated listeners, cleartext protocols on
+      untrusted networks, and parsers without bounds checks.
+    evidence:
+      - Interface security specification per protocol
+      - Authentication and encryption on interoperability interfaces
+      - Robustness tests for interface parsers
+    checks: [cleartext-transport, tls-verification-disabled, unsafe-deserialization]
+    artifacts: [architecture-doc, threat-model]
+    crosswalk: ["eu-mdr:GSPR14.2(d)", "iso-14971:5.3"]
+
+  - ref: "V.A.4"
+    title: Third-party software components and their support status
+    requirement: >
+      Manage the risks of third-party components: track each component's support level
+      and end-of-support date, assess known vulnerabilities against the device context,
+      and plan for components that will lose support during the device lifetime.
+    category: supply-chain
+    severity: high
+    fixability: process
+    guidance: >
+      Look for a component register (often the annotated SBOM) with support status and
+      end-of-support dates, and for vulnerability assessments of components: CI jobs
+      running Grype, Trivy, OSV-Scanner, Dependabot or Snyk, with documented triage
+      (exploitable or not in this device, and why; VEX documents are a good form). Check
+      for components that are past end of life (old OpenSSL, unsupported OS images,
+      abandoned npm packages) and for a plan to replace them. Flag scanners that run but
+      whose findings are never triaged.
+    evidence:
+      - Component support level and end-of-support dates
+      - Vulnerability assessment of components, for example VEX statements
+      - Plan for end-of-life components
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, vulnerability-scanning, dependency-update-automation]
+    crosswalk: ["iec-81001-5-1:4.1.5", "iec-62304:5.3.3", "nist-ssdf:PW.4.1"]
+
+  - ref: "V.A.5"
+    title: Security assessment of unresolved anomalies
+    requirement: >
+      Assess known unresolved software anomalies for security impact, including whether
+      they could be exploited, and document the assessment in the submission.
+    category: vulnerability-management
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for the residual anomaly list (release notes, known-issues export) and check
+      that each entry has a security assessment, for example using CWE classification and
+      exploitability. Pay attention to crashes on malformed input, authentication edge
+      cases and memory errors, which are often exploitable. Flag known anomalies with no
+      security evaluation.
+    evidence:
+      - Residual anomaly list with security impact assessment
+    artifacts: [changelog]
+    crosswalk: ["iec-62304:5.8.2", "iec-81001-5-1:5.8.2"]
+
+  - ref: "V.B.1"
+    title: Implementation of security controls
+    requirement: >
+      Implement security controls proportionate to risk in the categories FDA lists:
+      authentication, authorisation, cryptography, code, data and execution integrity,
+      and confidentiality (Appendix 1).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check authentication of users, devices and servers (no shared or hardcoded
+      credentials, per-device keys or certificates, MFA for remote administrative access),
+      server-side authorisation checks for every privileged action, current cryptography
+      (TLS 1.2 or higher with verification, AES-GCM or ChaCha20-Poly1305, no MD5, SHA-1,
+      DES or ECB, keys in a secure element, TPM, platform keystore or KMS), integrity of
+      code and data (signed binaries, secure boot on embedded devices, integrity checks on
+      configuration and clinical data), and confidentiality of health data at rest. Flag
+      every hit from the listed detectors, since FDA expects testing for hardcoded and
+      default credentials and weak cryptography.
+    evidence:
+      - Security requirements covering each control category
+      - Implementation in code and configuration
+      - Test evidence per control
+    checks: [hardcoded-secret, default-credentials, hardcoded-crypto-key, weak-hash, weak-cipher, insecure-random, tls-verification-disabled, jwt-unverified, weak-password-hash, secure-boot-disabled, debug-interface-enabled]
+    artifacts: [threat-model]
+    crosswalk: ["eu-mdr:GSPR18.8", "iec-81001-5-1:5.3.1", "owasp-asvs:V11.3.2", "iec-62443-4-2:CR 1.1"]
+
+  - ref: "App1.F"
+    title: Event detection and logging
+    requirement: >
+      Design the device to detect, log and, where appropriate, alert on security events
+      (failed logins, configuration changes, integrity failures, anomalous traffic), and
+      support forensic analysis.
+    category: logging-monitoring
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for structured security logs with timestamps, actor, event type and outcome:
+      authentication successes and failures, privilege changes, configuration and therapy
+      setting changes, update installation results, integrity check failures. Check that
+      logs are protected from tampering (append-only storage, forwarding to a server or
+      SIEM), retained for a defined period, exportable for forensics, and free of
+      secrets and unnecessary health data. Flag security-relevant actions with no log
+      entry and logs that include tokens, passwords or full patient records.
+    evidence:
+      - Security event catalogue and logging implementation
+      - Tamper-resistant log storage or forwarding
+      - Log export for investigation
+    checks: [pii-in-logs]
+    artifacts: [incident-response-plan]
+    crosswalk: ["hipaa-security:164.312(b)", "iec-62443-4-2:CR 2.8"]
+
+  - ref: "App1.G"
+    title: Resiliency and recovery
+    requirement: >
+      Design the device to keep its essential clinical functions, or fail safe, when under
+      attack or when a security control fails, and to recover to a known good state.
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that essential functions do not depend on cloud connectivity where loss would
+      cause harm (local operation or safe degraded mode), that the device can restore
+      from a known good image or configuration backup, that failed updates roll back (A/B
+      partitions, transactional updates), and that resource exhaustion (flooding,
+      oversized input) is bounded by rate limits and quotas. Flag designs where a network
+      outage or a crash in a non-essential component disables an essential function.
+    evidence:
+      - Defined essential functions and safe degraded modes
+      - Backup, restore and update rollback mechanisms
+      - Tests for denial-of-service and recovery
+    checks: [missing-rate-limiting, missing-watchdog]
+    artifacts: [backup-restore]
+    crosswalk: ["eu-mdr:GSPR17.1", "iec-62443-4-2:CR 7.1"]
+
+  - ref: "V.B.2"
+    title: Security architecture views
+    requirement: >
+      Document the security architecture with views that show the global system, the
+      potential for multi-patient harm, updatability and patchability, and security use
+      cases with call flows for security-relevant operations.
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for architecture diagrams that cover all assets and connections (device, apps,
+      cloud, update servers, third-party services), with call-flow diagrams for
+      authentication, key provisioning, data transfer and updates. Check for a
+      multi-patient harm analysis: whether one compromised server, credential or update
+      channel could affect many devices or patients, and the controls against it.
+      Compare diagrams with the code to make sure every service and endpoint is shown.
+    evidence:
+      - Global system, multi-patient harm, updatability and security use case views
+      - Call flows for security-relevant operations
+    artifacts: [architecture-doc, threat-model]
+    crosswalk: ["iec-62304:5.3.1", "eu-mdr:AnnexII"]
+
+  - ref: "V.C"
+    title: Cybersecurity testing including fuzz and penetration testing
+    requirement: >
+      Test security requirements and threat mitigations, perform vulnerability testing
+      (abuse cases, malformed and unexpected inputs including fuzzing, attack surface
+      analysis, vulnerability chaining, scanning, software composition analysis, static
+      and dynamic analysis, testing for hardcoded or default credentials), and perform
+      penetration testing by testers with appropriate independence and expertise.
+    category: testing-verification
+    severity: high
+    fixability: code
+    guidance: >
+      Look in CI for SAST (CodeQL, Semgrep, SonarQube), SCA (Dependabot, Snyk, Grype),
+      secret scanning (gitleaks, trufflehog), DAST (OWASP ZAP), and fuzzing of parsers
+      and protocol handlers (libFuzzer, AFL++, Jazzer, Atheris, cargo-fuzz, OSS-Fuzz
+      integration, Boofuzz for network protocols). Check for security test cases traced
+      to security requirements and threat model mitigations, and for a penetration test
+      report with scope, tester independence, methods, findings and remediation status.
+      Flag missing fuzzing for input parsers and missing penetration testing.
+    evidence:
+      - Security requirements and threat mitigation test results
+      - Fuzzing harnesses and SAST, SCA and secret scanning in CI
+      - Independent penetration test report with remediation tracking
+    checks: [hardcoded-secret, default-credentials, sql-injection-risk, command-injection-risk, xss-risk]
+    artifacts: [static-analysis-config, vulnerability-scanning, automated-tests, ci-pipeline]
+    crosswalk: ["iec-81001-5-1:5.7.3", "iec-81001-5-1:5.7.4", "iec-62443-4-1:SVV-3", "nist-ssdf:PW.8.2"]
+
+  - ref: "VI.A"
+    title: Cybersecurity labelling for users
+    requirement: >
+      Give users the security information they need: recommended security controls for
+      the use environment, network ports and interfaces, hardening and secure
+      configuration, backup and restore, how to obtain and verify updates, how security
+      events are logged and reported, end of support, SBOM availability, and secure
+      decommissioning.
+    category: transparency-documentation
+    severity: medium
+    fixability: document
+    guidance: >
+      Look for a customer security guide or the cybersecurity section of the IFU
+      (docs/security-guide.md, a MDS2 form). Compare the listed ports, protocols and
+      services with the code and container configuration (EXPOSE lines, listen calls,
+      firewall rules). Check for update instructions, an end-of-support statement, a
+      route to obtain the SBOM, and data sanitisation steps for decommissioning. Flag
+      undocumented open ports and missing end-of-support information.
+    evidence:
+      - Customer security guide consistent with the actual interfaces
+      - End-of-support date and SBOM access route
+      - Decommissioning and data sanitisation instructions
+    artifacts: [user-documentation, security-policy]
+    crosswalk: ["eu-mdr:GSPR17.4", "iec-81001-5-1:5.8.2"]
+
+  - ref: "524B(b)(1)"
+    title: Postmarket vulnerability monitoring plan with coordinated disclosure
+    requirement: >
+      Submit and follow a plan to monitor, identify and address postmarket cybersecurity
+      vulnerabilities and exploits in a reasonable time, including coordinated
+      vulnerability disclosure (the cybersecurity management plan).
+    category: vulnerability-management
+    severity: high
+    fixability: process
+    guidance: >
+      Look for SECURITY.md and /.well-known/security.txt with a reporting contact, a
+      vulnerability disclosure policy with response timelines, continuous monitoring of
+      components (SBOM-driven scanning in CI and on a schedule against NVD, OSV and CISA
+      KEV), triage records, advisories to customers, and metrics such as time to triage
+      and time to patch. Check that the scheduled scan runs even without code changes.
+      Flag repositories with no disclosure channel or no scheduled vulnerability
+      monitoring.
+    evidence:
+      - Cybersecurity management plan with timelines
+      - Coordinated vulnerability disclosure policy and contact
+      - Scheduled SBOM-based vulnerability monitoring and triage records
+    artifacts: [security-policy, vulnerability-scanning, sbom, incident-response-plan]
+    crosswalk: ["iec-81001-5-1:9.2", "iec-81001-5-1:6.2.1", "eu-mdr:MDCG2019-16", "eu-cra:AnnexI.II.5"]
+
+  - ref: "524B(b)(2)"
+    title: Cybersecure design processes and timely updates and patches
+    requirement: >
+      Maintain processes that give reasonable assurance the device and related systems
+      are cybersecure, and make updates and patches available on a reasonably justified
+      regular cycle for known unacceptable vulnerabilities, and as soon as possible out of
+      cycle for critical vulnerabilities that could cause uncontrolled risks.
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Check the update mechanism end to end: update packages signed and verified on the
+      device before installation (Appendix 1 firmware and software updates), anti-rollback
+      protection, authenticated update servers, staged rollout, and rollback on failure.
+      Look for a documented patch cadence and an expedited path for critical
+      vulnerabilities, and for evidence that the build pipeline can produce a patched
+      release quickly (automated builds, reproducible artefacts). Flag unsigned updates,
+      update downloads over cleartext, and products with no way to patch in the field.
+    evidence:
+      - Signed and verified updates with anti-rollback
+      - Documented regular and out-of-cycle patch timelines
+      - Release pipeline able to ship patches quickly
+    checks: [firmware-update-unsigned, cleartext-transport, tls-verification-disabled]
+    artifacts: [update-policy, ci-pipeline]
+    crosswalk: ["iec-81001-5-1:6.1.1", "unece-r156:7.2.1.1", "iec-62304:5.8.4"]
+
+  - ref: "524B(b)(3)"
+    title: Software bill of materials
+    requirement: >
+      Provide a software bill of materials covering commercial, open-source and
+      off-the-shelf components; FDA recommends a machine-readable SBOM with the baseline
+      elements plus each component's support level and end-of-support date, and an
+      assessment of known vulnerabilities.
+    category: supply-chain
+    severity: high
+    fixability: code
+    guidance: >
+      Look for SBOM generation in the release pipeline (syft, cdxgen, cyclonedx-npm,
+      cyclonedx-maven-plugin, spdx-sbom-generator, Yocto create-spdx) producing CycloneDX
+      or SPDX per release, covering application dependencies, the OS image or base
+      container, firmware libraries and vendored code. Check that it includes supplier,
+      name, version, unique identifiers (purl or CPE), dependency relationships and
+      timestamps, and that support level and end-of-support data are added. Compare the
+      SBOM with lockfiles to catch omissions. Flag missing SBOMs, SBOMs that cover only
+      one layer, and SBOMs generated by hand.
+    evidence:
+      - Machine-readable SBOM per release covering all software layers
+      - Support level and end-of-support data per component
+      - Known vulnerability assessment linked to the SBOM
+    checks: [unpinned-dependencies]
+    artifacts: [sbom, dependency-lockfile]
+    crosswalk: ["iec-62304:8.1.2", "iec-81001-5-1:4.1.5", "eu-cra:AnnexI.II.1", "nist-ssdf:PS.3.2"]

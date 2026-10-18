@@ -1,0 +1,815 @@
+id: owasp-asvs
+title: OWASP Application Security Verification Standard
+shortTitle: OWASP ASVS
+version: 5.0.0
+authority: OWASP Foundation
+kind: standard
+jurisdictions: [global]
+url: https://owasp.org/www-project-application-security-verification-standard/
+textPolicy: open
+summary: >
+  The ASVS is an open standard of testable security requirements for web applications
+  and APIs, organised into 17 chapters and three verification levels (L1 baseline, L2 for
+  most applications handling sensitive data, L3 for the highest assurance). This file
+  selects the most code-assessable L1 and L2 requirements from version 5.0.0.
+applicability:
+  fact: productTypes
+  in: [web-app, saas, backend-api, mobile-app]
+applicabilityNote: >
+  Voluntary, but the most common yardstick for web application and API security in
+  customer security reviews, pentest scopes and secure development policies. Version 5.0.0
+  (released 30 May 2025) is current and restructured the standard, so refs (for example
+  V6.2.1) follow 5.0.0 numbering and do not match 4.0.3. For mobile apps the selection
+  applies to the backend APIs the app uses; the app itself is covered by OWASP MASVS.
+  Requirement text is paraphrased from the open standard; the level of each requirement is
+  noted in its text. Selected requirements cover encoding and injection (V1), validation
+  (V2), browser security (V3), file handling (V5), authentication (V6), sessions (V7),
+  authorisation (V8), tokens (V9), cryptography (V11), secure communication (V12),
+  configuration (V13), data protection (V14), components (V15) and logging and errors
+  (V16).
+keyDates:
+  - { date: "2025-05-30", note: "ASVS 5.0.0 released" }
+controls:
+  - ref: V1.2.1
+    title: Context-aware output encoding
+    requirement: >
+      (L1) Output encoding for HTML, attributes, CSS, comments and HTTP headers must match
+      the context in which data is placed, to prevent injection such as XSS.
+    category: input-validation
+    severity: high
+    fixability: code
+    guidance: >
+      Check that templates use auto-escaping (React JSX, Angular templates, Vue mustache,
+      Jinja2 autoescape=True, Django templates, Razor, Thymeleaf th:text) and flag escapes
+      out of it: dangerouslySetInnerHTML, v-html, innerHTML, outerHTML, insertAdjacentHTML,
+      document.write, Jinja |safe or Markup(), Django mark_safe, Handlebars triple braces,
+      EJS <%- %>, th:utext. Where raw HTML is needed, it must pass through a vetted
+      sanitiser (DOMPurify, sanitize-html, bleach or nh3). Also check user data placed
+      into URLs (V1.2.2: no javascript: schemes) and inline scripts or JSON (V1.2.3).
+    evidence:
+      - Auto-escaping templates and no unsanitised raw HTML sinks
+    checks: [xss-risk]
+    crosswalk: ["owasp-top10:A05", "owasp-llm-top10:LLM05"]
+
+  - ref: V1.2.4
+    title: Parameterised database queries
+    requirement: >
+      (L1) Database queries (SQL, HQL, NoSQL, Cypher) must use parameterised queries, ORMs
+      or equivalent protections against injection.
+    category: input-validation
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag queries built with string concatenation, template literals, f-strings, % or
+      .format, sprintf, or StringBuilder that include request data; raw ORM escapes such as
+      Sequelize sequelize.query with interpolation, knex.raw, Prisma $queryRawUnsafe or
+      $executeRawUnsafe, Django .raw() or .extra(), SQLAlchemy text() with f-strings,
+      TypeORM query() with concatenation, Hibernate createQuery with concatenation. For
+      MongoDB, flag $where, $function and queries built from unvalidated JSON objects
+      (operator injection). Compliant code uses bind parameters (?, $1, :name) or the ORM
+      query builder, and validates identifiers such as sort columns against an allowlist.
+    evidence:
+      - All queries parameterised; dynamic identifiers allowlisted
+    checks: [sql-injection-risk]
+    crosswalk: ["owasp-top10:A05", "iso-iec-27001:A.8.28"]
+
+  - ref: V1.2.5
+    title: OS command injection prevention
+    requirement: >
+      (L1) The application must protect against OS command injection, using parameterised
+      process execution or contextual escaping.
+    category: input-validation
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag shell execution with interpolated input: child_process.exec or execSync with
+      template strings, spawn with shell:true, Python os.system, os.popen,
+      subprocess with shell=True, Ruby backticks and system with a single string, PHP
+      exec, shell_exec, system and passthru, Java Runtime.exec with concatenated strings,
+      Go exec.Command("sh", "-c", ...). Compliant code passes an argument array without a
+      shell (execFile, spawn without shell, subprocess.run([...])), validates arguments
+      against allowlists, and uses library APIs instead of shelling out.
+    evidence:
+      - Process execution uses argument arrays without a shell
+    checks: [command-injection-risk]
+    crosswalk: ["owasp-top10:A05", "iso-iec-27001:A.8.28"]
+
+  - ref: V1.3.2
+    title: No dynamic code execution of untrusted input
+    requirement: >
+      (L1) The application must avoid eval() and other dynamic code execution features such
+      as expression languages; where unavoidable, user input must be sanitised first.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Flag eval, new Function, setTimeout or setInterval with string arguments, vm.runInContext
+      on user input, Python eval and exec, Ruby eval and instance_eval, PHP eval and
+      create_function, SpEL, OGNL or MVEL parsing of request data, and template engines
+      rendering user-supplied templates (V1.3.7 template injection). Compliant code uses
+      data-driven logic, safe parsers (JSON.parse, ast.literal_eval) or sandboxed
+      evaluators with no access to the runtime.
+    evidence:
+      - No eval or expression-language evaluation of untrusted input
+    checks: [dynamic-code-eval, llm-output-execution]
+    crosswalk: ["owasp-llm-top10:LLM05", "owasp-top10:A05"]
+
+  - ref: V1.3.6
+    title: Server-side request forgery protection
+    requirement: >
+      (L2) The application must protect against SSRF by validating untrusted URLs against
+      an allowlist of protocols, domains, paths and ports before making requests.
+    category: input-validation
+    severity: high
+    fixability: code
+    guidance: >
+      Find server-side HTTP clients called with user-controlled URLs or hosts (fetch,
+      axios, got, requests, httpx, urllib, HttpClient, RestTemplate, WebClient, Go
+      http.Get), including webhooks, URL previews, image fetchers, PDF renderers and
+      import-from-URL features. Compliant code allowlists schemes and hosts, resolves DNS
+      and blocks private, loopback, link-local and cloud metadata addresses
+      (169.254.169.254, fd00::/8) after resolution, disables redirects or re-validates
+      them (V15.3.2), and runs fetchers with egress restrictions.
+    evidence:
+      - URL allowlist and private address blocking for outbound requests
+    crosswalk: ["owasp-top10:A01", "iso-iec-27001:A.8.20"]
+
+  - ref: V1.5.2
+    title: Safe deserialisation and XML parsing
+    requirement: >
+      (L2) Deserialisation of untrusted data must be safe, for example by allowlisting
+      object types; (L1, V1.5.1) XML parsers must disable external entity resolution to
+      prevent XXE.
+    category: input-validation
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag pickle.loads, joblib.load or torch.load on untrusted data, yaml.load without
+      SafeLoader, Java ObjectInputStream.readObject without an ObjectInputFilter, XStream
+      without type allowlists, Jackson enableDefaultTyping, .NET BinaryFormatter,
+      NetDataContractSerializer and TypeNameHandling other than None, PHP unserialize, Ruby
+      Marshal.load and YAML.load, node-serialize. For XML check that DocumentBuilderFactory,
+      SAXParserFactory and XMLInputFactory disable DTDs and external entities, Python uses
+      defusedxml, and libxml2 bindings do not set NOENT. Prefer JSON with schema validation.
+    evidence:
+      - No native deserialisation of untrusted input
+      - XML parsers hardened against external entities
+    checks: [unsafe-deserialization]
+    crosswalk: ["owasp-top10:A08", "owasp-llm-top10:LLM03"]
+
+  - ref: V2.2.1
+    title: Positive input validation at a trusted layer
+    requirement: >
+      (L1) Input must be validated against business expectations using allowlists of
+      values, patterns and ranges or an expected structure, and (V2.2.2) validation must
+      be enforced on a trusted server-side layer, not only in the client.
+    category: input-validation
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that request bodies, query parameters and headers are validated by schema at
+      the API boundary (zod, joi, yup, class-validator with whitelist and
+      forbidNonWhitelisted, pydantic models, marshmallow, Bean Validation @Valid, FluentValidation,
+      OpenAPI request validation middleware). Flag handlers that read req.body or
+      request.json fields directly without validation, and validation that exists only in
+      front-end forms. Good looks like typed schemas with length limits, enums and ranges
+      for every external input.
+    evidence:
+      - Schema validation of every external input on the server
+    crosswalk: ["owasp-masvs:MASVS-CODE-4", "iso-iec-27001:A.8.28"]
+
+  - ref: V2.4.1
+    title: Anti-automation controls
+    requirement: >
+      (L2) Anti-automation controls must protect against excessive calls that could lead
+      to data exfiltration, garbage data, quota exhaustion, denial of service or overuse
+      of costly resources.
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for rate limiting and quotas on public and expensive endpoints (express-rate-limit,
+      rate-limiter-flexible, slowapi, django-ratelimit, Spring Bucket4j, ASP.NET
+      AddRateLimiter, nginx limit_req, API gateway or WAF rules), pagination caps on list
+      endpoints, and bot protection on sign-up, contact and checkout forms. AI, search,
+      export and email-sending endpoints need per-user limits.
+    evidence:
+      - Rate limits and quotas on public and costly endpoints
+    checks: [missing-rate-limiting]
+    crosswalk: ["owasp-llm-top10:LLM10", "soc2:A1.1"]
+
+  - ref: V3.3.1
+    title: Secure cookie attributes
+    requirement: >
+      (L1) Cookies must have the Secure attribute and use the __Host- or __Secure- prefix;
+      (L2) session cookies must be HttpOnly (V3.3.4) and SameSite must be set according to
+      purpose (V3.3.2).
+    category: authentication-access
+    severity: medium
+    fixability: code
+    when:
+      { fact: productTypes, in: [web-app, saas] }
+    guidance: >
+      Inspect cookie settings: express-session and cookie-session cookie options,
+      res.cookie calls, Set-Cookie headers, Django SESSION_COOKIE_SECURE,
+      SESSION_COOKIE_HTTPONLY, CSRF_COOKIE_SECURE and SESSION_COOKIE_SAMESITE, Flask
+      SESSION_COOKIE_* settings, Rails cookie store options, Spring server.servlet.session.cookie.*,
+      ASP.NET CookieOptions, Next.js cookies().set options. Compliant session cookies
+      are Secure, HttpOnly, SameSite=Lax or Strict, and prefixed __Host- where they are not
+      shared across subdomains.
+    evidence:
+      - Session and auth cookies set Secure, HttpOnly and SameSite with a name prefix
+    checks: [insecure-cookie]
+    crosswalk: ["owasp-top10:A02", "pci-dss:Req6.2.4"]
+
+  - ref: V3.4.1
+    title: HTTP Strict Transport Security
+    requirement: >
+      (L1) Every response must include a Strict-Transport-Security header with a max-age
+      of at least one year; at L2 it must include subdomains.
+    category: communications-security
+    severity: medium
+    fixability: code
+    when:
+      { fact: productTypes, in: [web-app, saas] }
+    guidance: >
+      Check helmet() or helmet.hsts settings, Django SECURE_HSTS_SECONDS (31536000 or more)
+      and SECURE_HSTS_INCLUDE_SUBDOMAINS, Spring Security headers().httpStrictTransportSecurity,
+      ASP.NET UseHsts, nginx or Caddy add_header Strict-Transport-Security, CDN or
+      vercel.json and netlify.toml header rules. Compliant value:
+      max-age=31536000; includeSubDomains.
+    evidence:
+      - HSTS header with max-age of at least one year and includeSubDomains
+    checks: [missing-security-headers]
+    crosswalk: ["owasp-asvs:V12.2.1", "iso-iec-27001:A.8.24"]
+
+  - ref: V3.4.2
+    title: Restrictive CORS policy
+    requirement: >
+      (L1) The Access-Control-Allow-Origin header must be a fixed value or, if the request
+      Origin is reflected, validated against an allowlist of trusted origins; a wildcard
+      must not be combined with credentials or sensitive data.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Inspect cors() options (origin: true or "*", credentials: true), Flask-CORS and
+      django-cors-headers (CORS_ALLOW_ALL_ORIGINS, CORS_ORIGIN_ALLOW_ALL), Spring
+      @CrossOrigin and CorsConfiguration (allowedOriginPatterns "*" with
+      allowCredentials), ASP.NET AllowAnyOrigin, API gateway CORS settings and custom
+      middleware that echoes the Origin header. Compliant configuration lists exact
+      trusted origins and enables credentials only for them.
+    evidence:
+      - Explicit origin allowlist; no wildcard or reflected origin with credentials
+    checks: [cors-wildcard]
+    crosswalk: ["owasp-top10:A02"]
+
+  - ref: V3.4.3
+    title: Content Security Policy and related browser headers
+    requirement: >
+      (L2) Responses must include a Content-Security-Policy that restricts script sources
+      (at least object-src 'none' and base-uri 'none', with nonces or hashes for scripts),
+      together with X-Content-Type-Options nosniff (V3.4.4), a Referrer-Policy (V3.4.5)
+      and frame-ancestors to prevent framing (V3.4.6).
+    category: input-validation
+    severity: medium
+    fixability: code
+    when:
+      { fact: productTypes, in: [web-app, saas] }
+    guidance: >
+      Check helmet contentSecurityPolicy, Next.js headers() or middleware, django-csp,
+      Spring Security contentSecurityPolicy, NWebsec or ASP.NET middleware, nginx
+      add_header and meta http-equiv tags. Flag policies with 'unsafe-inline' or
+      'unsafe-eval' in script-src, wildcard script sources, missing frame-ancestors, and
+      responses without nosniff.
+    evidence:
+      - CSP with script nonces or hashes and frame-ancestors
+      - nosniff and Referrer-Policy headers on all responses
+    checks: [missing-security-headers]
+    crosswalk: ["owasp-top10:A02"]
+
+  - ref: V3.5.1
+    title: Cross-site request forgery protection
+    requirement: >
+      (L1) If the application does not rely on CORS preflight to block cross-origin calls
+      to sensitive functions, it must verify that such requests originate from the
+      application itself, for example with anti-forgery tokens or custom headers.
+    category: authentication-access
+    severity: high
+    fixability: code
+    when:
+      { fact: productTypes, in: [web-app, saas] }
+    guidance: >
+      Applies to cookie-authenticated state-changing requests. Check for CSRF middleware
+      (Django CsrfViewMiddleware without blanket @csrf_exempt, Rails protect_from_forgery,
+      Spring Security csrf() not disabled for browser sessions, ASP.NET
+      ValidateAntiForgeryToken, csrf-csrf or lusca for Express, SvelteKit or Next.js
+      server action origin checks), SameSite cookies, Origin or Sec-Fetch-Site header
+      checks, and that GET requests never change state (V3.5.3). Bearer-token APIs that do
+      not use cookies are not exposed in the same way.
+    evidence:
+      - Anti-forgery protection on cookie-authenticated state-changing endpoints
+    crosswalk: ["owasp-top10:A01"]
+
+  - ref: V5.2.2
+    title: File upload type and size validation
+    requirement: >
+      (L1) Uploaded files, including those inside archives, must have an expected
+      extension and content matching that type, and (V5.2.1) a size the application can
+      process without denial of service.
+    category: input-validation
+    severity: high
+    fixability: code
+    guidance: >
+      Inspect upload handlers (multer, busboy, formidable, Django FileField and
+      FILE_UPLOAD_MAX_MEMORY_SIZE, Spring MultipartFile and spring.servlet.multipart.max-file-size,
+      ASP.NET IFormFile, presigned S3 uploads with content-length-range conditions). Check
+      for size limits, extension allowlists, magic-byte content checks (file-type,
+      python-magic), image re-encoding, archive bomb limits (V5.2.3), and that uploads are
+      stored outside the web root and never executed (V5.3.1).
+    evidence:
+      - Size limits, type allowlists and content checks on every upload
+    crosswalk: ["owasp-top10:A06"]
+
+  - ref: V5.3.2
+    title: Safe file paths
+    requirement: >
+      (L1) File paths must be built from internally generated or trusted data; if
+      user-supplied names are used they must be strictly validated to prevent path
+      traversal, local file inclusion or SSRF.
+    category: input-validation
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag fs.readFile, fs.createReadStream, res.sendFile, open(), Path, File,
+      send_file or FileResponse built from request parameters, and archive extraction
+      that trusts entry names (zip slip, V5.3.3). Compliant code stores files under
+      generated ids, resolves the final path and checks it stays within the base
+      directory (path.resolve plus startsWith check, Path.resolve().is_relative_to,
+      Werkzeug safe_join), and rejects .., absolute paths and NUL bytes.
+    evidence:
+      - Generated storage names and base-directory containment checks
+    checks: [path-traversal-risk]
+    crosswalk: ["owasp-top10:A01"]
+
+  - ref: V6.2.1
+    title: Password policy
+    requirement: >
+      (L1) Passwords must be at least 8 characters (15 recommended), allow any characters
+      without composition rules (V6.2.5), be checked against at least the top 3000 common
+      passwords (V6.2.4), allow paste and password managers (V6.2.7); (L2) at least 64
+      characters must be permitted (V6.2.9), breached passwords rejected (V6.2.12) and no
+      periodic rotation forced (V6.2.10).
+    category: authentication-access
+    severity: medium
+    fixability: code
+    guidance: >
+      Inspect registration and password-change validation (Django AUTH_PASSWORD_VALIDATORS,
+      ASP.NET Identity PasswordOptions, Spring PasswordValidator, Devise
+      config.password_length, Keycloak, Cognito or Auth0 password policy configuration,
+      custom regexes). Flag maximum lengths below 64, composition rules, forced expiry
+      and missing common or breached password checks (zxcvbn, Have I Been Pwned range API,
+      a bundled top-passwords list). Check that password fields use type=password and do
+      not block paste.
+    evidence:
+      - Minimum length 8 or more, maximum 64 or more, no composition rules
+      - Common or breached password check on set and change
+    crosswalk: ["owasp-masvs:MASVS-AUTH-1", "pci-dss:Req8.3.6"]
+
+  - ref: V6.3.1
+    title: Brute force and credential stuffing protection
+    requirement: >
+      (L1) Controls against credential stuffing and password brute force must be
+      implemented as documented, such as rate limiting, lockout or adaptive challenges.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check login, password reset, OTP verification and token endpoints for rate limiting
+      per account and per IP, progressive delays or temporary lockout, CAPTCHA or other
+      challenges after failures, and alerts on spikes. Look for express-rate-limit or
+      rate-limiter-flexible on auth routes, django-axes, Devise lockable, Spring
+      AuthenticationFailureHandler counters, ASP.NET Identity lockout options, or IdP
+      attack protection settings. Responses must not reveal whether the account exists.
+    evidence:
+      - Rate limiting and lockout or challenge on authentication endpoints
+    checks: [missing-rate-limiting]
+    crosswalk: ["owasp-top10:A07", "soc2:CC6.1", "iso-iec-27001:A.8.5"]
+
+  - ref: V6.3.2
+    title: No default accounts
+    requirement: >
+      (L1) Default user accounts such as root, admin or sa must not be present or must be
+      disabled.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Search seed scripts, migrations, fixtures, Docker entrypoints, Helm values and
+      .env.example for accounts created with known passwords (admin/admin, admin123,
+      changeme) or default service credentials in docker-compose (POSTGRES_PASSWORD:
+      postgres, MYSQL_ROOT_PASSWORD). Compliant set-ups create the first admin with a
+      generated one-time credential or through an invitation flow, and refuse to start
+      in production with default secrets (V13.2.3).
+    evidence:
+      - No seeded accounts with known passwords in production paths
+    checks: [default-credentials, hardcoded-secret]
+    crosswalk: ["etsi-en-303-645:5.1-1", "iso-iec-27001:A.8.5"]
+
+  - ref: V6.3.3
+    title: Multi-factor authentication
+    requirement: >
+      (L2) Access to the application must require multi-factor authentication or an
+      equivalent combination of single-factor mechanisms.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check for TOTP or WebAuthn support (otplib, pyotp, speakeasy, SimpleWebAuthn,
+      webauthn4j, Fido2NetLib) or MFA enforced at the IdP (Auth0, Cognito, Entra ID,
+      Keycloak, Okta configuration). Check that MFA is enforced for administrators at
+      least, that one-time codes are single use (V6.5.1) and generated with a CSPRNG
+      (V6.5.3), that recovery does not bypass MFA (V6.4.3), and that SMS OTP is not the
+      only option for high-value accounts (V6.6.1).
+    evidence:
+      - MFA available for all users and enforced for privileged users
+    crosswalk: ["soc2:CC6.1", "iso-iec-27001:A.8.5", "pci-dss:Req8.4.2"]
+
+  - ref: V7.2.3
+    title: Strong session tokens
+    requirement: >
+      (L1) Reference session tokens must be unique, generated by a CSPRNG and carry at
+      least 128 bits of entropy; sessions must use dynamically generated tokens rather than
+      static API keys (V7.2.2), and a new token must be issued on authentication (V7.2.4).
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Prefer the framework session manager. Flag custom session or reset tokens built from
+      Math.random, Date.now, uuid v1, random.random, rand(), sequential ids or hashes of
+      user data. Compliant generators: crypto.randomBytes(32), secrets.token_hex(32),
+      secrets.token_urlsafe(32),
+      SecureRandom, RandomNumberGenerator. Check that login calls session regeneration
+      (req.session.regenerate, request.session.cycle_key, Spring session fixation
+      protection, reset_session in Rails) to prevent fixation.
+    evidence:
+      - Session and reset tokens from a CSPRNG with at least 128 bits
+      - Session regenerated on login
+    checks: [insecure-random]
+    crosswalk: ["owasp-asvs:V11.5.1", "owasp-top10:A07"]
+
+  - ref: V7.4.1
+    title: Effective session termination
+    requirement: >
+      (L1) When a session ends through logout or expiry, it must not be usable again;
+      server-side session data must be invalidated, and (V7.4.2) all sessions of a disabled
+      or deleted account must be terminated. (L2) Inactivity and absolute timeouts must be
+      enforced (V7.3.1, V7.3.2).
+    category: authentication-access
+    severity: medium
+    fixability: code
+    guidance: >
+      Check logout handlers destroy the server session (req.session.destroy, session.flush,
+      SecurityContextLogoutHandler, SignOutAsync) rather than only clearing the client
+      cookie. For JWT-based sessions, check for short access-token lifetimes plus refresh
+      token revocation or a deny-list on logout and account disable. Check idle and absolute
+      timeout settings (cookie maxAge, SESSION_COOKIE_AGE, server.servlet.session.timeout,
+      IdP session settings).
+    evidence:
+      - Server-side invalidation on logout and account disable
+      - Configured idle and absolute session timeouts
+    crosswalk: ["owasp-top10:A07", "soc2:CC6.2"]
+
+  - ref: V8.2.1
+    title: Function-level authorisation
+    requirement: >
+      (L1) Access to functions must be restricted to consumers with explicit permissions,
+      and (V8.3.1) authorisation must be enforced at a trusted server layer, never only in
+      client code.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Map routes to authorisation checks: middleware or guards (Express middleware,
+      NestJS @UseGuards and @Roles, Spring @PreAuthorize and SecurityFilterChain
+      authorizeHttpRequests, Django permission_classes and @permission_required, Rails
+      before_action with Pundit or CanCanCan, ASP.NET [Authorize(Policy=...)]). Flag admin
+      and internal routes without checks, deny-by-default missing (permitAll catch-alls,
+      AllowAnonymous on sensitive controllers), and checks that exist only in the UI
+      (hidden buttons, client-side route guards).
+    evidence:
+      - Deny-by-default authorisation with explicit permissions per route
+    crosswalk: ["owasp-top10:A01", "soc2:CC6.1", "iso-iec-27001:A.8.3"]
+
+  - ref: V8.2.2
+    title: Object-level authorisation (IDOR and BOLA)
+    requirement: >
+      (L1) Access to specific data items must be restricted to consumers with explicit
+      permission to those items, preventing insecure direct object references.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      For every handler that loads a record by id from the path, query or body, check that
+      the query is scoped to the current user or tenant (where owner_id = currentUser, Prisma
+      where with userId, Django get_object_or_404 with owner filter, Pundit policy scope,
+      row-level security) or that an explicit permission check runs on the loaded object.
+      Flag findById(req.params.id) followed by returning the object without an ownership
+      check, and bulk or export endpoints without scoping. Also check field-level
+      exposure and mass assignment (V8.2.3, V15.3.3).
+    evidence:
+      - Ownership or permission check on every object access
+      - Tests for cross-user access denial
+    crosswalk: ["owasp-top10:A01", "owasp-llm-top10:LLM08", "iso-iec-27001:A.8.3"]
+
+  - ref: V8.4.1
+    title: Tenant isolation
+    requirement: >
+      (L2) Multi-tenant applications must use cross-tenant controls so that operations
+      never affect tenants the consumer has no permission for.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    when:
+      { fact: productTypes, in: [saas] }
+    guidance: >
+      Check how tenant context is derived: it must come from the authenticated session or
+      token, never from a client-supplied header or parameter alone. Check that every data
+      access path applies the tenant filter (ORM global scopes, Hibernate filters,
+      PostgreSQL row-level security policies, separate schemas or databases), including
+      background jobs, caches (keys include tenant id), search indexes, file storage
+      prefixes and vector stores. Look for automated tests that try cross-tenant access.
+    evidence:
+      - Tenant id bound from authenticated context and enforced in every data layer
+      - Cross-tenant access tests
+    crosswalk: ["owasp-llm-top10:LLM08", "soc2:CC6.1", "iso-iec-27001:A.8.3"]
+
+  - ref: V9.1.1
+    title: Verified self-contained tokens
+    requirement: >
+      (L1) Self-contained tokens such as JWTs must be validated by signature or MAC before
+      their contents are trusted, only allowlisted algorithms may be accepted (V9.1.2),
+      keys must come from trusted pre-configured sources (V9.1.3), and exp and nbf must be
+      enforced (V9.2.1); (L2) audience and token type must be checked (V9.2.2, V9.2.3).
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag jwt.decode without verification (jsonwebtoken decode, PyJWT decode with
+      verify_signature False or options that skip verification, jose decodeJwt for
+      authorisation), algorithms lists containing none or mixing HS and RS families,
+      keys fetched from the token's jku, x5u or jwk header, and missing audience or issuer
+      checks. Compliant code calls jwt.verify or jwtVerify with explicit algorithms,
+      issuer and audience, uses a fixed JWKS URL, and rejects expired tokens.
+    evidence:
+      - Token verification with explicit algorithms, issuer, audience and expiry
+    checks: [jwt-unverified]
+    crosswalk: ["owasp-top10:A07", "owasp-masvs:MASVS-AUTH-1"]
+
+  - ref: V11.3.2
+    title: Approved ciphers and modes
+    requirement: >
+      (L1) Only approved ciphers and modes such as AES-GCM may be used, and insecure block
+      modes such as ECB and weak padding such as PKCS#1 v1.5 must not be used (V11.3.1);
+      (L2) encrypted data must be protected against modification (V11.3.3).
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Flag DES, 3DES, RC4, Blowfish, AES-ECB, AES-CBC without a MAC, static or reused IVs
+      and nonces, RSA with PKCS1 v1.5 encryption padding, and home-made crypto. Check
+      createCipheriv algorithm strings, Cipher.getInstance transformations ("AES" alone
+      defaults to ECB in Java), PyCryptodome modes, and .NET Aes.Mode. Compliant code uses
+      AES-256-GCM or ChaCha20-Poly1305 with random 96-bit nonces, or a high-level library
+      (libsodium, Tink, Fernet).
+    evidence:
+      - Authenticated encryption with unique nonces throughout
+    checks: [weak-cipher, hardcoded-crypto-key]
+    crosswalk: ["iso-iec-27001:A.8.24", "owasp-masvs:MASVS-CRYPTO-1", "pci-dss:Req4.2.1"]
+
+  - ref: V11.4.1
+    title: Approved hash functions
+    requirement: >
+      (L1) Only approved hash functions may be used for cryptographic purposes such as
+      signatures, HMAC, key derivation and random generation; MD5 and similar must not be
+      used.
+    category: cryptography
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag MD5 and SHA-1 in security contexts (signatures, integrity checks, token
+      derivation, HMAC keys, certificate fingerprints used for trust). Non-security uses
+      such as cache keys or ETags are acceptable if clearly so. Compliant code uses SHA-256
+      or stronger, SHA-3 or BLAKE2.
+    evidence:
+      - No MD5 or SHA-1 in security functions
+    checks: [weak-hash]
+    crosswalk: ["iso-iec-27001:A.8.24", "owasp-masvs:MASVS-CRYPTO-1"]
+
+  - ref: V11.4.2
+    title: Password storage with a slow key derivation function
+    requirement: >
+      (L2) Passwords must be stored using an approved, computationally intensive password
+      hashing function with parameters set according to current guidance.
+    category: cryptography
+    severity: critical
+    fixability: code
+    guidance: >
+      Check password hashing: compliant options are argon2id (argon2, argon2-cffi), scrypt,
+      bcrypt with cost 10 or more, or PBKDF2-HMAC-SHA256 with at least 600000 iterations,
+      or the framework default where it uses one of these (Django PBKDF2 or Argon2
+      hasher, ASP.NET Identity PasswordHasher v3, Spring BCryptPasswordEncoder or
+      DelegatingPasswordEncoder). Flag MD5, SHA-1, SHA-256 or SHA-512 of passwords, unsalted
+      hashes, reversible encryption of passwords, and plaintext storage.
+    evidence:
+      - Passwords hashed with argon2id, scrypt, bcrypt or PBKDF2 at current cost
+    checks: [weak-password-hash]
+    crosswalk: ["iso-iec-27001:A.8.5", "pci-dss:Req8.3.6"]
+
+  - ref: V11.5.1
+    title: Cryptographically secure randomness
+    requirement: >
+      (L2) Random values meant to be unguessable must come from a CSPRNG and carry at least
+      128 bits of entropy.
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Flag Math.random, random.random or random.randint, java.util.Random, rand() and
+      mt_rand, System.Random and lodash random used for tokens, reset codes, invitation
+      links, API keys, OTPs, nonces or file names that grant access. Compliant: crypto
+      randomBytes or getRandomValues, Python secrets, SecureRandom,
+      RandomNumberGenerator, random_bytes.
+    evidence:
+      - Security tokens generated with a CSPRNG
+    checks: [insecure-random]
+    crosswalk: ["iso-iec-27001:A.8.24", "owasp-masvs:MASVS-CRYPTO-1"]
+
+  - ref: V12.2.1
+    title: TLS for all external connections
+    requirement: >
+      (L1) TLS must be used for all connectivity between clients and external HTTP
+      services without fallback to cleartext, using only current protocol versions such as
+      TLS 1.2 and 1.3 (V12.1.1) and publicly trusted certificates (V12.2.2).
+    category: communications-security
+    severity: high
+    fixability: code
+    guidance: >
+      Flag http:// and ws:// URLs to non-local hosts in code and configuration, servers
+      that listen on plain HTTP without redirect for browser traffic, and TLS
+      configuration enabling TLS 1.0 or 1.1 (ssl_protocols in nginx, minVersion in Node
+      tls options, SSLContext settings, ALB or CloudFront security policies). Compliant
+      deployments terminate TLS 1.2 or 1.3 with HSTS and use https and wss everywhere.
+    evidence:
+      - HTTPS and WSS for all external endpoints with TLS 1.2 or newer
+    checks: [cleartext-transport]
+    crosswalk: ["iso-iec-27001:A.8.24", "owasp-masvs:MASVS-NETWORK-1", "pci-dss:Req4.2.1"]
+
+  - ref: V12.3.2
+    title: TLS certificate validation by clients
+    requirement: >
+      (L2) TLS clients must validate server certificates before communicating, and
+      (V12.3.1) internal service connections such as databases and message brokers must
+      also be encrypted.
+    category: communications-security
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag rejectUnauthorized:false, NODE_TLS_REJECT_UNAUTHORIZED=0, requests verify=False,
+      ssl._create_unverified_context, CERT_NONE, InsecureSkipVerify:true, trust-all
+      TrustManagers and HostnameVerifiers, curl -k in scripts, and sslmode=disable or
+      require-without-verify for databases. Compliant clients use default verification or
+      pin a private CA explicitly.
+    evidence:
+      - No disabled certificate or hostname verification
+      - Encrypted, verified connections to internal services
+    checks: [tls-verification-disabled, cleartext-transport]
+    crosswalk: ["iso-iec-27001:A.8.20", "owasp-masvs:MASVS-NETWORK-1"]
+
+  - ref: V13.3.1
+    title: Secrets management
+    requirement: >
+      (L2) Backend secrets such as passwords, keys and API tokens must be created, stored,
+      accessed and destroyed through a secrets management solution, with access following
+      least privilege (V13.3.2).
+    category: secrets-management
+    severity: critical
+    fixability: code
+    guidance: >
+      Flag secrets committed in code, configuration, Dockerfiles, CI files, Terraform state
+      or notebooks, and .env files not covered by .gitignore. Compliant set-ups read secrets
+      at runtime from a vault (AWS Secrets Manager, GCP Secret Manager, Azure Key Vault,
+      HashiCorp Vault, Doppler, 1Password) or platform secret injection, scope them per
+      service, rotate them, and run secret scanning in CI (gitleaks, trufflehog, GitHub
+      secret scanning push protection).
+    evidence:
+      - No secrets in the repository; runtime retrieval from a secret store
+      - Secret scanning in CI
+    checks: [hardcoded-secret, hardcoded-crypto-key]
+    artifacts: [ci-pipeline]
+    crosswalk: ["iso-iec-27001:A.8.24", "owasp-llm-top10:LLM07", "soc2:CC6.1"]
+
+  - ref: V13.4.2
+    title: Debug features disabled in production
+    requirement: >
+      (L2) Debug modes must be disabled in production for all components, and (L1, V13.4.1)
+      source control metadata must not be deployed or accessible; documentation and
+      monitoring endpoints must not be exposed unintentionally (V13.4.5).
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      Flag DEBUG=True in Django production settings, app.debug or FLASK_DEBUG in production,
+      Spring Boot management.endpoints.web.exposure.include=* or unauthenticated actuator,
+      ASP.NET UseDeveloperExceptionPage outside development, Express errorhandler in
+      production, Laravel APP_DEBUG=true, exposed Swagger UI or GraphQL introspection on
+      production without intent, and .git directories copied into images (missing
+      .dockerignore entries).
+    evidence:
+      - Production configuration with debug off and diagnostics endpoints protected
+    checks: [debug-enabled]
+    crosswalk: ["iso-iec-27001:A.8.9", "owasp-top10:A02"]
+
+  - ref: V15.2.1
+    title: Components within remediation time frames
+    requirement: >
+      (L1) The application must only contain components that have not breached the
+      documented update and remediation time frames for known vulnerabilities (V15.1.1);
+      (L2) an inventory such as an SBOM must be maintained and components must come from
+      trusted, maintained repositories (V15.1.2).
+    category: vulnerability-management
+    severity: high
+    fixability: code
+    guidance: >
+      Check for lockfiles, automated dependency updates (Dependabot, Renovate), vulnerability
+      scanning in CI (npm audit, pip-audit, OWASP Dependency-Check, Trivy, Grype, Snyk,
+      osv-scanner) with a failing threshold, an SBOM generated per release (CycloneDX,
+      Syft), and a documented remediation policy (for example critical within 7 days).
+      Flag known-vulnerable or end-of-life versions and dependencies pulled from
+      unofficial registries or git URLs without pinning.
+    evidence:
+      - Lockfiles, automated updates and CI vulnerability scanning
+      - SBOM per release and documented remediation time frames
+    checks: [unpinned-dependencies]
+    artifacts: [dependency-lockfile, dependency-update-automation, vulnerability-scanning, sbom]
+    crosswalk: ["iso-iec-27001:A.8.8", "nist-ssdf:RV.1.1", "owasp-top10:A03", "eu-cra:AnnexI.II.2"]
+
+  - ref: V16.2.5
+    title: No sensitive data in logs
+    requirement: >
+      (L2) Logging of sensitive data must follow its protection level: credentials and
+      payment data must not be logged, and other sensitive data must be masked or hashed.
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Flag log statements that include passwords, tokens, Authorization or Cookie headers,
+      full request bodies on auth or payment routes, card numbers, health data, or whole
+      user objects. Check logger redaction configuration (pino redact, winston formats,
+      structlog processors, Logback masking, Serilog destructuring policies) and HTTP
+      access log formats. Compliant logs reference users by id and redact secrets.
+    evidence:
+      - Redaction configured; no credentials or sensitive payloads in logs
+    checks: [pii-in-logs]
+    crosswalk: ["iso-iec-27001:A.8.15", "gdpr:Art.32", "pci-dss:Req3.5.1"]
+
+  - ref: V16.3.1
+    title: Security event logging
+    requirement: >
+      (L2) All authentication operations, successful and failed, must be logged with
+      relevant metadata, failed authorisation attempts must be logged (V16.3.2), and log
+      entries must include when, where, who and what (V16.2.1).
+    category: logging-monitoring
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that login success and failure, MFA events, password and email changes, role
+      changes, access denials and admin actions emit structured security events with
+      timestamp in UTC, user or client id, source IP, action and outcome, and that log
+      data from users is encoded to prevent log injection (V16.4.1). Check that logs go to
+      a central, access-controlled store (V16.4.2, V16.4.3).
+    evidence:
+      - Structured security events for authentication and authorisation
+      - Central, protected log storage
+    crosswalk: ["iso-iec-27001:A.8.15", "soc2:CC7.2", "owasp-top10:A09"]
+
+  - ref: V16.5.1
+    title: Generic error messages
+    requirement: >
+      (L2) Unexpected or security-sensitive errors must return a generic message to the
+      consumer without stack traces, queries, keys or tokens, and (V16.5.3) failures must
+      not leave the application in a fail-open state.
+    category: secure-development
+    severity: medium
+    fixability: code
+    guidance: >
+      Check global error handlers (Express error middleware, FastAPI exception handlers,
+      Spring @ControllerAdvice, ASP.NET UseExceptionHandler, Django DEBUG off with custom
+      500 handler) return a generic body with a correlation id and log details server
+      side. Flag res.send(err), err.stack or exception messages in responses, ORM errors
+      surfaced to clients, and catch blocks that continue processing after a validation
+      or authorisation error.
+    evidence:
+      - Global error handler returning generic messages with correlation ids
+    checks: [error-details-leak]
+    crosswalk: ["owasp-top10:A10", "iso-iec-27001:A.8.28"]

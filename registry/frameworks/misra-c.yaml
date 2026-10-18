@@ -1,0 +1,513 @@
+id: misra-c
+title: MISRA C - Guidelines for the use of the C language in critical systems
+shortTitle: MISRA C:2025
+version: MISRA C:2025 (March 2025)
+authority: The MISRA Consortium
+kind: standard
+jurisdictions: [global]
+url: https://misra.org.uk/misra-c/
+textPolicy: paraphrased
+summary: >
+  MISRA C defines a safe subset of the C language for critical embedded systems through
+  directives and rules classified as mandatory, required or advisory. MISRA C:2025,
+  published in March 2025, is an incremental update of MISRA C:2023 (new rules 8.18, 8.19,
+  11.11 and 19.3, Rule 1.2 turned into Dir 1.2, Rule 15.5 disapplied). Compliance is
+  claimed using the MISRA Compliance framework: a guideline re-categorisation plan,
+  documented deviations and a compliance summary. This registry selects the guidelines
+  with the highest safety and security impact.
+applicability:
+  all:
+    - { fact: productTypes, in: [embedded-firmware, automotive-ecu, industrial-control, medical-device] }
+    - { fact: languages, in: [c] }
+applicabilityNote: >
+  Applies to C code in embedded, automotive, industrial and medical products, where MISRA
+  C is the expected language subset (ISO 26262-6, IEC 61508-3 Table A.3, IEC 62304
+  practice, many OEM contracts).  The languages fact is detected from the code and confirmed by a person; C++ code falls under MISRA C++:2023. Projects that committed
+  to MISRA C:2012 or C:2023 keep that edition for the release; numbering of the guidelines
+  below is the same in those editions unless noted. Guideline text is copyrighted and is
+  paraphrased here. Severity mapping: mandatory and memory-safety required guidelines are
+  high, other required guidelines medium, advisory low.
+controls:
+  - ref: GRP
+    title: MISRA compliance process, deviations and compliance matrix
+    requirement: >
+      A MISRA compliance claim needs a guideline re-categorisation plan (GRP) agreed with
+      the customer, a guideline compliance summary (compliance matrix) showing each
+      guideline as compliant, deviated or disapplied, documented and approved deviation
+      records for every violation of a required guideline, and evidence from an analysis
+      tool. Mandatory guidelines admit no deviations.
+    category: code-safety
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a MISRA compliance folder (docs/misra/, compliance/MISRA*), a GRP table, a
+      guideline compliance summary listing all directives and rules, a deviation register
+      (each entry with guideline, location or scope, justification, risk assessment and
+      approver), and checker configuration (Polyspace, PC-lint Plus au-misra4.lnt, Helix
+      QAC, LDRA, Parasoft, Coverity MISRA, cppcheck --addon=misra) in CI. In code, check
+      that suppression comments (// PRQA S, /* polyspace ... */, //lint -e, // cppcheck-suppress)
+      reference a deviation ID. Suppressions without a matching deviation record are a gap.
+    evidence:
+      - Guideline re-categorisation plan
+      - Guideline compliance summary for the release
+      - Approved deviation records referenced by every suppression
+      - MISRA checker configured in CI with results archived
+    artifacts: [coding-standard, static-analysis-config, ci-pipeline]
+    crosswalk: ["iec-61508:Table A.3", "iso-26262:6-8", "iec-62443-4-1:SI-2", "iso-26262:6-5.4.3"]
+
+  - ref: Dir 4.1
+    title: Minimise run-time failures
+    requirement: >
+      Required. Run-time failures such as overflow, division by zero, invalid pointer
+      dereference and out-of-bounds access must be minimised through analysis, defensive
+      code and design.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Check for sound static analysis or abstract interpretation (Polyspace Code Prover,
+      Astree) or at least a checker for run-time errors, and for defensive checks at module
+      boundaries: divisor checks, range checks on array indexes, null checks on pointer
+      parameters. Look for documented run-time error analysis in the verification report.
+    evidence:
+      - Run-time error analysis report
+      - Defensive checks at module boundaries
+    artifacts: [static-analysis-config]
+    crosswalk: ["iec-61508:Table B.8", "cert-c:INT32-C", "cert-c:ARR30-C"]
+
+  - ref: Dir 4.7
+    title: Test error information returned by functions
+    requirement: >
+      Required. When a function returns error information, the caller must test it.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for calls to HAL and driver functions (HAL_StatusTypeDef results, esp_err_t,
+      status_t) and library calls whose status is ignored. ESP_ERROR_CHECK or explicit
+      branches on the status are compliant. Flag calls used as statements when their status
+      matters.
+    evidence:
+      - Error returns tested at every call site
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:ERR33-C", "misra-c:Rule 17.7"]
+
+  - ref: Dir 4.12
+    title: No dynamic memory allocation
+    requirement: >
+      Required. Dynamic memory allocation must not be used.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Search for malloc, calloc, realloc, free, RTOS heap APIs (pvPortMalloc, k_malloc,
+      rt_malloc), C++ new in mixed code, and libraries that allocate internally (for
+      example mbedTLS with MBEDTLS_PLATFORM_MEMORY, cJSON). Compliant designs use static
+      allocation (xTaskCreateStatic, static queues, memory pools sized at compile time).
+      Allocation only during initialisation needs a documented deviation.
+    evidence:
+      - No heap use, or a deviation limited to initialisation
+      - Static RTOS object creation
+    checks: [dynamic-memory-embedded]
+    artifacts: [static-analysis-config]
+    crosswalk: ["iec-61508:Table B.1", "cert-c:MEM31-C", "misra-c:Rule 21.3"]
+
+  - ref: Dir 5.1
+    title: No data races between threads
+    requirement: >
+      Required. Threads must not access the same object in a conflicting, unsynchronised
+      way.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for globals shared between RTOS tasks or between ISRs and tasks without
+      critical sections, mutexes, queues or C11 atomics. Check that volatile is not used as
+      a substitute for synchronisation of multi-word data.
+    evidence:
+      - Synchronisation for every shared object
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:CON43-C"]
+
+  - ref: Rule 1.3
+    title: No undefined or critical unspecified behaviour
+    requirement: >
+      Required. The program must not rely on undefined or critical unspecified behaviour.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Check for signed overflow, shifts by negative or too-large amounts, unsequenced
+      modifications, strict-aliasing violations and use of indeterminate values. Running
+      UBSan in host-based unit tests (-fsanitize=undefined) and enabling -Wall -Wextra
+      -Werror helps demonstrate this.
+    evidence:
+      - Undefined-behaviour checks in analysis and sanitiser runs
+    artifacts: [static-analysis-config, automated-tests]
+    crosswalk: ["cert-c:INT32-C"]
+
+  - ref: Rule 8.4
+    title: Compatible declaration visible for external definitions
+    requirement: >
+      Required. Every object or function with external linkage must have a compatible
+      declaration visible where it is defined.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Check that each .c file includes its own header and that externally visible
+      functions and objects are declared in exactly one header. Flag extern declarations
+      written inside .c files and prototypes that differ from definitions.
+    evidence:
+      - Each module includes its own header
+    artifacts: [static-analysis-config]
+
+  - ref: Rule 8.7
+    title: Limit external linkage
+    requirement: >
+      Advisory. Functions and objects referenced in only one translation unit should not
+      have external linkage.
+    category: code-safety
+    severity: low
+    fixability: code
+    guidance: >
+      Flag non-static functions and file-scope variables used only in their own file. Good
+      looks like static for module-private symbols, which also reduces the attack surface
+      for accidental misuse.
+    evidence:
+      - Module-private symbols declared static
+    artifacts: [static-analysis-config]
+
+  - ref: Rule 9.1
+    title: Read automatic variables only after they are set
+    requirement: >
+      Mandatory. An automatic object must not be read before it has been given a value.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for locals assigned only in some branches, structs partially initialised and
+      then copied or transmitted, and output parameters not set on error paths. Enable
+      -Wuninitialized and -Wmaybe-uninitialized.
+    evidence:
+      - No uninitialised reads reported by analysis
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:EXP33-C"]
+
+  - ref: Rule 10.1
+    title: Operands of appropriate essential type
+    requirement: >
+      Required. Operands must not be of an inappropriate essential type, for example
+      Boolean values in arithmetic or signed values in bitwise operations.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag bitwise operators and shifts on signed types, arithmetic on Boolean or
+      character types, and enum values used in arithmetic. Prefer unsigned fixed-width types
+      for register and bit manipulation.
+    evidence:
+      - Essential type model checks passing
+    artifacts: [static-analysis-config]
+
+  - ref: Rule 10.3
+    title: No assignment to narrower or different essential type
+    requirement: >
+      Required. A value must not be assigned to an object of a narrower essential type or of
+      a different essential type category.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Enable -Wconversion and review implicit narrowing such as uint32_t into uint8_t,
+      signed into unsigned, and float into integer. Compliant code uses explicit casts
+      after range checks.
+    evidence:
+      - No implicit narrowing conversions
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:INT31-C", "iec-61508:Table B.1"]
+
+  - ref: Rule 10.4
+    title: Same essential type category for arithmetic operands
+    requirement: >
+      Required. Both operands of an operator subject to the usual arithmetic conversions
+      must have the same essential type category.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag mixed signed and unsigned comparisons and arithmetic (int compared to size_t,
+      int32_t added to uint32_t), which cause surprising conversions in length checks.
+      Enable -Wsign-compare.
+    evidence:
+      - No mixed signed and unsigned arithmetic
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:INT30-C"]
+
+  - ref: Rule 11.3
+    title: No casts between different object pointer types
+    requirement: >
+      Required. A pointer to an object type must not be cast to a pointer to a different
+      object type.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for casts of byte buffers to struct pointers when parsing packets ((struct hdr
+      *)buf), which risk misalignment and aliasing violations. Compliant code copies with
+      memcpy into a properly aligned struct or decodes field by field. Register access
+      macros normally need a documented deviation.
+    evidence:
+      - Packet parsing without type-punning casts, or documented deviations
+    artifacts: [static-analysis-config]
+
+  - ref: Rule 13.2
+    title: No dependence on evaluation order
+    requirement: >
+      Required. The value of an expression and its persistent side effects must be the same
+      under every permitted evaluation order.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag expressions that modify and read the same variable without sequencing (i =
+      i++ + 1, buf[i++] = i), and function arguments with side effects on shared state.
+    evidence:
+      - No unsequenced side effects
+    artifacts: [static-analysis-config]
+
+  - ref: Rule 13.5
+    title: No persistent side effects in right operand of logical operators
+    requirement: >
+      Required. The right-hand operand of && or || must not contain persistent side effects.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag conditions such as if (ready && (count++ > 3)) or if (a || write_reg(x)), where
+      the side effect happens only sometimes.
+    evidence:
+      - Side effects moved out of short-circuit operands
+    artifacts: [static-analysis-config]
+
+  - ref: Rule 14.3
+    title: No invariant controlling expressions
+    requirement: >
+      Required. Controlling expressions must not be invariant, except for intentional
+      infinite loops.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag conditions that are always true or false, for example an unsigned value
+      compared with < 0 or a range check that can never fail, which often hide broken
+      safety checks. Infinite main loops (for (;;)) are permitted.
+    evidence:
+      - No always-true or always-false conditions
+    artifacts: [static-analysis-config]
+
+  - ref: Rule 15.1
+    title: Avoid goto
+    requirement: >
+      Advisory. The goto statement should not be used. Required Rules 15.2 and 15.3 restrict
+      any goto that is used to jumping forward within the same block.
+    category: code-safety
+    severity: low
+    fixability: code
+    guidance: >
+      List goto uses. A forward goto to a single cleanup label may be accepted under the
+      GRP or a deviation; backward jumps and jumps into blocks are not acceptable.
+    evidence:
+      - No goto, or goto limited to documented forward cleanup patterns
+    checks: [goto-statement]
+    artifacts: [coding-standard]
+    crosswalk: ["iec-61508:Table B.1"]
+
+  - ref: Rule 15.5
+    title: Single point of exit (disapplied in MISRA C:2025)
+    requirement: >
+      Advisory in MISRA C:2012 and C:2023 (a function should have a single point of exit at
+      its end). MISRA C:2025 disapplies it, so it is no longer required for a 2025
+      compliance claim.
+    category: code-safety
+    severity: info
+    fixability: code
+    guidance: >
+      Only report multiple return statements if the project's GRP or coding standard keeps
+      this rule (common for projects certified against MISRA C:2012 or required by IEC
+      61508 or ISO 26262 style guides). Otherwise treat as informational.
+    evidence:
+      - GRP states whether the rule is applied
+    artifacts: [coding-standard]
+
+  - ref: Rule 16.4
+    title: Every switch has a default label
+    requirement: >
+      Required. Every switch statement must have a default label, which should contain an
+      action or a comment explaining why none is taken.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag switch statements over state machines, command IDs or enums without default.
+      In safety code the default should enter a safe state or report an error rather than
+      do nothing silently.
+    evidence:
+      - Defaults that handle unexpected values
+    artifacts: [static-analysis-config]
+    crosswalk: ["iec-61508:Table A.4"]
+
+  - ref: Rule 17.2
+    title: No recursion
+    requirement: >
+      Required. Functions must not call themselves, directly or indirectly.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Look for recursive parsers (JSON, XML, ASN.1), tree walkers and indirect recursion
+      through callbacks. Recursion makes worst-case stack usage unbounded on small stacks.
+      Use call-graph analysis (-fstack-usage, -fcallgraph-info, checker call graph) to
+      prove absence.
+    evidence:
+      - Call graph free of cycles
+      - Worst-case stack usage analysis
+    artifacts: [static-analysis-config]
+    crosswalk: ["iec-61508:Table B.1"]
+
+  - ref: Rule 17.7
+    title: Use return values of non-void functions
+    requirement: >
+      Required. The value returned by a function with non-void return type must be used,
+      or explicitly discarded with a cast to void.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag ignored results of functions such as snprintf, memcpy_s, HAL_* and driver
+      calls. Explicit (void) casts show intent and should be rare and justified.
+    evidence:
+      - Return values used or explicitly discarded
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:ERR33-C"]
+
+  - ref: Rule 18.1
+    title: Pointer arithmetic stays within the array
+    requirement: >
+      Required. Pointer arithmetic must yield a pointer to an element of the same array or
+      one past its end.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Check pointer increments in parsing loops and buffer walkers against the buffer end,
+      and indexes derived from input. Compliant code compares against an end pointer or
+      remaining length before each advance.
+    evidence:
+      - Bounds checks on pointer arithmetic
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:ARR30-C"]
+
+  - ref: Rule 18.6
+    title: No dangling pointers to automatic objects
+    requirement: >
+      Required. The address of an automatic object must not be copied to an object that
+      outlives it.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Flag functions returning the address of a local buffer, locals stored in global
+      pointers, and pointers to stack data passed to RTOS queues or DMA that complete
+      after the function returns.
+    evidence:
+      - No stack addresses escaping their scope
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:MEM30-C"]
+
+  - ref: Rule 21.3
+    title: No stdlib memory allocation functions
+    requirement: >
+      Required. The memory allocation and deallocation functions of stdlib.h must not be
+      used.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Flag malloc, calloc, realloc, aligned_alloc and free. Together with Dir 4.12 this
+      implies a static memory architecture. Wrappers that call these functions count too.
+    evidence:
+      - No stdlib allocation calls, or approved deviation
+    checks: [dynamic-memory-embedded]
+    artifacts: [static-analysis-config]
+    crosswalk: ["iec-61508:Table B.1", "misra-c:Dir 4.12"]
+
+  - ref: Rule 21.6
+    title: No standard library input and output functions
+    requirement: >
+      Required. The standard library input and output functions must not be used.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Flag printf, sprintf, scanf, fopen and the rest of stdio.h in production code. Debug
+      logging through printf needs a deviation or must be compiled out of release builds
+      (check the logging macro configuration). sprintf and scanf("%s") are also memory
+      safety risks.
+    evidence:
+      - No stdio in release builds, or deviation for logging
+    checks: [unsafe-c-functions]
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:STR31-C"]
+
+  - ref: Rule 21.17
+    title: String functions stay within bounds
+    requirement: >
+      Mandatory. Use of the string handling functions from string.h must not access beyond
+      the bounds of the objects referenced by their pointer parameters.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Check strcpy, strcat, strlen, strcmp and strchr calls for destination capacity and
+      guaranteed null termination of sources. Unbounded copies of external input are
+      violations. Rule 21.18 (mandatory) similarly requires size arguments to memcpy,
+      memset and strncpy to be valid for the objects.
+    evidence:
+      - Bounded string handling with proven capacity
+    checks: [unsafe-c-functions]
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:STR31-C", "cert-c:STR32-C", "cert-c:ARR38-C"]
+
+  - ref: Rule 22.1
+    title: Release dynamically obtained resources
+    requirement: >
+      Required. All resources obtained dynamically through standard library functions,
+      such as memory and file streams, must be explicitly released.
+    category: code-safety
+    severity: medium
+    fixability: code
+    guidance: >
+      Check every allocation and fopen has a matching release on all paths, including
+      error returns.
+    evidence:
+      - Matching release on all paths
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:MEM31-C", "cert-c:FIO42-C"]
+
+  - ref: Rule 22.2
+    title: Free only memory obtained from the standard library
+    requirement: >
+      Mandatory. A block of memory may only be freed if it was allocated by a standard
+      library function, and only once.
+    category: code-safety
+    severity: high
+    fixability: code
+    guidance: >
+      Flag double free, free of stack or static memory, and free of offset pointers. Where
+      Rule 21.3 is deviated, ownership rules for heap objects must be documented.
+    evidence:
+      - No invalid or double free
+    checks: [dynamic-memory-embedded]
+    artifacts: [static-analysis-config]
+    crosswalk: ["cert-c:MEM34-C", "cert-c:MEM30-C"]

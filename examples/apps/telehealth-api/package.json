@@ -1,0 +1,20 @@
+{
+  "name": "medilin-telehealth-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MediLin telehealth backend (patients, appointments, AI triage).",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "optionalDependencies": {
+    "medilin-report-generator": "*"
+  },
+  "devDependencies": {
+    "medilin-dev-seed": "latest"
+  }
+}

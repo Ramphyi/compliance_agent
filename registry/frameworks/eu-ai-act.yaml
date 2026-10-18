@@ -1,0 +1,769 @@
+id: eu-ai-act
+title: Regulation (EU) 2024/1689 laying down harmonised rules on artificial intelligence (Artificial Intelligence Act)
+shortTitle: EU AI Act
+version: Regulation (EU) 2024/1689 as amended by Regulation (EU) 2026/1744 (Digital Omnibus on AI)
+authority: European Parliament and Council of the European Union
+kind: regulation
+jurisdictions: [EU]
+url: https://eur-lex.europa.eu/eli/reg/2024/1689/oj
+textPolicy: open
+summary: >
+  The EU AI Act is a product-safety style regulation for AI systems and general-purpose AI
+  models placed on the EU market or whose output is used in the EU. It bans a short list of
+  AI practices, sets risk management, data, documentation, logging, transparency, human
+  oversight and robustness requirements for high-risk AI systems, adds transparency duties
+  for chatbots and synthetic content, and imposes documentation and copyright duties on
+  providers of general-purpose AI models.
+applicability:
+  all:
+    - { not: { fact: aiUsage, in: [none] } }
+    - { fact: markets, in: [EU] }
+applicabilityNote: >
+  Applies to providers that place AI systems or general-purpose AI models on the EU market
+  or put them into service in the EU, to deployers using AI systems in the EU, and to
+  providers and deployers outside the EU whose AI output is used in the EU. A company that
+  builds a product on a third-party model (OpenAI, Anthropic and similar) is normally the
+  provider of its own AI system and a downstream provider of the model. Obligations depend
+  on role (provider or deployer) and risk tier: prohibited practices, high-risk (Article 6
+  with Annex I or Annex III), transparency (Article 50) and general-purpose AI models
+  (Articles 53 to 55). Military, national-security, pure research and personal
+  non-professional use are excluded. The Digital Omnibus on AI, Regulation (EU) 2026/1744
+  of 8 July 2026 (OJ 24 July 2026, in force 27 July 2026), postponed the high-risk
+  obligations to 2 December 2027 for Annex III systems and to 2 August 2028 for Annex I
+  product systems, softened Article 4 into a duty to take measures supporting AI literacy,
+  added Article 4a on processing special-category data for bias detection, added two
+  prohibitions (non-consensual intimate imagery and child sexual abuse material) from
+  2 December 2026, allowed SMEs and small mid-caps to use a simplified technical
+  documentation form, and gave generative systems already on the market before
+  2 August 2026 until 2 December 2026 to meet Article 50(2) marking. Article 50
+  transparency duties were not postponed and apply from 2 August 2026. Confirm the risk
+  classification and your role with counsel, and check the current Commission guidelines
+  on Article 6 and the status of harmonised standards before relying on a classification.
+keyDates:
+  - { date: "2024-08-01", note: "Regulation (EU) 2024/1689 entered into force" }
+  - { date: "2025-02-02", note: "Chapters I and II apply - AI literacy (Art. 4) and prohibited practices (Art. 5)" }
+  - { date: "2025-08-02", note: "General-purpose AI model obligations (Chapter V) apply, plus governance, notified bodies and penalties (except Art. 101 fines)" }
+  - { date: "2026-07-27", note: "Digital Omnibus on AI (Regulation (EU) 2026/1744) entered into force; amended Article 4 applies" }
+  - { date: "2026-08-02", note: "General date of application, including Article 50 transparency obligations and Commission fines for GPAI providers (Art. 101)" }
+  - { date: "2026-12-02", note: "New prohibitions in Art. 5(1)(ba) and (bb) apply; generative AI systems placed on the market before 2026-08-02 must meet Art. 50(2) marking" }
+  - { date: "2027-08-02", note: "GPAI models placed on the market before 2025-08-02 must comply (Art. 111(3)); was the original Annex I high-risk date before the Omnibus" }
+  - { date: "2027-12-02", note: "High-risk requirements (Chapter III Sections 1-3) apply to Annex III systems (Art. 113 as amended; originally 2026-08-02)" }
+  - { date: "2028-08-02", note: "High-risk requirements apply to Annex I product systems under Art. 6(1) (Art. 113 as amended; originally 2027-08-02)" }
+  - { date: "2030-08-02", note: "Providers and deployers of legacy high-risk systems used by public authorities must comply (Art. 111(2) as amended)" }
+controls:
+  - ref: Art.4
+    title: AI literacy measures for staff
+    requirement: >
+      Providers and deployers must take measures to support the AI literacy of staff and
+      other people operating or using AI systems on their behalf, taking into account their
+      knowledge, the context of use and the people affected. Since the Digital Omnibus the
+      duty is to take measures, not to guarantee a specific literacy level.
+    category: ai-governance
+    severity: medium
+    fixability: process
+    guidance: >
+      This is organisational, but the repository can show part of it. Look for an AI usage
+      policy or engineering guideline (docs/ai-policy.md, CONTRIBUTING.md sections on AI
+      features, prompt-engineering guidelines, model cards for internal use), onboarding
+      material for people who operate the AI features (support, moderators, reviewers),
+      and in-product guidance for operators of admin consoles that expose model output.
+      Good looks like a documented training or briefing for each role that touches the AI
+      system (developers, operators, reviewers who override outputs) covering capabilities,
+      limitations, known failure modes such as hallucination and prompt injection, and when
+      to escalate. Absence of any written material is a document finding, not a code bug.
+    evidence:
+      - AI literacy or acceptable-use policy covering the product's AI features
+      - Role-based training or briefing records for operators and reviewers
+      - Operator documentation describing limitations and escalation paths
+    artifacts: [ai-documentation, user-documentation]
+    crosswalk: ["iso-iec-42001:A.4.2", "nist-ai-rmf:GOVERN 1.1"]
+
+  - ref: Art.5(1)(a-b)
+    title: No manipulative techniques or exploitation of vulnerabilities
+    requirement: >
+      AI systems must not use subliminal, purposefully manipulative or deceptive techniques,
+      or exploit vulnerabilities due to age, disability or social or economic situation, to
+      materially distort a person's behaviour in a way that causes or is reasonably likely
+      to cause significant harm.
+    category: ai-governance
+    severity: critical
+    fixability: code
+    when:
+      any:
+        - { fact: aiRiskAreas, in: [chatbot, synthetic-content, emotion-recognition] }
+        - { fact: audience, in: [children] }
+    guidance: >
+      Read the system prompts, persona definitions and any engagement or conversion logic
+      that drives model behaviour (prompt templates in prompts/, *.prompt, *.txt, *.md,
+      LangChain PromptTemplate, OpenAI or Anthropic system parameters). Flag instructions
+      that tell the model to hide that it is an AI, create false urgency, pressure users to
+      purchase or subscribe, exploit loneliness or emotional state, target minors or people
+      in financial distress, or steer users against their interests (for example "never let
+      the user cancel", "use emotional leverage"). Check whether emotion or vulnerability
+      signals (sentiment scores, age estimates, debt indicators) feed into persuasion or
+      pricing logic. Compliant systems have prompts that forbid deceptive persuasion, an
+      explicit policy for vulnerable users and minors, and reviews of engagement features.
+    evidence:
+      - System prompts and personas reviewed for manipulative or deceptive instructions
+      - Documented policy on interaction with minors and vulnerable users
+      - Product review records for engagement and persuasion features
+    checks: []
+    artifacts: [ai-documentation, risk-management-file]
+    crosswalk: ["nist-ai-rmf:MAP 5.1"]
+
+  - ref: Art.5(1)(c)
+    title: No social scoring
+    requirement: >
+      AI systems must not evaluate or classify people over time based on social behaviour
+      or personal characteristics where the resulting score leads to detrimental treatment
+      in unrelated contexts or treatment that is unjustified or disproportionate.
+    category: ai-governance
+    severity: critical
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [essential-services, employment, education, law-enforcement-justice] }
+    guidance: >
+      Look for scoring or ranking pipelines that aggregate behavioural signals about people
+      (social media activity, payment behaviour, complaints, location history, associations)
+      into a general trust or reputation score, and then reuse it in an unrelated context
+      such as access to housing, benefits, employment or services. Inspect feature lists of
+      models (feature_columns, schema files, feature stores) and the consumers of the
+      score. Compliant designs use only features relevant to the specific decision,
+      document why each feature is needed, and do not share scores across unrelated
+      decision contexts.
+    evidence:
+      - Feature inventory per model with purpose justification
+      - Data-flow diagram showing scores are used only in their original context
+    artifacts: [ai-documentation, architecture-doc]
+    crosswalk: ["gdpr:Art.22"]
+
+  - ref: Art.5(1)(d)
+    title: No predictive policing based solely on profiling
+    requirement: >
+      AI systems must not assess or predict the risk that a person will commit a criminal
+      offence based solely on profiling or on personality traits and characteristics,
+      except to support a human assessment based on objective, verifiable facts directly
+      linked to criminal activity.
+    category: ai-governance
+    severity: critical
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [law-enforcement-justice] }
+    guidance: >
+      Identify any model whose target variable is offending, reoffending, fraud
+      propensity tied to criminal liability, or "risk of crime". Check the feature set: a
+      model driven by demographics, personality, nationality, neighbourhood or social
+      network without objective facts linked to a specific criminal activity is
+      prohibited. Compliant systems only support a human assessment, take case facts as
+      input, and record the human decision separately from the model output.
+    evidence:
+      - Model cards stating target variable, features and intended human-support role
+      - Workflow showing a human assessor decides on objective facts
+    artifacts: [ai-documentation]
+    crosswalk: []
+
+  - ref: Art.5(1)(e)
+    title: No untargeted scraping of facial images
+    requirement: >
+      AI systems must not create or expand facial recognition databases through untargeted
+      scraping of facial images from the internet or CCTV footage.
+    category: ai-governance
+    severity: critical
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [biometric] }
+    guidance: >
+      Search for crawlers and scrapers (requests, Scrapy, Puppeteer, Playwright, yt-dlp,
+      instaloader) feeding face detection or embedding pipelines (face_recognition, dlib,
+      InsightFace, DeepFace, AWS Rekognition IndexFaces, Azure Face) and for jobs that
+      ingest CCTV or video streams into a face index. Any pipeline that collects faces in
+      bulk from public sources to build or enlarge a recognition gallery is prohibited.
+      Compliant systems enrol faces only from consenting, identified subjects through a
+      documented enrolment flow.
+    evidence:
+      - Documented, consent-based enrolment flow for face templates
+      - No scraping jobs feeding biometric indexes
+    artifacts: [ai-documentation, processing-records]
+    crosswalk: ["gdpr:Art.9"]
+
+  - ref: Art.5(1)(f)
+    title: No emotion recognition in the workplace or education
+    requirement: >
+      AI systems must not infer the emotions of people in the workplace or in educational
+      institutions, except for medical or safety reasons.
+    category: ai-governance
+    severity: critical
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [emotion-recognition] }
+    guidance: >
+      Find emotion, affect or sentiment-from-biometrics features (facial expression
+      analysis, voice stress, keystroke or gaze-based mood inference; SDKs such as Affectiva,
+      Hume, Azure Face emotion attributes, custom FER models) and check the deployment
+      context: employee monitoring, HR, proctoring, classroom or e-learning products are
+      prohibited unless the purpose is medical or safety (for example driver drowsiness).
+      Text sentiment analysis of customer messages is not emotion recognition based on
+      biometric data, but voice and face based inference is. Compliant products disable
+      these features for workplace and education tenants or document the medical or safety
+      exception.
+    evidence:
+      - Inventory of emotion-inference features and the contexts where they are enabled
+      - Feature flags or tenant configuration disabling them for workplace and education use
+    artifacts: [ai-documentation]
+    crosswalk: []
+
+  - ref: Art.5(1)(g)
+    title: No biometric categorisation of sensitive attributes
+    requirement: >
+      AI systems must not categorise individuals based on biometric data to deduce or infer
+      race, political opinions, trade-union membership, religious or philosophical beliefs,
+      sex life or sexual orientation. Labelling or filtering of lawfully acquired biometric
+      datasets for law enforcement is excepted.
+    category: ai-governance
+    severity: critical
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [biometric] }
+    guidance: >
+      Check classifier outputs and label schemas of face, voice or body models for classes
+      such as ethnicity, religion, sexual orientation or political leaning (look in label
+      maps, class_names, model configs and API response schemas). Any output that infers
+      these attributes from biometric data is prohibited. Compliant systems have no such
+      output classes and filter them from third-party vision API responses.
+    evidence:
+      - Model label schemas reviewed and free of sensitive-attribute classes
+      - Third-party vision API responses filtered for prohibited attributes
+    artifacts: [ai-documentation]
+    crosswalk: ["gdpr:Art.9"]
+
+  - ref: Art.5(1)(h)
+    title: No real-time remote biometric identification for law enforcement
+    requirement: >
+      Real-time remote biometric identification in publicly accessible spaces for law
+      enforcement is prohibited, except in narrowly defined, authorised cases such as
+      searching for specific victims or preventing an imminent threat.
+    category: ai-governance
+    severity: critical
+    fixability: process
+    when:
+      all:
+        - { fact: aiRiskAreas, in: [biometric] }
+        - { fact: aiRiskAreas, in: [law-enforcement-justice] }
+    guidance: >
+      Look for live video ingestion (RTSP, WebRTC, camera SDKs) matched against watchlists
+      or galleries in real time. If the product offers this to law enforcement, the
+      exceptions require prior judicial or administrative authorisation per use, a
+      fundamental rights impact assessment and registration. Check for authorisation
+      gating in code (per-search warrant reference, time-limited activation, audit trail)
+      and confirm with counsel; without it the feature must not ship to EU law enforcement.
+    evidence:
+      - Authorisation gating and audit trail for each real-time identification use
+      - Legal assessment of the applicable Article 5(2)-(7) conditions
+    artifacts: [ai-documentation, dpia]
+    crosswalk: []
+
+  - ref: Art.5(1)(ba-bb)
+    title: No generation of non-consensual intimate imagery or child sexual abuse material
+    requirement: >
+      From 2 December 2026, AI systems must not generate or manipulate realistic intimate
+      or sexually explicit images, video or audio of an identifiable person without their
+      explicit consent, or child sexual abuse material. Providers are caught where this is
+      the intended purpose or a reasonably foreseeable outcome that lacks adequate
+      safeguards to prevent it.
+    category: ai-security
+    severity: critical
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [synthetic-content] }
+    guidance: >
+      For image, video or voice generation and editing features, inspect the safety layer:
+      prompt and output classifiers (provider moderation endpoints, safety_settings,
+      NSFW and CSAM classifiers, hash matching such as PhotoDNA), blocks on
+      face-swap or "undress" edits of uploaded photos of real people, age-estimation or
+      minor-detection gates, and abuse reporting. Check that safety filters cannot be
+      disabled by request parameters and that safety settings of third-party models are not
+      lowered (for example safety_settings BLOCK_NONE, disabled safety_checker in diffusers
+      pipelines). Compliant systems block these outputs by default, log and act on
+      attempts, and correct reported misuse.
+    evidence:
+      - Input and output safety classifiers for sexual content and minors
+      - Blocking of intimate edits of identifiable people without verified consent
+      - Abuse reporting and takedown workflow
+    checks: []
+    artifacts: [ai-documentation, risk-management-file]
+    crosswalk: ["nist-ai-rmf:GAI 2.11", "owasp-llm-top10:LLM05"]
+
+  - ref: Art.6
+    title: Documented high-risk classification
+    requirement: >
+      Each AI system must be classified: high-risk if it is a safety component of, or
+      itself, a product under Annex I legislation requiring third-party conformity
+      assessment, or if it is used in an Annex III area. A provider that considers an
+      Annex III system not high-risk under Article 6(3) must document that assessment
+      before placing it on the market and register it; systems that profile natural
+      persons are always high-risk.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    guidance: >
+      Look for a classification record per AI feature (docs/ai/classification.md, model
+      cards, AI register) that states the intended purpose, the Annex III point considered
+      (biometrics, critical infrastructure, education, employment, essential services, law
+      enforcement, migration, justice and democracy) or the Annex I product legislation,
+      and the conclusion. Compare it with what the code actually does: a CV-screening,
+      credit-scoring, exam-grading or triage feature contradicts a "minimal risk"
+      classification. If Article 6(3) is relied on, the record must explain which
+      condition applies (narrow procedural task, improving a prior human activity,
+      detecting decision patterns without replacing human assessment, or preparatory task)
+      and confirm that no profiling of natural persons occurs.
+    evidence:
+      - AI system inventory with intended purpose and risk classification per system
+      - Article 6(3) assessment where an Annex III use is classified as not high-risk
+      - EU database registration reference where required
+    artifacts: [ai-documentation, risk-management-file]
+    crosswalk: ["iso-iec-42001:6.1.4", "nist-ai-rmf:MAP 1.1"]
+
+  - ref: Art.9
+    title: Risk management system for high-risk AI
+    requirement: >
+      Providers of high-risk AI systems must run a documented, iterative risk management
+      process across the life cycle that identifies foreseeable risks to health, safety and
+      fundamental rights, including from reasonably foreseeable misuse, adopts mitigation
+      measures and tests the system against defined metrics before release.
+    category: risk-assessment
+    severity: high
+    fixability: document
+    when:
+      { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+    guidance: >
+      Look for a risk register or risk management file for the AI system (risk-register.csv,
+      docs/risk/, hazard analysis, threat model) that lists AI-specific hazards such as
+      biased outcomes, hallucinated outputs, automation bias, adversarial input, data drift
+      and misuse, with mitigations traced to code (thresholds, guardrails, human review
+      steps) and to tests. Check that evaluation tests exist and run in CI against
+      documented acceptance metrics (tests/eval, promptfoo, deepeval, lm-eval, pytest
+      suites with accuracy or fairness thresholds). Good looks like a living document
+      updated on each model or prompt change, with residual risks accepted by a named
+      owner. Applies from 2 December 2027 for Annex III systems and 2 August 2028 for
+      Annex I systems.
+    evidence:
+      - AI risk management file with hazards, mitigations and residual risk acceptance
+      - Pre-release evaluation results against defined metrics
+      - Change log linking model or prompt changes to risk review
+    artifacts: [risk-management-file, threat-model, automated-tests]
+    crosswalk: ["iso-iec-42001:6.1.2", "nist-ai-rmf:MAP 5.1", "iso-14971:7.1"]
+
+  - ref: Art.10
+    title: Data and data governance
+    requirement: >
+      Training, validation and testing data for high-risk AI must follow documented data
+      governance: design choices, collection and origin, preparation, assumptions,
+      availability and suitability, examination and mitigation of biases, and
+      identification of gaps. Data must be relevant, sufficiently representative and as
+      free of errors and complete as possible for the intended purpose.
+    category: data-protection
+    severity: high
+    fixability: document
+    when:
+      { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+    guidance: >
+      Inspect data pipelines and dataset documentation: datasheets or data cards, DVC or
+      LakeFS metadata, data loading scripts, labelling guidelines, train/validation/test
+      split code, and bias analyses (fairlearn, AIF360, per-group metrics in evaluation
+      notebooks). Good looks like versioned datasets with recorded provenance and licence,
+      documented preprocessing, a held-out test set representative of the deployment
+      population, and per-subgroup performance reported. If the system uses a third-party
+      model without training, the requirements apply to the testing data. Processing of
+      special-category data for bias detection is only allowed under the Article 4a
+      safeguards (strict necessity, pseudonymisation, access control, no onward transfer,
+      deletion after correction, documented in the records of processing).
+    evidence:
+      - Datasheets for training, validation and test sets with provenance and licence
+      - Bias examination results per relevant subgroup
+      - Versioned data pipeline with reproducible splits
+    artifacts: [ai-documentation, processing-records]
+    crosswalk: ["iso-iec-42001:A.7.5", "nist-ai-rmf:MEASURE 2.11", "gdpr:Art.9"]
+
+  - ref: Art.11
+    title: Technical documentation (Annex IV)
+    requirement: >
+      Providers must draw up technical documentation before a high-risk AI system is placed
+      on the market and keep it up to date, containing at least the elements of Annex IV.
+      SMEs and small mid-caps may use the Commission's simplified form.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    when:
+      { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+    guidance: >
+      Look for a technical documentation set (docs/ai/technical-documentation.md, model
+      cards, system cards) covering the Annex IV elements: general description and intended
+      purpose, versions of software and models, system architecture and how components
+      interact, development methods and third-party models used, data requirements and
+      datasheets, human oversight measures, pre-determined changes, validation and testing
+      procedures with metrics and results, cybersecurity measures, the risk management
+      file, post-market monitoring plan and a copy of the EU declaration of conformity.
+      Verify that the documented model names and versions match those in code and
+      configuration (model ids in env files, provider SDK calls, model registry entries).
+    evidence:
+      - Annex IV technical documentation, version-controlled with the code
+      - Model and dataset versions in the documentation matching deployed configuration
+    artifacts: [ai-documentation, architecture-doc]
+    crosswalk: ["iso-iec-42001:A.6.2.7", "nist-ai-rmf:MAP 1.1"]
+
+  - ref: Art.12
+    title: Automatic event logging
+    requirement: >
+      High-risk AI systems must technically allow automatic recording of events over their
+      lifetime, enabling traceability: identifying risk situations and substantial
+      modifications, supporting post-market monitoring and monitoring of operation by
+      deployers. Providers and deployers must keep the logs under their control for at
+      least six months (Articles 19 and 26(6)).
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+    guidance: >
+      Trace each inference path and check that it writes a structured log record with a
+      timestamp, request or session id, model and prompt version, input reference (or
+      hash), output, confidence, any human override and the identity of the reviewing
+      operator. For remote biometric identification, Article 12(3) also requires the
+      period of use, the reference database and the people who verified results. Check
+      retention configuration (log sink retention, S3 lifecycle, Loki or CloudWatch
+      retention) is at least six months and that logs are tamper-resistant and
+      access-controlled. Flag inference code with no logging, logs that drop the model
+      version, and logs that contain raw special-category data without need.
+    evidence:
+      - Structured inference logs with model version, input reference, output and reviewer
+      - Retention of at least six months configured in the log store
+      - Access control and integrity protection on AI logs
+    checks: [pii-in-logs]
+    crosswalk: ["iso-iec-42001:A.6.2.8", "iso-iec-27001:A.8.15", "soc2:CC7.2"]
+
+  - ref: Art.13
+    title: Transparency and instructions for use to deployers
+    requirement: >
+      High-risk AI systems must be transparent enough for deployers to interpret and use
+      the output appropriately, and come with instructions for use stating the provider's
+      identity, intended purpose, accuracy, robustness and cybersecurity levels, known
+      risks, performance on specific groups, input data specifications, human oversight
+      measures, expected lifetime and how to collect and interpret logs.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    when:
+      { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+    guidance: >
+      Look for deployer-facing documentation (docs/, help center sources, API reference,
+      admin console help text) that states the intended purpose and limitations, accuracy
+      metrics and the conditions they were measured under, known failure modes, input
+      requirements, the human oversight the deployer must apply, and how to export logs.
+      Check that output presented to deployers carries interpretability aids where
+      appropriate (confidence, reasons or top features, warnings when inputs are out of
+      distribution) rather than a bare decision.
+    evidence:
+      - Instructions for use covering the Article 13(3) content
+      - Output explanations or confidence indicators in the deployer interface
+    artifacts: [user-documentation, ai-documentation]
+    crosswalk: ["iso-iec-42001:A.8.2", "nist-ai-rmf:MAP 1.1"]
+
+  - ref: Art.14
+    title: Human oversight
+    requirement: >
+      High-risk AI systems must be designed so that natural persons can effectively oversee
+      them: understand capacities and limitations, stay aware of automation bias, correctly
+      interpret output, decide not to use or override the output, and stop the system
+      safely. Remote biometric identification results need verification by two people.
+    category: ai-governance
+    severity: high
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+    guidance: >
+      Look for a human-in-the-loop step before consequential actions: review queues,
+      approve or reject endpoints, override fields recorded alongside the model output,
+      and a stop or disable mechanism (feature flag, kill switch, circuit breaker) that
+      falls back to a safe manual process. Flag code paths where model output directly
+      triggers rejection of a candidate, denial of credit, grading or clinical action with
+      no review. Check that the UI shows uncertainty and does not pre-select the model's
+      answer in a way that encourages rubber-stamping.
+    evidence:
+      - Review and override workflow with recorded human decisions
+      - Kill switch or feature flag to stop the AI function
+      - Operator UI showing confidence and limitations
+    crosswalk: ["iso-iec-42001:A.9.4", "nist-ai-rmf:MANAGE 2.4", "owasp-llm-top10:LLM06-approval"]
+
+  - ref: Art.15
+    title: Accuracy, robustness and cybersecurity
+    requirement: >
+      High-risk AI systems must achieve an appropriate, declared level of accuracy, be
+      resilient to errors, faults and inconsistencies, and be protected against attempts
+      to alter their use, outputs or performance, including data poisoning, model
+      poisoning, adversarial examples, model evasion and confidentiality attacks.
+    category: ai-security
+    severity: high
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+    guidance: >
+      Check that accuracy metrics are declared and tested (evaluation suites in CI with
+      thresholds), that inputs are validated and out-of-distribution inputs are detected or
+      rejected, and that fallbacks exist when the model or provider fails (timeouts,
+      retries, safe default). For LLM-based systems check prompt-injection defences,
+      separation of instructions and untrusted data, output validation before use, and
+      no model output passed to eval, shell, SQL or file writes. Check model artefact
+      integrity (pinned model versions, hashes or signatures on downloaded weights, no
+      pickle-based model loading from untrusted sources) and secret handling for provider
+      API keys. A product meeting the essential cybersecurity requirements of the Cyber
+      Resilience Act is presumed to meet the cybersecurity part (Art. 42(3)).
+    evidence:
+      - Declared accuracy metrics with CI evaluation results
+      - Adversarial and prompt-injection test results
+      - Integrity checks on model artefacts and pinned model versions
+    checks: [llm-prompt-injection-risk, llm-output-execution, unsafe-deserialization, hardcoded-secret]
+    artifacts: [automated-tests, threat-model]
+    crosswalk: ["owasp-llm-top10:LLM01", "owasp-llm-top10:LLM04", "nist-ai-rmf:MEASURE 2.7", "eu-cra:AnnexI.II.2"]
+
+  - ref: Art.26
+    title: Deployer obligations for high-risk AI
+    requirement: >
+      Deployers of high-risk AI systems must use them according to the instructions, assign
+      competent human oversight, ensure input data under their control is relevant, monitor
+      operation and report risks and serious incidents, keep logs for at least six months,
+      inform workers' representatives before workplace use, and inform people subject to
+      decisions. Public bodies and certain credit and insurance deployers must also carry
+      out a fundamental rights impact assessment (Article 27).
+    category: ai-governance
+    severity: high
+    fixability: process
+    when:
+      { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+    guidance: >
+      Applies where the organisation uses a high-risk AI system in its own operations or
+      operates one for customers. Look for operational runbooks naming the oversight role,
+      monitoring dashboards and alerts on model behaviour, log retention settings of at
+      least six months, notices to affected persons (for example candidate or applicant
+      notices that AI is used in the decision, and the Article 86 right to an explanation),
+      and a fundamental rights impact assessment where required (it may cross-reference
+      the GDPR DPIA). For SaaS that customers deploy, check that the product gives
+      deployers the means to comply: log export, oversight controls, notice templates.
+    evidence:
+      - Operating procedure assigning human oversight and monitoring duties
+      - Notices to affected persons and workers' representatives
+      - Fundamental rights impact assessment where Article 27 applies
+    artifacts: [dpia, user-documentation, incident-response-plan]
+    crosswalk: ["iso-iec-42001:A.9.4", "gdpr:Art.35", "nist-ai-rmf:MANAGE 4.1"]
+
+  - ref: Art.50(1)
+    title: Disclosure that users are interacting with AI
+    requirement: >
+      Providers must design AI systems that interact directly with people so that those
+      people are informed they are interacting with an AI system, unless obvious from the
+      context. The information must be clear, distinguishable and given at the latest at
+      the first interaction, and must be accessible.
+    category: transparency-documentation
+    severity: high
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [chatbot] }
+    guidance: >
+      Inspect chat widgets, voice assistants, email or SMS auto-responders and agent
+      personas. Look for a visible label at the start of the conversation ("AI assistant",
+      "You are chatting with an AI"), an accessible text alternative for voice (spoken
+      disclosure at call start), and that personas with human names still disclose AI
+      status. Check system prompts do not instruct the model to claim to be human or deny
+      being an AI. Check the disclosure survives localisation (i18n strings present for
+      all locales) and is exposed to screen readers (aria-label or visible text, not only
+      an icon). Applies from 2 August 2026.
+    evidence:
+      - Visible and accessible AI disclosure at the first interaction in every channel
+      - System prompt forbidding the model from claiming to be human
+    checks: [ai-disclosure-missing]
+    crosswalk: ["iso-iec-42001:A.8.2", "eu-accessibility-act:AnnexI"]
+
+  - ref: Art.50(2)
+    title: Machine-readable marking of synthetic content
+    requirement: >
+      Providers of AI systems, including general-purpose AI systems, that generate synthetic
+      audio, image, video or text must ensure outputs are marked in a machine-readable
+      format and detectable as artificially generated or manipulated, using effective,
+      interoperable, robust and reliable techniques as far as technically feasible.
+      Assistive editing that does not substantially alter input is excepted.
+    category: transparency-documentation
+    severity: high
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [synthetic-content] }
+    guidance: >
+      Follow the generation pipeline to the point where content is returned or stored and
+      look for marking: C2PA content credentials (c2pa-rs, c2pa-node, c2patool), IPTC
+      DigitalSourceType "trainedAlgorithmicMedia" metadata, invisible watermarks (provider
+      watermarks such as SynthID kept intact, or libraries like invisible-watermark or
+      AudioSeal), and metadata in text output where feasible. Flag post-processing that
+      strips metadata (image re-encoding with sharp, Pillow or ffmpeg without preserving
+      metadata, EXIF stripping) after generation. The Commission's voluntary Code of
+      Practice on marking and labelling AI-generated content describes accepted
+      approaches. Applies from 2 August 2026; systems already on the market before then
+      have until 2 December 2026.
+    evidence:
+      - Machine-readable provenance marking applied to every generated output
+      - Tests showing marks survive the product's own post-processing
+    crosswalk: ["nist-ai-rmf:GAI 2.8"]
+
+  - ref: Art.50(3)
+    title: Notice of emotion recognition and biometric categorisation
+    requirement: >
+      Deployers of emotion recognition or biometric categorisation systems must inform the
+      people exposed to them about the operation of the system and process personal data
+      in line with data protection law.
+    category: transparency-documentation
+    severity: high
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [emotion-recognition, biometric] }
+    guidance: >
+      Check that the user interface or physical setup informs people before or when the
+      system runs (pre-capture notice screen, camera-on indicator with explanation, signage
+      text in documentation for physical deployments), and that the privacy policy
+      describes the processing and legal basis. Look for consent or notice components gating
+      camera or microphone capture in code (getUserMedia, AVCaptureSession, CameraX) before
+      biometric analysis starts.
+    evidence:
+      - Notice shown before biometric or emotion analysis starts
+      - Privacy policy section describing the processing
+    artifacts: [privacy-policy]
+    crosswalk: ["gdpr:Art.13", "gdpr:Art.9"]
+
+  - ref: Art.50(4)
+    title: Disclosure of deepfakes and AI-generated public-interest text
+    requirement: >
+      Deployers that generate or manipulate image, audio or video constituting a deepfake
+      must disclose that it is artificial; deployers publishing AI-generated text to inform
+      the public on matters of public interest must disclose it unless it underwent human
+      review and editorial responsibility. Artistic, satirical or fictional works need only
+      a non-intrusive disclosure.
+    category: transparency-documentation
+    severity: high
+    fixability: code
+    when:
+      { fact: aiRiskAreas, in: [synthetic-content] }
+    guidance: >
+      Where the product publishes or lets users publish generated media of real people,
+      places or events, check for a visible label on the content (overlay, caption,
+      "AI-generated" badge, the EU common icon where adopted) in addition to machine-readable
+      marking, and that sharing or export features keep the label. For news-like or public
+      interest text generation, check for a disclosure line or an editorial review workflow
+      with a recorded human approver. Applies from 2 August 2026.
+    evidence:
+      - Visible AI-generated label on deepfake media and on exports
+      - Editorial review records or disclosure on AI-generated public-interest text
+    checks: [ai-disclosure-missing]
+    crosswalk: ["nist-ai-rmf:GAI 2.8"]
+
+  - ref: Art.53(1)(a-b)
+    title: GPAI model technical documentation and downstream information
+    requirement: >
+      Providers of general-purpose AI models must draw up and keep up to date technical
+      documentation of the model for the AI Office (Annex XI) and information and
+      documentation for downstream providers integrating the model (Annex XII). Providers
+      of free and open-source models without systemic risk are exempt from these two
+      duties. Providers outside the EU must appoint an authorised representative
+      (Article 54).
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    when:
+      { fact: aiUsage, equals: general-purpose-model }
+    guidance: >
+      Look for a model card or model documentation package covering architecture and
+      parameter count, modalities, training methodology, training data description,
+      compute used, energy consumption, intended and prohibited uses, acceptable use
+      policy, licence, evaluation results and integration guidance for downstream
+      providers (input and output formats, technical integration requirements, known
+      limitations). The GPAI Code of Practice Model Documentation Form is the reference
+      template. Check that the documentation matches released checkpoints and is versioned
+      per model release.
+    evidence:
+      - Annex XI technical documentation per model version
+      - Annex XII downstream provider documentation and acceptable use policy
+    artifacts: [ai-documentation, license-file]
+    crosswalk: ["iso-iec-42001:A.6.2.7", "nist-ai-rmf:GOVERN 6.1"]
+
+  - ref: Art.53(1)(c-d)
+    title: GPAI copyright policy and training content summary
+    requirement: >
+      Providers of general-purpose AI models must put in place a policy to comply with EU
+      copyright law, including identifying and respecting machine-readable text and data
+      mining opt-outs, and publish a sufficiently detailed summary of the content used for
+      training using the AI Office template.
+    category: transparency-documentation
+    severity: high
+    fixability: document
+    when:
+      { fact: aiUsage, equals: general-purpose-model }
+    guidance: >
+      Inspect training-data crawlers and ingestion code: check that robots.txt and other
+      machine-readable reservations (for example ai.txt or TDM-Rep headers and metadata)
+      are honoured, that the crawler user agent is documented, and that excluded domains
+      and opt-out lists are applied before data enters the corpus. Look for the published
+      training content summary and a written copyright policy with a complaint channel for
+      rightsholders.
+    evidence:
+      - Copyright compliance policy and complaint contact
+      - Crawler code honouring robots.txt and TDM opt-outs
+      - Public training content summary following the AI Office template
+    artifacts: [ai-documentation]
+    crosswalk: ["nist-ai-rmf:GAI 2.10"]
+
+  - ref: Art.55
+    title: Obligations for GPAI models with systemic risk
+    requirement: >
+      Providers of general-purpose AI models with systemic risk (presumed above 10^25
+      training FLOPs or designated by the Commission) must evaluate the model including
+      adversarial testing, assess and mitigate systemic risks, track and report serious
+      incidents to the AI Office without undue delay, and ensure adequate cybersecurity for
+      the model and its infrastructure.
+    category: ai-security
+    severity: high
+    fixability: process
+    when:
+      { fact: aiUsage, equals: general-purpose-model }
+    guidance: >
+      First check whether training compute exceeds the 10^25 FLOP presumption (training
+      logs, compute accounting) and whether the Commission was notified (Article 52). If
+      in scope, look for red-teaming and evaluation harnesses, a systemic risk assessment,
+      an incident tracking and reporting procedure to the AI Office, and security controls
+      protecting weights (access control on model storage, encryption, insider-threat
+      controls, no public buckets). The GPAI Code of Practice Safety and Security chapter
+      is the reference.
+    evidence:
+      - Training compute record and Article 52 notification where applicable
+      - Adversarial evaluation reports and systemic risk assessment
+      - Serious incident reporting procedure and model weight security controls
+    artifacts: [risk-management-file, incident-response-plan, threat-model]
+    crosswalk: ["nist-ai-rmf:MEASURE 2.7", "owasp-llm-top10:LLM03"]
+
+  - ref: Art.72
+    title: Post-market monitoring and serious incident reporting
+    requirement: >
+      Providers of high-risk AI systems must run a documented post-market monitoring system
+      that actively collects and analyses performance data over the system's lifetime, and
+      must report serious incidents to market surveillance authorities within the
+      Article 73 deadlines.
+    category: logging-monitoring
+    severity: high
+    fixability: process
+    when:
+      { fact: aiRiskAreas, in: [biometric, emotion-recognition, critical-infrastructure, education, employment, essential-services, law-enforcement-justice, medical, safety-component] }
+    guidance: >
+      Look for production monitoring of model quality: drift and accuracy dashboards,
+      feedback capture (thumbs up or down, correction flows, complaint intake), alerting
+      thresholds, and a post-market monitoring plan document. Check the incident response
+      plan defines an AI serious incident, the reporting path to authorities and the
+      deadlines (at most 15 days, shorter for widespread infringements and deaths).
+    evidence:
+      - Post-market monitoring plan and live model-quality monitoring
+      - Incident response plan covering AI serious incident reporting
+    artifacts: [incident-response-plan, ai-documentation]
+    crosswalk: ["iso-iec-42001:A.6.2.6", "nist-ai-rmf:MANAGE 4.1", "nist-ai-rmf:MANAGE 4.3"]

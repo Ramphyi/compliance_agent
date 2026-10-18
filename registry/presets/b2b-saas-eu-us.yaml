@@ -1,0 +1,29 @@
+id: b2b-saas-eu-us
+title: B2B SaaS (EU and US, SOC 2 and ISO 27001)
+description: >
+  A business-to-business SaaS web application that processes personal data,
+  sold in the EU, the US and California, targeting SOC 2 and ISO/IEC 27001.
+  Brings GDPR for EU personal data, CCPA/CPRA for California, the OWASP Top 10
+  and ASVS for the application, and the SOC 2 Trust Services Criteria and ISO
+  27001 Annex A controls that the certifications add to the audit.
+examples: []
+answers:
+  productTypes: [saas, web-app, backend-api]
+  sector: [general]
+  markets: [EU, US, US-CA]
+  audience: [businesses]
+  orgRole: service-provider
+  orgSize: medium
+  dataCategories: [personal, credentials]
+  aiUsage: none
+  safetyCritical: "no"
+  connectivity: [internet]
+  updates: continuous-deployment
+  distribution: [web]
+  regulatedEntity: [none]
+  certificationsTarget: [soc2, iso-27001]
+  openSource: proprietary
+includeFrameworks: []
+excludeFrameworks: []
+verify:
+  - npm test

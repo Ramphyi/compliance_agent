@@ -1,0 +1,385 @@
+id: en-18031
+title: "EN 18031-1, -2 and -3:2024 Common security requirements for radio equipment (RED Delegated Regulation (EU) 2022/30, Article 3(3)(d), (e) and (f))"
+shortTitle: EN 18031 (RED cybersecurity)
+version: EN 18031-1:2024, EN 18031-2:2024, EN 18031-3:2024
+authority: CEN-CENELEC (harmonised under Directive 2014/53/EU)
+kind: standard
+jurisdictions: [EU]
+url: https://eur-lex.europa.eu/eli/dec_impl/2025/138/oj
+textPolicy: paraphrased
+summary: >
+  Delegated Regulation (EU) 2022/30 activates the cybersecurity essential requirements of
+  the Radio Equipment Directive for internet-connected radio equipment: Art. 3(3)(d) no
+  harm to the network, Art. 3(3)(e) protection of personal data and privacy (including
+  toys, childcare equipment and wearables), and Art. 3(3)(f) protection from fraud for
+  equipment handling money or monetary value. EN 18031-1, -2 and -3 are the harmonised
+  standards that give presumption of conformity for each part, using security mechanisms
+  such as access control (ACM), authentication (AUM), secure update (SUM), secure storage
+  (SSM), secure communication (SCM), resilience (RLM), network monitoring (NMM), traffic
+  control (TCM), confidential cryptographic keys (CCK), general equipment capabilities
+  (GEC), cryptography (CRY), logging (LGM), deletion (DLM) and user notification (UNM).
+applicability:
+  all:
+    - { fact: markets, in: [EU] }
+    - { fact: connectivity, in: [wifi, bluetooth, cellular, nfc-uwb] }
+    - not: { fact: productTypes, in: [medical-device] }
+applicabilityNote: >
+  Applies to radio equipment placed on the EU market from 1 August 2025: (d) to radio
+  equipment that can communicate over the internet directly or via other equipment, (e)
+  to such equipment that processes personal, traffic or location data and to radio toys,
+  childcare equipment and wearables, and (f) to internet-connected equipment that lets
+  the user transfer money, monetary value or virtual currency. Radio equipment that is
+  also a medical device or in vitro diagnostic device is excluded from all three points
+  (Art. 2(1)); equipment under the vehicle type-approval (2019/2144), civil aviation
+  (2018/1139) or electronic road toll (2019/520) rules is excluded from (e) and (f) only,
+  so EN 18031-1 still applies to it (Art. 2(2)). Harmonised-standard presumption is restricted (Implementing
+  Decision (EU) 2025/138): no presumption where the equipment lets users choose not to set
+  or use a password under clauses 6.2.5.1 and 6.2.5.2 (AUM-5) of each part, for EN 18031-2
+  the parental or guardian access control options for toys and childcare equipment, and
+  for EN 18031-3 the secure update requirement in clause 6.3.2.4. Where a restriction
+  applies, a notified body (EU-type examination) is required for that requirement.
+  Delegated Regulation (EU) 2026/339 repeals Delegated Regulation 2022/30 with effect from
+  11 December 2027, when the Cyber Resilience Act takes over; equipment placed on the
+  market until 10 December 2027 stays under the RED regime. Text is paraphrased; consult
+  the standards for the decision trees and assessment criteria.
+keyDates:
+  - { date: "2025-01-30", note: References of EN 18031-1/-2/-3:2024 published in the OJ with restrictions (Implementing Decision (EU) 2025/138) }
+  - { date: "2025-08-01", note: Article 3(3)(d)(e)(f) cybersecurity requirements apply to radio equipment placed on the market }
+  - { date: "2026-04-29", note: Delegated Regulation (EU) 2026/339 repealing Delegated Regulation 2022/30 published }
+  - { date: "2027-12-11", note: Delegated Regulation 2022/30 repealed; the Cyber Resilience Act applies instead }
+controls:
+  - ref: ACM-1
+    title: Access control for security and network assets
+    requirement: >
+      Equipment must have access control mechanisms that ensure only authorised entities
+      can access security assets and network assets (and, for part 2 and 3, privacy and
+      financial assets) through its interfaces, unless access is intended to be public or
+      the equipment's environment provides equivalent control.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Enumerate network and local interfaces (web UI, REST or CoAP endpoints, BLE GATT
+      characteristics, Matter clusters, MQTT topics, companion app APIs) and check that
+      operations reading or changing credentials, keys, configuration, firmware or personal
+      data are gated by an access check. For toys and childcare equipment (EN 18031-2),
+      check whether access control relies on parental or guardian control options, which
+      do not give presumption of conformity and need notified body assessment. Flag BLE
+      characteristics with write permission and no encryption or authentication
+      requirement.
+    evidence:
+      - Access checks on every interface handling security, network or personal assets
+      - Documented decision-tree outcome for each interface
+    checks: [mobile-exported-component, cors-wildcard]
+    crosswalk: ["etsi-en-303-645:5.5-5", "iec-62443-4-2:CR 2.1", "eu-cra:AnnexI.I.2(d)", "owasp-top10:A01"]
+
+  - ref: AUM-1
+    title: Authentication of entities accessing assets
+    requirement: >
+      Where access control requires it, equipment must authenticate users, devices and
+      services before granting access to assets over network interfaces, using
+      appropriate authentication mechanisms and validating authenticators securely.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check authentication on local and remote interfaces: password or token checks in web
+      and API handlers, BLE pairing with LE Secure Connections and bonding, mutual TLS or
+      signed tokens for device-to-cloud, and session handling. Flag hard-coded bypasses
+      (if (user == "debug")), authentication done only in the app, and comparisons of
+      secrets that leak timing.
+    evidence:
+      - Authentication on all access-controlled interfaces
+      - Secure validation of authenticators
+    checks: [hardcoded-secret, jwt-unverified, cleartext-transport]
+    crosswalk: ["iec-62443-4-2:CR 1.1", "iec-62443-4-2:CR 1.2", "eu-cra:AnnexI.I.2(d)", "etsi-en-303-645:5.1-3"]
+
+  - ref: AUM-4
+    title: Changing authenticators
+    requirement: >
+      Where passwords or other authenticators are used, authorised users must be able to
+      change them.
+    category: authentication-access
+    severity: medium
+    fixability: code
+    guidance: >
+      Look for a credential change function in the device UI, web interface or companion
+      app that updates stored credentials and ends existing sessions.
+    evidence:
+      - Credential change available to users
+    crosswalk: ["etsi-en-303-645:5.1-4"]
+
+  - ref: AUM-5
+    title: Factory default and password strength rules
+    requirement: >
+      Factory default passwords must be unique per device and not derivable from public
+      information, and passwords must meet strength requirements (AUM-5-1 and AUM-5-2,
+      clauses 6.2.5.1 and 6.2.5.2). Letting users choose not to set or use a password
+      removes the harmonised-standard presumption of conformity.
+    category: authentication-access
+    severity: critical
+    fixability: code
+    guidance: >
+      Search firmware, app and provisioning tools for universal default passwords, Wi-Fi
+      softAP keys and PINs shared by all units, and passwords derived from MAC addresses or
+      serial numbers. Check password set handlers for minimum length and complexity. Check
+      whether the product offers a "no password" or "skip" option on setup: if so, flag that
+      the EN 18031 presumption does not apply and a notified body assessment is needed.
+    evidence:
+      - Unique random per-device defaults or forced user password
+      - Password strength enforcement with no option to disable passwords
+    checks: [default-credentials, hardcoded-secret, insecure-random]
+    crosswalk: ["etsi-en-303-645:5.1-1", "etsi-en-303-645:5.1-2", "uk-psti:Sch1.1", "iec-62443-4-2:CR 1.5", "iec-62443-4-2:CR 1.7"]
+
+  - ref: AUM-6
+    title: Brute force protection
+    requirement: >
+      Authentication mechanisms reachable over network interfaces must make brute-force
+      attacks impractical, for example by delays, lockout or attempt limits.
+    category: authentication-access
+    severity: high
+    fixability: code
+    guidance: >
+      Check login, PIN and pairing handlers for attempt counters, back-off delays or
+      lockout. Flag short numeric PINs on network-reachable interfaces without limits.
+    evidence:
+      - Attempt limiting on all network authentication paths
+    checks: [missing-rate-limiting]
+    crosswalk: ["etsi-en-303-645:5.1-5", "iec-62443-4-2:CR 1.11", "owasp-top10:A07"]
+
+  - ref: SUM-1
+    title: Update mechanism available
+    requirement: >
+      Equipment must have an update mechanism for its software unless a justified
+      exception applies, and should support automatic or easily applied security updates
+      (SUM-3).
+    category: updates-maintenance
+    severity: high
+    fixability: code
+    guidance: >
+      Identify the update path for all software on the radio equipment, including radio
+      module firmware (Wi-Fi or BLE coprocessor, cellular modem). Check that updates can be
+      applied by users or automatically. Equipment that cannot be updated needs a
+      documented justification in the decision tree.
+    evidence:
+      - Update mechanism covering all firmware components
+    checks: [firmware-update-unsigned]
+    artifacts: [update-policy]
+    crosswalk: ["etsi-en-303-645:5.3-2", "eu-cra:AnnexI.I.2(c)"]
+
+  - ref: SUM-2
+    title: Secure updates
+    requirement: >
+      The update mechanism must ensure the integrity and authenticity of updates, for
+      example through digital signatures verified on the device, and resist rollback where
+      relevant. For EN 18031-3 the secure update clause 6.3.2.4 is restricted in the OJ
+      citation and needs separate assessment.
+    category: updates-maintenance
+    severity: critical
+    fixability: code
+    guidance: >
+      Check signature verification before installation (MCUboot, ESP-IDF secure boot v2 or
+      signed app verification, Nordic DFU signed packages, SUIT manifests, SWUpdate or RAUC
+      signed bundles), protection of the public key in immutable storage, and
+      anti-rollback. Flag OTA code that installs images verified only by CRC or a hash
+      downloaded from the same source, or downloads over http:// or with TLS verification
+      disabled.
+    evidence:
+      - Signed updates verified on the device
+      - Anti-rollback and protected verification keys
+    checks: [firmware-update-unsigned, tls-verification-disabled, cleartext-transport]
+    crosswalk: ["etsi-en-303-645:5.3-10", "iec-62443-4-2:EDR 3.10", "iec-62443-4-1:SUM-4", "eu-cra:AnnexI.II.7"]
+
+  - ref: SSM-2
+    title: Secure storage of security and personal assets
+    requirement: >
+      Stored security assets (keys, credentials) and, under parts 2 and 3, personal and
+      financial assets must be protected for integrity and, where needed, confidentiality
+      (SSM-2 integrity, SSM-3 confidentiality).
+    category: secrets-management
+    severity: high
+    fixability: code
+    guidance: >
+      Check flash encryption and NVS encryption (CONFIG_SECURE_FLASH_ENC_ENABLED,
+      CONFIG_NVS_ENCRYPTION), secure elements or TrustZone storage for keys, readout
+      protection of internal flash (STM32 RDP, nRF APPROTECT), and Keystore or Keychain in
+      companion apps. Flag credentials in plaintext files or unprotected external flash.
+    evidence:
+      - Encrypted or hardware-protected storage
+      - Debug readout protection enabled
+    checks: [secure-boot-disabled, debug-interface-enabled, hardcoded-crypto-key, mobile-backup-allowed]
+    crosswalk: ["etsi-en-303-645:5.4-1", "iec-62443-4-2:CR 4.1", "eu-cra:AnnexI.I.2(e)"]
+
+  - ref: SCM-2
+    title: Secure communication
+    requirement: >
+      Communication of security, personal and financial assets over network interfaces
+      must be protected for integrity and authenticity (SCM-2), confidentiality (SCM-3)
+      and against replay (SCM-4), using best-practice protocols.
+    category: communications-security
+    severity: high
+    fixability: code
+    guidance: >
+      Check TLS 1.2 or later with certificate validation for cloud traffic (mbedTLS
+      MBEDTLS_SSL_VERIFY_REQUIRED, esp_crt_bundle_attach), DTLS or OSCORE for CoAP, BLE LE
+      Secure Connections with encrypted characteristics for sensitive data, WPA2 or WPA3
+      for Wi-Fi provisioning, and nonces or sequence numbers against replay in custom
+      protocols. Flag http://, mqtt://, plaintext BLE characteristics carrying credentials,
+      and disabled certificate checks.
+    evidence:
+      - Authenticated encryption on all external channels
+      - Replay protection in custom protocols
+    checks: [cleartext-transport, tls-verification-disabled, weak-cipher]
+    crosswalk: ["etsi-en-303-645:5.5-1", "iec-62443-4-2:CR 3.1", "eu-cra:AnnexI.I.2(e)"]
+
+  - ref: CCK-3
+    title: No static default cryptographic keys
+    requirement: >
+      Confidential cryptographic keys must be of appropriate strength (CCK-1), generated
+      with suitable mechanisms (CCK-2), and pre-installed keys must not be static default
+      values shared across devices (CCK-3).
+    category: secrets-management
+    severity: critical
+    fixability: code
+    guidance: >
+      Search for literal key arrays and PEM private keys in source and default
+      configuration, fleet-wide symmetric keys for cloud or update encryption, and keys
+      derived from serial numbers. Good looks like per-device keys generated on device from
+      a TRNG or injected by a factory HSM.
+    evidence:
+      - Per-device keys from a secure generation process
+      - No shared or hard-coded secret keys
+    checks: [hardcoded-crypto-key, hardcoded-secret, insecure-random]
+    crosswalk: ["etsi-en-303-645:5.4-3", "etsi-en-303-645:5.4-4", "cert-c:MSC41-C"]
+
+  - ref: GEC-1
+    title: No publicly known exploitable vulnerabilities
+    requirement: >
+      Software and hardware must be kept up to date so that the equipment does not contain
+      publicly known exploitable vulnerabilities when placed on the market.
+    category: vulnerability-management
+    severity: critical
+    fixability: code
+    guidance: >
+      Check versions of the SDK (ESP-IDF, nRF Connect SDK, Zephyr, Yocto layers), TLS
+      library, Bluetooth stack and radio firmware against known CVEs (for example BLE
+      stack vulnerabilities such as SweynTooth or BrakTooth in vendor SDKs), and look for a
+      release-time vulnerability scan against an SBOM.
+    evidence:
+      - Release-time vulnerability scan of all components
+      - Current SDK and radio firmware versions
+    artifacts: [sbom, vulnerability-scanning]
+    crosswalk: ["eu-cra:AnnexI.I.2(a)", "nist-ssdf:PW.4.4"]
+
+  - ref: GEC-2
+    title: Limit exposed services and interfaces
+    requirement: >
+      Exposure of services through network interfaces must be limited to what is needed,
+      optional services must be configurable, exposed interfaces and services must be
+      documented, and unnecessary external interfaces must not be present (GEC-2 to GEC-5).
+    category: secure-development
+    severity: high
+    fixability: code
+    guidance: >
+      List listening sockets, mDNS and UPnP advertisements, BLE services and debug ports in
+      release builds and compare with the product documentation. Flag telnet, FTP, debug
+      HTTP endpoints, open UART shells and JTAG or SWD left enabled.
+    evidence:
+      - Documented list of exposed interfaces and services
+      - Unused services and debug ports disabled
+    checks: [debug-enabled, debug-interface-enabled, cleartext-transport]
+    artifacts: [user-documentation]
+    crosswalk: ["etsi-en-303-645:5.6-1", "etsi-en-303-645:5.6-4A", "iec-62443-4-2:CR 7.7", "eu-cra:AnnexI.I.2(j)"]
+
+  - ref: CRY-1
+    title: Best practice cryptography
+    requirement: >
+      Security mechanisms must use best-practice cryptographic algorithms, modes and key
+      lengths.
+    category: cryptography
+    severity: high
+    fixability: code
+    guidance: >
+      Flag MD5, SHA-1, DES, 3DES, RC4, ECB, RSA below 2048 bits, custom ciphers and
+      non-cryptographic random sources for keys and nonces. Good looks like AES-GCM or
+      AES-CCM, SHA-256 or better, ECDSA P-256 or Ed25519, X25519, and a seeded DRBG or
+      hardware TRNG.
+    evidence:
+      - Approved algorithms and key sizes throughout
+    checks: [weak-hash, weak-cipher, insecure-random]
+    crosswalk: ["iec-62443-4-2:CR 4.3", "owasp-top10:A04", "cert-c:MSC30-C"]
+
+  - ref: RLM-1
+    title: Resilience against denial of service
+    requirement: >
+      Equipment must have mechanisms that mitigate the effect of denial-of-service attacks
+      on its own operation (RLM, parts 1 and 3); network equipment must also monitor for and
+      mitigate attacks and control traffic (NMM-1 and TCM-1).
+    category: resilience-availability
+    severity: medium
+    fixability: code
+    guidance: >
+      Check for connection and rate limits, bounded buffers, timeouts, watchdog recovery
+      and back-off on reconnect. For routers, gateways and access points, check firewall
+      defaults, flood protection and traffic filtering features.
+    evidence:
+      - Rate and resource limits and watchdog recovery
+      - Traffic control features for network equipment
+    checks: [missing-watchdog, missing-rate-limiting]
+    crosswalk: ["eu-cra:AnnexI.I.2(h)", "eu-cra:AnnexI.I.2(i)", "iec-62443-4-2:CR 7.1"]
+
+  - ref: LGM-1
+    title: Security logging
+    requirement: >
+      Under parts 2 and 3, equipment must log security-relevant events (for example
+      access to personal or financial assets and changes to security settings), store logs
+      persistently with reliable time, and protect them.
+    category: logging-monitoring
+    severity: medium
+    fixability: code
+    when: { all: [ { not: { fact: productTypes, in: [automotive-ecu] } }, { any: [ { fact: dataCategories, in: [personal, health, genetic-biometric, children, location, credentials, financial, payment-cards] }, { fact: audience, in: [children] } ] } ] }
+    guidance: >
+      Look for an event log on device or backend that records authentication, access to
+      personal or payment data, configuration changes and update events, with timestamps
+      from a reliable source (NTP or RTC), size limits and protection against tampering.
+      Check logs exclude secrets.
+    evidence:
+      - Security event log with reliable timestamps
+    checks: [pii-in-logs]
+    crosswalk: ["iec-62443-4-2:CR 2.8", "eu-cra:AnnexI.I.2(l)"]
+
+  - ref: DLM-1
+    title: Deletion of personal data
+    requirement: >
+      Under EN 18031-2, equipment that stores personal data must give users a way to
+      delete it, including personal data held on the equipment and, where applicable,
+      associated security assets.
+    category: privacy-rights
+    severity: medium
+    fixability: code
+    when: { all: [ { not: { fact: productTypes, in: [automotive-ecu] } }, { any: [ { fact: dataCategories, in: [personal, health, genetic-biometric, children, location, credentials] }, { fact: audience, in: [children] } ] } ] }
+    guidance: >
+      Check for a factory reset or delete function that erases personal data, credentials
+      and keys from device storage (not just marking them deleted) and a companion app or
+      API path to delete cloud-side data.
+    evidence:
+      - Effective deletion of personal data and credentials
+    crosswalk: ["etsi-en-303-645:5.11-1", "eu-cra:AnnexI.I.2(m)", "gdpr:Art.17"]
+
+  - ref: UNM-1
+    title: User notification of privacy-relevant changes
+    requirement: >
+      Under EN 18031-2, equipment must notify users of changes that affect the processing
+      of their personal data, for example changes to privacy-relevant settings or the
+      start of data collection by sensors.
+    category: privacy-rights
+    severity: low
+    fixability: code
+    when: { all: [ { not: { fact: productTypes, in: [automotive-ecu] } }, { any: [ { fact: dataCategories, in: [personal, health, genetic-biometric, children, location] }, { fact: audience, in: [children] } ] } ] }
+    guidance: >
+      Look for in-app or on-device notifications when privacy settings change, when
+      recording or location sharing starts (LED indicators, notifications), and when
+      software updates change data processing.
+    evidence:
+      - User notifications for privacy-relevant changes
+    crosswalk: ["etsi-en-303-645:5.8-3", "etsi-en-303-645:6-1"]

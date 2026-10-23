@@ -117,7 +117,17 @@ export type Control = ControlDef & {
   frameworkTitle: string;
 };
 
-export type Framework = Omit<FrameworkDef, "controls"> & { controls: Control[] };
+/** built-in: shipped in registry/; custom: the server's own frameworks directory; project: <repo>/.acai/rules. */
+export type FrameworkOrigin = "built-in" | "custom" | "project";
+
+export type Framework = Omit<FrameworkDef, "controls"> & {
+  controls: Control[];
+  origin: FrameworkOrigin;
+  /** The YAML file it was loaded from. */
+  file: string;
+  /** Set when this framework replaced one with the same id from an earlier layer. */
+  replaces?: { origin: FrameworkOrigin; version: string };
+};
 
 export type Registry = {
   questionnaire: z.infer<typeof questionnaireSchema>;

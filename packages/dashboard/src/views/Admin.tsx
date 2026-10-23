@@ -7,8 +7,9 @@ import { useToast } from "../context";
 import { type AdminTab, ago, fmtTime, useResource } from "../hooks";
 import type { AccountRef, AuthEvent, Role, ServerInfo, TokenInfo, UserInfo } from "../types";
 import { ROLE_HELP, ROLE_LABELS } from "./Account";
+import { Frameworks } from "./Frameworks";
 
-const TAB_LABELS: Record<AdminTab, string> = { users: "Users", tokens: "Tokens", activity: "Activity", server: "Server" };
+const TAB_LABELS: Record<AdminTab, string> = { users: "Users", tokens: "Tokens", frameworks: "Frameworks", activity: "Activity", server: "Server" };
 const ROLES: Role[] = ["admin", "member", "viewer"];
 
 /** `me` is null in local mode, where the person at this machine acts as administrator. */
@@ -25,6 +26,7 @@ export function AdminView({ tab, me, onMetaChanged }: { tab: AdminTab; me: Accou
       </nav>
       {tab === "users" && <Users me={me} onMetaChanged={onMetaChanged} />}
       {tab === "tokens" && <Tokens />}
+      {tab === "frameworks" && <Frameworks />}
       {tab === "activity" && <Activity />}
       {tab === "server" && <Server />}
     </div>

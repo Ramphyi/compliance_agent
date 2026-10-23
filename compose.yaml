@@ -1,4 +1,5 @@
 # Acai as a service: dashboard, API and MCP over HTTP on http://127.0.0.1:4317.
+# Step-by-step guide: docs/DOCKER.md.
 #
 #   cp .env.example .env            # set ACAI_ADMIN_TOKEN (and a model key if you want Acai's own agents)
 #   mkdir -p repos && git clone <repo> repos/<name>
@@ -46,7 +47,8 @@ services:
       ACAI_APPROVERS: ${ACAI_APPROVERS:-}
       # The model can also be chosen on the dashboard's Model page; keys for it come from .env:
       # ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, MISTRAL_API_KEY,
-      # GROQ_API_KEY, DEEPSEEK_API_KEY, XAI_API_KEY, TOGETHER_API_KEY (see `acai providers`).
+      # GROQ_API_KEY, DEEPSEEK_API_KEY, XAI_API_KEY, TOGETHER_API_KEY, and for Microsoft Foundry
+      # AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT or ANTHROPIC_FOUNDRY_API_KEY + ANTHROPIC_FOUNDRY_RESOURCE (see `acai providers`).
     # One service needs no network of its own (and Docker hosts with many projects run out of subnets).
     network_mode: bridge
     extra_hosts:

@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 const api = "http://127.0.0.1:4317";
 
 // `base: "./"` keeps every asset URL relative, so the build works under any path
-// prefix and inside the VS Code webview iframe.
+// prefix and inside the VS Code webview iframe. welcome.html is the landing page (/welcome).
 export default defineConfig({
   base: "./",
   plugins: [react()],
@@ -14,5 +14,9 @@ export default defineConfig({
       "/mcp": { target: api },
     },
   },
-  build: { outDir: "dist", emptyOutDir: true },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    rollupOptions: { input: { main: "index.html", welcome: "welcome.html" } },
+  },
 });

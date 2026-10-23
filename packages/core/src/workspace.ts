@@ -7,6 +7,7 @@ import { changedPaths, commitPaths, currentBranch, diffSince, ensureBranch, head
 import { detectVerifyCommands, runVerification } from "./fix/verify";
 import { computeScope, inScope, scopedControls, visibleQuestions } from "./registry/conditions";
 import { CATEGORIES, SEVERITIES } from "./registry/ids";
+import { frameworkLayers } from "./registry/custom";
 import { loadRegistry } from "./registry/load";
 import type { Control, Question, Registry } from "./registry/schema";
 import { applyReview, availableActions, ReviewError, type ReviewInput, summarize } from "./review";
@@ -56,14 +57,15 @@ export class Workspace {
     const abs = resolve(root);
     if (!existsSync(abs)) throw new Error(`Project directory not found: ${abs}`);
     const store = new Store(abs, opts.stateDir);
-    const { registry, errors } = loadRegistry(opts.registryRoot, [store.rulesDir()]);
+    const { registry, errors } = loadRegistry(opts.registryRoot, frameworkLayers(store.rulesDir()));
     const ws = new Workspace(abs, store, registry);
     ws.registryErrors = errors;
     return ws;
   }
 
+  /** Re-read the built-in registry, the server's frameworks and this project's rules. */
   reloadRegistry() {
-    const { registry, errors } = loadRegistry(this.registry.root, [this.store.rulesDir()]);
+    const { registry, errors } = loadRegistry(this.registry.root, frameworkLayers(this.store.rulesDir()));
     this.registry = registry;
     this.registryErrors = errors;
   }
@@ -238,6 +240,8 @@ export class Workspace {
         jurisdictions: f.jurisdictions,
         controls: scopedControls(this.registry, [{ ...s, override: "include" }], p.answers).length,
         keyDates: f.keyDates,
+        origin: f.origin,
+        replaces: f.replaces,
       };
     });
   }
@@ -326,7 +330,15 @@ export class Workspace {
     return {
       ...f,
       actions: availableActions(f.status),
-      controls: controls.map((c) => ({ id: c.id, framework: c.frameworkTitle, ref: c.ref, title: c.title, requirement: c.requirement })),
+      controls: controls.map((c) => ({
+        id: c.id,
+        frameworkId: c.frameworkId,
+        framework: c.frameworkTitle,
+        frameworkKind: this.registry.frameworks.find((x) => x.id === c.frameworkId)?.kind,
+        ref: c.ref,
+        title: c.title,
+        requirement: c.requirement,
+      })),
     };
   }
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type Engine, presetById } from "./catalog";
+import { type Engine, presetById, presetEndpointFromEnv } from "./catalog";
 
 export type AgentTool<T = unknown> = {
   name: string;
@@ -93,6 +93,16 @@ export type ProviderConfig = {
 export function providerConfigFromEnv(env = process.env): ProviderConfig {
   // ACAI_PROVIDER may name any catalog entry, for example gemini, openrouter or ollama.
   const preset = presetById(env.ACAI_PROVIDER);
+  // Microsoft Foundry: the person's own resource, a deployment name and the key Azure issued.
+  if (preset?.group === "azure")
+    return {
+      provider: preset.engine,
+      preset: preset.id,
+      model: env.ACAI_MODEL || preset.defaultModel,
+      effort: env.ACAI_EFFORT as ProviderConfig["effort"],
+      baseURL: presetEndpointFromEnv(preset, env),
+      apiKey: (preset.keyEnv && env[preset.keyEnv]) || undefined,
+    };
   if (preset && preset.engine === "openai-compatible" && preset.id !== "openai-compatible")
     return {
       provider: "openai-compatible",

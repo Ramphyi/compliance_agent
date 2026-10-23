@@ -93,7 +93,11 @@ export function GuideView({ meta, section }: { meta: Meta; section?: string }) {
 
   return (
     <div className="page">
-      <PageHeader title="Guide" description="How an audit works, how to run it from an agent, and how to add rules." />
+      <PageHeader
+        title="Guide"
+        description="How an audit works, how to run it from an agent, and how to add rules."
+        actions={<a className="btn btn-sm btn-ghost" href="welcome">What Acai is for</a>}
+      />
       <div className="guide-layout">
         <nav className="guide-nav" aria-label="Guide sections">
           {SECTIONS.map((s) => (

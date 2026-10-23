@@ -112,6 +112,8 @@ code --install-extension dist/acai-vscode.vsix
 - **Medical:** IEC 62304, ISO 14971, EU MDR (software), FDA premarket cybersecurity / 524B, IEC 81001-5-1
 - **Platforms:** Apple App Review, Google Play policy
 
+**Your own standards, on-premise.** Administrators can add frameworks that are not built in, or update a built-in one with a newer revision, as YAML on the running server: in **Admin → Frameworks** or with `acai frameworks add <file.yaml>`. They apply to every project at once, with no rebuild. See [registry/README.md](registry/README.md).
+
 **Research.** With the Anthropic provider, `acai research` (or the dashboard) searches official sources for guardrails beyond the registry. An MCP host can do the same with its own web search through `acai_propose_rules`. A person accepts or rejects each proposed rule. Accepted rules become a project-local framework in `.acai/rules/`.
 
 **Dates and versions** were checked against official sources in October 2026 where possible; each framework's `keyDates` and notes say what was verified. Re-check anything you rely on with counsel.
@@ -138,6 +140,9 @@ Acai's own agents (product analyst, auditor, re-investigator, fixer, researcher)
 | `anthropic`: Claude | `ANTHROPIC_API_KEY` | Messages API. Default `claude-opus-5-5`, adaptive thinking, effort `high` (`ACAI_EFFORT`), refusal fallback, web search for research. |
 | `openai`: GPT | `OPENAI_API_KEY` | Responses API with `store: false`. Default `gpt-5.5`, web search for research. |
 | `gemini`, `openrouter`, `mistral`, `groq`, `deepseek`, `xai`, `together` | `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, … | Their OpenAI-compatible endpoints. OpenRouter gives access to most other models. No web research. |
+| `azure-openai`: Azure OpenAI in Microsoft Foundry | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` | Responses API on your resource's v1 endpoint, for GPT deployments (and DeepSeek or Grok). The model is the deployment name. No web research. |
+| `azure-foundry`: other Foundry models | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` | Chat Completions on the same endpoint, for Llama, Mistral, Phi and other deployments. |
+| `azure-claude`: Claude in Microsoft Foundry | `ANTHROPIC_FOUNDRY_API_KEY`, `ANTHROPIC_FOUNDRY_RESOURCE` (or `ANTHROPIC_FOUNDRY_BASE_URL`) | Messages API on `https://<resource>.services.ai.azure.com/anthropic/`; default deployment `claude-opus-5-5`. Web research with the basic web search tool. Billed through Azure. |
 | `ollama`, `lmstudio` | none | Models on your own machine, fully on-premise. In Docker they are reached through `host.docker.internal`. |
 | `openai-compatible` with `ACAI_OPENAI_BASE_URL` | `ACAI_OPENAI_API_KEY` | Any other endpoint: vLLM, LiteLLM, an internal gateway. |
 | none | | Detectors and evidence checks only. Agents connected over MCP can still do the reasoning with their own model. |
@@ -157,7 +162,7 @@ docker compose --profile tls up -d         # optional: Caddy with HTTPS (set ACA
 
 Sign in with `ACAI_ADMIN_TOKEN`, then add people under **Admin** or with `docker compose exec acai node /opt/acai/acai.mjs users add <name> --role member`. Every git repository in `./repos` becomes a project; add more later from the dashboard (`/workspace/<name>`). In `.env`, `ACAI_REPOS` points the container at another folder of repositories and `ACAI_HOST_PORT` changes the port. On macOS, Docker Desktop can only mount folders it shares (Settings → Resources → File sharing); `/Users` is shared by default, `/Applications` is not. Agents on your computer connect over HTTP with an API token, for example `claude mcp add --transport http acai http://127.0.0.1:4317/mcp --header "Authorization: Bearer $ACAI_TOKEN"`. Open the agent in the repository's folder on your computer; the container sees the same files.
 
-**[docs/DEPLOY.md](docs/DEPLOY.md)** covers TLS and reverse proxies, systemd and Kubernetes, backups, upgrades, air-gapped installs with a local model, and a hardening checklist.
+**[docs/DOCKER.md](docs/DOCKER.md)** is the step-by-step guide to running it with Docker: setup, the model (including Microsoft Foundry), connecting agents, everyday commands and troubleshooting. **[docs/DEPLOY.md](docs/DEPLOY.md)** covers TLS and reverse proxies, systemd and Kubernetes, backups, upgrades, air-gapped installs with a local model, and a hardening checklist.
 
 - **Accounts.** Each person has an account with a role: `viewer` (read only), `member` (audits, reviews, fixes, MCP) or `admin` (also users, tokens, approvals, the model). They sign in with API tokens (`acai_…`); Acai stores only hashes, in `$ACAI_HOME/auth.json`. The dashboard exchanges a token for a session cookie. Revoking a token or disabling an account ends its sessions and OAuth grants. Manage accounts under **Admin**, with `acai users` and `acai tokens`, or through `/api/admin`. `ACAI_TOKENS=name:token,...` still works for read-only accounts from the environment.
 - **Network.** Without accounts the server is a local single-user tool: it binds to localhost only and rejects requests whose `Host` header isn't local, which blocks DNS rebinding. Listening on any other interface requires an account (`ACAI_ADMIN_TOKEN` or `acai users add`).

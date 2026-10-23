@@ -185,6 +185,23 @@ docker compose start acai
 
 On bare metal, back up `/var/lib/acai` and `/srv/acai/repos`.
 
+## Your own and updated frameworks
+
+Administrators can add frameworks or update built-in ones (for example a newer ISO revision, or
+an internal standard) on the running server: **Admin → Frameworks**, or
+
+```sh
+docker compose exec -T acai node /opt/acai/acai.mjs frameworks add - < iso-iec-27001.yaml
+docker compose exec acai node /opt/acai/acai.mjs frameworks          # built-in, custom and updated
+docker compose exec acai node /opt/acai/acai.mjs frameworks show iso-iec-27001 > iso-iec-27001.yaml
+```
+
+They are stored in the data volume (`/data/frameworks`), so they are part of the backup, and
+survive upgrades. A framework you updated keeps replacing the built-in one after an upgrade,
+even if the new release ships a newer built-in revision; compare the versions under
+Admin → Frameworks after upgrading. To manage them in git instead, mount a checkout read-only
+and set `ACAI_FRAMEWORKS_DIR` to it. See [registry/README.md](../registry/README.md).
+
 ## Upgrades
 
 ```sh
@@ -266,6 +283,7 @@ From the container, a server on the Docker host is `http://host.docker.internal:
 | `ACAI_ADMINS` | all environment accounts | Which environment accounts are administrators |
 | `ACAI_APPROVERS` | | Members who may approve commands and change the model |
 | `ACAI_HOME` | `~/.acai` (`/data` in Docker) | Server state |
+| `ACAI_FRAMEWORKS_DIR` | `$ACAI_HOME/frameworks` | This server's own and updated frameworks |
 | `ACAI_HOST`, `ACAI_PORT` | `127.0.0.1`, `4317` (`0.0.0.0` in Docker) | Listen address |
 | `ACAI_PUBLIC_URL` | | Public HTTPS origin; turns on OAuth |
 | `ACAI_TRUST_PROXY` | `0` | `1` behind one reverse proxy |

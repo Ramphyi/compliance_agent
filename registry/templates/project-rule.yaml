@@ -1,5 +1,6 @@
 # Your own rules, written as a framework. Save a copy as <project>/.acai/rules/<id>.yaml for one
-# project, or as registry/frameworks/<id>.yaml for every project. The id must equal the file name.
+# project, or add it for every project on the server (Admin → Frameworks, or
+# `acai frameworks add <file.yaml>`; see templates/framework.yaml). The id must equal the file name.
 # Format, categories and fact values: registry/README.md and registry/questionnaire.yaml.
 id: internal-security-policy
 title: Internal security policy for products that handle health data

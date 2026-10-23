@@ -51,6 +51,11 @@ export function Scope() {
             <tr key={r.frameworkId} className={r.active ? "" : "dim"}>
               <td>
                 <button className="link-btn strong" onClick={() => setOpen(r.frameworkId)}>{r.shortTitle}</button>
+                {r.origin && r.origin !== "built-in" && (
+                  <span className="badge badge-accent scope-origin" title={r.replaces ? `Replaces the ${r.replaces.origin} version ${r.replaces.version}` : undefined}>
+                    {r.origin === "project" ? "Project rules" : r.replaces ? "Updated on this server" : "Added on this server"}
+                  </span>
+                )}
                 <div className="muted small clamp-1" title={r.title}>{r.title}</div>
               </td>
               <td className="small">{r.version}</td>

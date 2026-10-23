@@ -7,7 +7,7 @@ import { HandoffModal } from "../components/handoff";
 import { ActorTag, Empty, Loading, SeverityBadge, StatusBadge } from "../components/ui";
 import { useShell, useToast } from "../context";
 import { fmtTime, go, href, loc } from "../hooks";
-import { categoryLabel, type Finding, SEVERITIES, type Severity } from "../types";
+import { categoryLabel, type Finding, findingFrameworks, frameworkKindLabel, SEVERITIES, type Severity } from "../types";
 
 type Group = "decide" | "confirmed" | "fixes" | "closed" | "all";
 const GROUPS: Record<Group, { label: string; statuses?: string[] }> = {
@@ -26,6 +26,7 @@ export function Findings({ selectedId }: { selectedId?: string }) {
   const [kind, setKind] = useState<"all" | "code" | "evidence">("all");
   const [source, setSource] = useState("all");
   const [category, setCategory] = useState("all");
+  const [framework, setFramework] = useState("all");
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [help, setHelp] = useState(false);
@@ -45,10 +46,11 @@ export function Findings({ selectedId }: { selectedId?: string }) {
       if (kind === "evidence" && f.kind !== "missing-artifact") return false;
       if (source !== "all" && f.source !== source) return false;
       if (category !== "all" && f.category !== category) return false;
-      if (needle && !`${f.id} ${f.title} ${f.description} ${f.locations.map((l) => l.path).join(" ")} ${f.controlIds.join(" ")}`.toLowerCase().includes(needle)) return false;
+      if (framework !== "all" && !f.controls.some((c) => c.frameworkId === framework)) return false;
+      if (needle && !`${f.id} ${f.title} ${f.description} ${f.locations.map((l) => l.path).join(" ")} ${f.controlIds.join(" ")} ${f.controls.map((c) => c.framework).join(" ")}`.toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [findings, group, sev, kind, source, category, q]);
+  }, [findings, group, sev, kind, source, category, framework, q]);
 
   const current = findings.find((f) => f.id === selectedId) ?? list[0];
   const idx = current ? list.findIndex((f) => f.id === current.id) : -1;
@@ -90,6 +92,8 @@ export function Findings({ selectedId }: { selectedId?: string }) {
 
   const confirmed = findings.filter((f) => f.status === "confirmed" && f.fixability !== "process").length;
   const categories = [...new Set(findings.map((f) => f.category))].sort();
+  const frameworks = [...new Map(findings.flatMap(findingFrameworks).map((fw) => [fw.id, fw])).values()].sort((a, b) => a.title.localeCompare(b.title));
+  const kinds = [...new Set(frameworks.map((fw) => frameworkKindLabel(fw.kind)))].sort();
   const pickedFindings = findings.filter((f) => picked.has(f.id));
 
   return (
@@ -129,6 +133,14 @@ export function Findings({ selectedId }: { selectedId?: string }) {
         <select aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value)}>
           <option value="all">All categories</option>
           {categories.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}
+        </select>
+        <select aria-label="Framework" value={framework} onChange={(e) => setFramework(e.target.value)}>
+          <option value="all">All frameworks</option>
+          {kinds.map((k) => (
+            <optgroup key={k} label={`${k}s`}>
+              {frameworks.filter((fw) => frameworkKindLabel(fw.kind) === k).map((fw) => <option key={fw.id} value={fw.id}>{fw.title}</option>)}
+            </optgroup>
+          ))}
         </select>
         <label className="search">
           <Search size={14} aria-hidden />
@@ -174,6 +186,7 @@ export function Findings({ selectedId }: { selectedId?: string }) {
                   <StatusBadge status={f.status} />
                 </div>
                 <div className="f-title">{f.title}</div>
+                <FrameworkTags f={f} max={2} />
                 <div className="mono small muted truncate">{f.kind === "missing-artifact" ? "Evidence gap" : loc(f.locations[0])}</div>
               </a>
             </li>
@@ -203,6 +216,7 @@ function Detail({ f, flow, readOnly }: { f: Finding; flow: ReturnType<typeof use
           <span className="mono">{f.id}</span>
         </div>
         <h2 id={`t-${f.id}`}>{f.title}</h2>
+        <FrameworkTags f={f} />
       </header>
 
       {!readOnly && (
@@ -298,6 +312,27 @@ function Detail({ f, flow, readOnly }: { f: Finding; flow: ReturnType<typeof use
         )}
       </section>
     </article>
+  );
+}
+
+/** One tag per framework the finding maps to (ISO/IEC 27001, EU GDPR…), coloured by kind. */
+function FrameworkTags({ f, max }: { f: Finding; max?: number }) {
+  const all = findingFrameworks(f);
+  if (!all.length) return null;
+  const shown = max ? all.slice(0, max) : all;
+  return (
+    <span className="fw-tags">
+      {shown.map((fw) => (
+        <span key={fw.id} className={`badge fw-tag fw-${fw.kind ?? "other"}`} title={`${frameworkKindLabel(fw.kind)} · ${fw.title} ${fw.refs.join(", ")}`}>
+          {fw.title}
+        </span>
+      ))}
+      {all.length > shown.length && (
+        <span className="badge fw-tag" title={all.slice(shown.length).map((fw) => fw.title).join(", ")}>
+          +{all.length - shown.length}
+        </span>
+      )}
+    </span>
   );
 }
 

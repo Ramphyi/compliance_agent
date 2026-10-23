@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { AnthropicProvider } from "./anthropic";
+import { FOUNDRY_CLAUDE_MODELS, presetById } from "./catalog";
 import { OpenAIResponsesProvider } from "./openai";
 import { OpenAICompatibleProvider } from "./openai-compatible";
 import { type LlmProvider, type ProviderConfig, providerConfigFromEnv } from "./provider";
@@ -20,6 +21,12 @@ export async function createProvider(cfg: ProviderConfig = providerConfigFromEnv
 export async function listModels(cfg: ProviderConfig): Promise<string[]> {
   const opts = { apiKey: cfg.apiKey || undefined, baseURL: cfg.baseURL || undefined, maxRetries: 0, timeout: 20_000 };
   const ids: string[] = [];
+  const preset = presetById(cfg.preset);
+  // Never let the SDKs fill in api.openai.com or OPENAI_API_KEY for an Azure resource.
+  if (preset?.group === "azure" && !cfg.baseURL) throw new Error(`Enter your resource endpoint (${preset.endpointHint})`);
+  if (preset?.group === "azure" && !cfg.apiKey) throw new Error(`Enter the key of your Foundry resource, or set ${preset.keyEnv} on the server`);
+  // No Models API there: offer the default deployment names (they equal the model ids).
+  if (cfg.preset === "azure-claude") return FOUNDRY_CLAUDE_MODELS;
   if (cfg.provider === "anthropic") {
     for await (const m of new Anthropic(opts).models.list({ limit: 100 })) ids.push(m.id);
   } else if (cfg.provider === "openai" || cfg.provider === "openai-compatible") {

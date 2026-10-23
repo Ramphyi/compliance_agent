@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { presetById, type ProviderConfig, providerConfigFromEnv, type ProviderPreset } from "@acai/core";
+import { presetBaseURL, presetById, presetEndpointFromEnv, type ProviderConfig, providerConfigFromEnv, type ProviderPreset } from "@acai/core";
 import { acaiHome } from "./projects";
 
 /** The model chosen in the dashboard. Overrides the environment until it is reset. */
@@ -38,7 +38,7 @@ export function configFromSettings(s: ModelSettings, env = process.env): Provide
     provider: preset.engine,
     preset: preset.id,
     model: s.model || preset.defaultModel,
-    baseURL: s.baseURL || defaultBaseURL(preset, env),
+    baseURL: presetBaseURL(preset, s.baseURL) || defaultBaseURL(preset, env) || presetEndpointFromEnv(preset, env),
     apiKey: s.apiKey || (preset.keyEnv ? env[preset.keyEnv] : undefined) || (preset.id === "openai-compatible" ? env.OPENAI_API_KEY : undefined),
     effort: s.effort,
   };

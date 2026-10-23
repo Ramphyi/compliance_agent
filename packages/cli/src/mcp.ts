@@ -84,7 +84,8 @@ export function createMcpServer(ctx: McpContext) {
     async (uri, { id }) => {
       const f = ws(ctx.defaultProject ?? ctx.projects.list()[0]?.id).registry.frameworks.find((x) => x.id === id);
       if (!f) throw new Error(`Unknown framework ${id}`);
-      return { contents: [{ uri: uri.href, text: JSON.stringify(f, null, 1) }] };
+      const { file: _file, ...rest } = f;
+      return { contents: [{ uri: uri.href, text: JSON.stringify(rest, null, 1) }] };
     },
   );
   server.registerPrompt("audit", { title: "Run a compliance audit", description: "Audit this project with Acai, with you reviewing every finding." }, () => ({

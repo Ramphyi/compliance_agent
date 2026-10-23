@@ -16,6 +16,33 @@ Validate every file with:
 npm run registry:validate
 ```
 
+## Frameworks for a whole server (on-premise)
+
+An installed server can add standards that are not built in (another ISO standard, a
+customer's requirements, an internal secure-coding standard) and update built-in ones (a newer
+revision, or a company profile of a standard), without rebuilding Acai or editing this folder:
+
+- Dashboard: **Admin → Frameworks**. *New framework* starts from
+  [templates/framework.yaml](templates/framework.yaml), *Upload YAML* takes a file, and
+  *Update* on a built-in framework opens its current file. *Check* validates the file and
+  shows what it adds or replaces; *Save* applies it to every project.
+- Command line: `acai frameworks add <file.yaml>` (or `-` for stdin), `acai frameworks validate`,
+  `acai frameworks show <id>` to start an update, `acai frameworks remove <id>`, and
+  `acai frameworks template`.
+
+Files are stored in `$ACAI_HOME/frameworks/<id>.yaml` (the `/data` volume in Docker), or in
+`ACAI_FRAMEWORKS_DIR`, for example a read-only checkout of a git repository where compliance
+owners review changes. A running server applies changes in that folder at once.
+
+A file with the id of a built-in framework replaces it everywhere; the shipped file is never
+changed, and removing yours brings the built-in version back. A file that fails validation
+is skipped and listed under Admin → Frameworks, so a broken update leaves the previous
+version in place. Audits record the registry hash, so you can tell which version a result
+used. Re-audit after a change to check against it.
+
+Conditions can only use the facts and values in `questionnaire.yaml`. When no fact fits a new
+framework, use `applicability: { always: true }` and exclude it per project on the Scope page.
+
 ## Rules for one project
 
 A project can add its own frameworks, for example a company policy, without touching this

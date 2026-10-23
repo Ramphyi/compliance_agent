@@ -1,0 +1,48 @@
+# A framework (standard, regulation or internal policy) for this Acai server.
+#
+# Add it in the dashboard (Admin → Frameworks) or with `acai frameworks add <file.yaml>`.
+# It applies to every project on the server, without a rebuild.
+#
+# - New standard: pick a new id. The file is saved as <id>.yaml.
+# - Newer revision of a built-in framework: start from its current file
+#   (`acai frameworks show iso-iec-27001`, or Update in the dashboard), keep the id, and change
+#   version, keyDates and controls. Your file replaces the built-in one; remove it to go back.
+#
+# Paraphrase licensed standards (ISO, IEC, SAE…) and keep the clause numbers; never paste
+# their text. Facts and values for conditions: registry/questionnaire.yaml. Categories,
+# detectors (checks) and evidence artifacts: registry/README.md.
+id: example-standard
+title: Example standard - full title as published
+shortTitle: Example standard
+version: "2026"
+authority: Who publishes it
+kind: standard            # regulation, standard, guideline, platform-policy or contract
+jurisdictions: [global]
+url: https://example.com/standard
+textPolicy: paraphrased   # open if the text is free to reproduce
+summary: >
+  One paragraph: what the standard covers and who uses it.
+# When the framework applies. `{ always: true }` puts it in every project's scope; people can
+# still exclude it per project on the Scope page. Or use the questionnaire's facts, e.g.
+#   { fact: productTypes, in: [embedded-firmware, automotive-ecu] }
+applicability: { always: true }
+applicabilityNote: >
+  Why and when it applies, in plain words.
+keyDates:
+  - { date: "2026-01-01", note: "Published" }
+controls:
+  - ref: "5.1"            # the clause or requirement number in the standard
+    title: Short name of the requirement
+    requirement: >
+      The requirement, paraphrased: what must be true.
+    category: secure-development
+    severity: medium      # critical, high, medium, low or info
+    fixability: code      # code, document or process
+    guidance: >
+      What to look for in the code, build files, CI and documents, and what good and bad
+      look like. The agent and reviewers read this.
+    evidence:
+      - What demonstrates the requirement is met
+    checks: []            # detector ids that find violations in code, e.g. [unsafe-c-functions]
+    artifacts: []         # documents that evidence it, e.g. [threat-model, sbom]
+    crosswalk: []         # equivalent controls elsewhere, e.g. ["iso-iec-27001:A.8.28"]

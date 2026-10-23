@@ -27,6 +27,7 @@ export class OpenAICompatibleProvider implements LlmProvider {
     const preset = presetById(cfg.preset);
     if (!cfg.baseURL) throw new Error(`An endpoint URL is required for ${preset?.label ?? "the openai-compatible provider"} (ACAI_OPENAI_BASE_URL)`);
     if (!cfg.model) throw new Error(`Choose a model for ${preset?.label ?? "the openai-compatible provider"} (ACAI_MODEL)`);
+    if (preset?.group === "azure" && !cfg.apiKey) throw new Error(`${preset.label} needs the key of your Foundry resource (${preset.keyEnv})`);
     this.model = cfg.model;
     this.dialect = preset?.schema;
     this.client = new OpenAI({ baseURL: cfg.baseURL, apiKey: cfg.apiKey || "not-needed", maxRetries: 3, timeout: 10 * 60_000 });

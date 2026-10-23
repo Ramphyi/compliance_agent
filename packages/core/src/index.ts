@@ -1,7 +1,10 @@
 export * from "./types";
 export * from "./registry/ids";
 export * from "./registry/schema";
-export { loadRegistry, findRegistryRoot, type RegistryIssue } from "./registry/load";
+export { checkFramework, loadRegistry, findRegistryRoot, type FrameworkCheck, type FrameworkLayer, type RegistryIssue } from "./registry/load";
+export {
+  acaiHome, customFrameworksDir, FrameworkError, frameworkLayers, frameworkSource, frameworkTemplate, listFrameworks, removeFramework, saveFramework, serverRegistry, validateFramework,
+} from "./registry/custom";
 export { computeScope, evaluate, inScope, scopedControls, visibleQuestions } from "./registry/conditions";
 export { scanProject, redactSecrets, isSensitivePath, type Snapshot } from "./scan/walk";
 export { confine, readTools, writeTools, type ToolContext } from "./llm/tools";
@@ -19,7 +22,7 @@ export { BATCHES, agentActor, fixFinding, investigate, reinvestigate, research, 
 export { AUDITOR_SYSTEM, FIXER_SYSTEM, REINVESTIGATE_SYSTEM, RESEARCH_SYSTEM, UNDERSTAND_SYSTEM } from "./audit/prompts";
 export { providerConfigFromEnv, type AgentEvent, type LlmProvider, type ProviderConfig } from "./llm/provider";
 export { createProvider, listModels } from "./llm/factory";
-export { MODEL_KEY_ENVS, presetById, PROVIDER_PRESETS, type Engine, type ProviderPreset } from "./llm/catalog";
+export { FOUNDRY_CLAUDE_MODELS, MODEL_KEY_ENVS, presetBaseURL, presetById, presetEndpointFromEnv, PROVIDER_PRESETS, type Engine, type ProviderPreset } from "./llm/catalog";
 export { gate, markdownReport, report, sarifReport } from "./report";
 export { findingTasks, fixTasks, tasksMarkdown, type FixTask } from "./handoff";
 export { changedPaths, currentBranch, head } from "./fix/git";

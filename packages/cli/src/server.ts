@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, watch, type FSWatcher } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, watch, type FSWatcher } from "node:fs";
 import type { Server } from "node:http";
 import { userInfo } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -10,6 +10,7 @@ import {
   type Actor, ALL_CHECKS, ARTIFACTS, BATCHES, CATEGORY_LABELS, confine, createProvider, type FindingDraft, fixFinding, investigate, isSensitivePath, listModels,
   presetById, PROVIDER_PRESETS,
   currentBranch, fixTasks, isGitRepo, type LlmProvider, redactSecrets, tasksMarkdown, reinvestigate, report, research, ReviewError, summarize, understandProduct, type Workspace,
+  presetEndpointFromEnv, customFrameworksDir, FrameworkError, frameworkSource, frameworkTemplate, listFrameworks, removeFramework, saveFramework, validateFramework,
 } from "@acai/core";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { CLIENT_LABELS, CLIENTS, connectGuide, launcher, REMOTE_ONLY } from "./connect";
@@ -365,6 +366,50 @@ export function createApp(opts: ServerOptions) {
     };
   }));
 
+  // Frameworks for every project on this server: new standards, internal rules, and newer
+  // revisions of built-in ones (same id). Stored in customFrameworksDir(), applied at once.
+  app.get("/api/admin/frameworks", route(() => {
+    let writable = true;
+    try {
+      mkdirSync(customFrameworksDir(), { recursive: true });
+    } catch {
+      writable = false;
+    }
+    return { ...listFrameworks(), writable };
+  }));
+  app.get("/api/admin/frameworks/template", route(() => ({ yaml: frameworkTemplate() })));
+  app.get("/api/admin/frameworks/:id/source", route((req) => frameworkSource(String(req.params.id))));
+  app.post("/api/admin/frameworks/validate", route((req) => validateFramework(String(req.body?.yaml ?? ""))));
+  app.post("/api/admin/frameworks", route((req, res) => {
+    try {
+      const saved = saveFramework(String(req.body?.yaml ?? ""));
+      opts.projects.reloadRegistries();
+      auth.log(changedBy(req, res), saved.replaces ? "framework.update" : "framework.add", `${saved.framework!.id} ${saved.framework!.version}`);
+      const { file: _file, ...check } = saved;
+      return check;
+    } catch (e) {
+      if (e instanceof FrameworkError) return void res.status(422).json({ error: e.message, check: e.check });
+      throw e;
+    }
+  }));
+  app.delete("/api/admin/frameworks/:id", route((req, res) => {
+    const out = removeFramework(String(req.params.id));
+    opts.projects.reloadRegistries();
+    auth.log(changedBy(req, res), "framework.remove", String(req.params.id));
+    return out;
+  }));
+  // Files added with `acai frameworks add`, or copied in by hand, reach open projects without a restart.
+  try {
+    mkdirSync(customFrameworksDir(), { recursive: true });
+    let timer: NodeJS.Timeout | undefined;
+    watch(customFrameworksDir(), { persistent: false }, () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => opts.projects.reloadRegistries(), 300);
+    });
+  } catch {
+    /* read-only or unavailable: POST /api/registry/reload applies changes */
+  }
+
   // ---------------------------------------------------------------- projects
   app.get("/api/projects", route(() =>
     opts.projects.list().map((p) => {
@@ -425,7 +470,7 @@ export function createApp(opts: ServerOptions) {
       locked: modelLocked(),
       inContainer: process.env.ACAI_CONTAINER === "1",
       saved: saved && { preset: saved.preset, model: saved.model, baseURL: saved.baseURL, effort: saved.effort, hasKey: Boolean(saved.apiKey) },
-      presets: PROVIDER_PRESETS.map((p) => ({ ...p, baseURL: defaultBaseURL(p), keyInEnvironment: Boolean(p.keyEnv && process.env[p.keyEnv]) })),
+      presets: PROVIDER_PRESETS.map((p) => ({ ...p, baseURL: defaultBaseURL(p) ?? presetEndpointFromEnv(p), keyInEnvironment: Boolean(p.keyEnv && process.env[p.keyEnv]) })),
     };
   };
   const modelInput = (body: Record<string, unknown>): ModelSettings => {
@@ -618,7 +663,7 @@ export function createApp(opts: ServerOptions) {
       root: r.root,
       ruleTemplate: existsSync(template) ? readFileSync(template, "utf8") : null,
       batches: BATCHES.map(({ id, title }) => ({ id, title })),
-      frameworks: r.frameworks.map(({ controls, ...f }) => ({ ...f, controlCount: controls.length })),
+      frameworks: r.frameworks.map(({ controls, file: _file, ...f }) => ({ ...f, controlCount: controls.length })),
       presets: r.presets,
       questionnaire: r.questionnaire,
       checks: ALL_CHECKS.map(({ id, title, description, severity, category, confidence }) => ({ id, title, description, severity, category, confidence })),
@@ -626,7 +671,7 @@ export function createApp(opts: ServerOptions) {
       categories: CATEGORY_LABELS,
     };
   }));
-  /** Rule files changed on disk (registry/frameworks or a project's .acai/rules): load them without a restart. */
+  /** Rule files changed on disk (registry/frameworks, the server's frameworks or a project's .acai/rules): load them without a restart. */
   app.post("/api/registry/reload", route(() => {
     opts.projects.reloadRegistries();
     return opts.projects.list().map((p) => {
@@ -638,7 +683,8 @@ export function createApp(opts: ServerOptions) {
     const first = opts.projects.list()[0];
     const f = first && opts.projects.get(first.id).ws.registry.frameworks.find((x) => x.id === req.params.id);
     if (!f) throw new Error("Framework not found");
-    return f;
+    const { file: _file, ...rest } = f;
+    return rest;
   }));
 
   // -------------------------------------------------------------------- live
@@ -779,6 +825,8 @@ export function createApp(opts: ServerOptions) {
   const dir = findDashboardDir(opts.dashboardDir);
   if (dir) {
     app.use(express.static(dir, { index: false, maxAge: "1h" }));
+    // The landing page. Its asset URLs are relative, so "/welcome/" would break them.
+    app.get("/welcome", (req, res) => (req.path.endsWith("/") ? res.redirect(301, "../welcome") : res.sendFile(join(dir, "welcome.html"))));
     app.get(/^\/(?!api|mcp|oauth|hooks).*/, (_req, res) => res.sendFile(join(dir, "index.html")));
   } else {
     app.get("/", (_req, res) => void res.type("text").send("Acai API is running. The dashboard is not built: run `npm run build`."));

@@ -7,7 +7,8 @@ import { useResource } from "../hooks";
 import type { Effort, ModelState, ProviderPresetInfo } from "../types";
 
 const GROUPS: { label: string; match: (p: ProviderPresetInfo) => boolean }[] = [
-  { label: "Cloud", match: (p) => !p.local && p.id !== "openai-compatible" },
+  { label: "Cloud", match: (p) => !p.local && !p.group && p.id !== "openai-compatible" },
+  { label: "Microsoft Foundry (Azure)", match: (p) => p.group === "azure" },
   { label: "On your machine", match: (p) => Boolean(p.local) },
   { label: "Other", match: (p) => p.id === "openai-compatible" },
 ];
@@ -53,7 +54,15 @@ export function ModelView({ onChanged, readOnly = false }: { onChanged: () => vo
     try {
       const r = await api.post<{ models: string[] }>("api/model/models", body());
       setModels(r.models);
-      toast.success(r.models.length ? `${p.label}: ${r.models.length} models.` : `${p.label} answered but listed no models.`);
+      toast.success(
+        p.id === "azure-claude"
+          ? "Foundry has no model list for Claude: these are the default deployment names. Use yours if you renamed it."
+          : p.deployments
+            ? `${p.label}: the key works. ${r.models.length} models on the resource; enter your deployment name.`
+            : r.models.length
+              ? `${p.label}: ${r.models.length} models.`
+              : `${p.label} answered but listed no models.`,
+      );
     } catch (e) {
       toast.error(e);
     } finally {
@@ -153,7 +162,7 @@ export function ModelView({ onChanged, readOnly = false }: { onChanged: () => vo
           <div className="field-row">
             <label className="field">
               <span>Endpoint</span>
-              <input className="mono" value={baseURL} onChange={(e) => setBaseURL(e.target.value)} placeholder={p.baseURL ?? (p.engine === "openai-compatible" ? "https://your-endpoint/v1" : "Default API")} />
+              <input className="mono" value={baseURL} onChange={(e) => setBaseURL(e.target.value)} placeholder={p.baseURL ?? p.endpointHint ?? (p.engine === "openai-compatible" ? "https://your-endpoint/v1" : "Default API")} />
             </label>
             <label className="field">
               <span>API key</span>
@@ -166,17 +175,24 @@ export function ModelView({ onChanged, readOnly = false }: { onChanged: () => vo
               <>
                 {" "}
                 <a href={p.docs} target="_blank" rel="noreferrer">
-                  Get a key
+                  {p.group === "azure" ? "Setup guide" : "Get a key"}
                 </a>
               </>
             )}
             {p.local && data.inContainer && " In a container, the endpoint reaches your computer through host.docker.internal."}
+            {p.group === "azure" && (
+              <>
+                {" "}
+                In the Foundry portal, open your deployment (Build → Models → Details): use its Target URI as the endpoint (the resource URL is enough) and its Key. The
+                model is the deployment name.{p.endpointEnv && <> On the server: {p.endpointEnv.join(" or ")} and {p.keyEnv}.</>}
+              </>
+            )}
           </p>
 
           <div className="field-row">
             <label className="field">
-              <span>Model</span>
-              <input list="model-options" value={model} onChange={(e) => setModel(e.target.value)} placeholder={p.defaultModel ?? "Load the models, then pick one"} />
+              <span>{p.deployments ? "Deployment name" : "Model"}</span>
+              <input list="model-options" value={model} onChange={(e) => setModel(e.target.value)} placeholder={p.defaultModel ?? (p.deployments ? "Your deployment name, e.g. gpt-5.5" : "Load the models, then pick one")} />
               <datalist id="model-options">{models?.map((m) => <option key={m} value={m} />)}</datalist>
             </label>
             {p.engine !== "openai-compatible" && (

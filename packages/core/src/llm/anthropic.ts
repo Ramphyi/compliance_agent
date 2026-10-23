@@ -7,6 +7,7 @@ import type {
   BetaToolUnion,
   BetaToolUseBlock,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import { presetById } from "./catalog";
 import {
   type AgentResult,
   type AgentRun,
@@ -33,14 +34,25 @@ export class AnthropicProvider implements LlmProvider {
   private effort: NonNullable<ProviderConfig["effort"]>;
   /** A custom base URL may be a gateway that rejects newer request fields. */
   private directApi: boolean;
+  /** Claude in Microsoft Foundry: deployments hosted on Azure accept only the basic web search tool. */
+  private foundry: boolean;
 
   /** `deps` lets tests inject a client pointed at a fake API. */
   constructor(cfg: ProviderConfig, deps: { client?: Anthropic; directApi?: boolean } = {}) {
+    const preset = presetById(cfg.preset);
+    this.foundry = preset?.group === "azure";
+    if (this.foundry && !deps.client && !cfg.baseURL) throw new Error(`${preset!.label} needs your resource (${preset!.endpointHint}), or set ${preset!.endpointEnv?.join(" or ")}`);
+    if (this.foundry && !deps.client && !cfg.apiKey) throw new Error(`${preset!.label} needs the key of your Foundry resource (${preset!.keyEnv})`);
     this.model = cfg.model || DEFAULT_MODEL;
     this.effort = cfg.effort ?? "high";
     this.directApi = deps.directApi ?? !cfg.baseURL;
-    this.client = deps.client ?? new Anthropic({ apiKey: cfg.apiKey || undefined, baseURL: cfg.baseURL || undefined, maxRetries: 4, timeout: 15 * 60_000 });
-    this.destination = `Anthropic API (${cfg.baseURL || "api.anthropic.com"}), model ${this.model}`;
+    // For Foundry, never fall back to ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN: that would send a Claude API credential to Azure.
+    this.client =
+      deps.client ??
+      new Anthropic({ apiKey: cfg.apiKey || undefined, ...(this.foundry ? { authToken: null } : {}), baseURL: cfg.baseURL || undefined, maxRetries: 4, timeout: 15 * 60_000 });
+    this.destination = this.foundry
+      ? `Claude in Microsoft Foundry (${new URL(cfg.baseURL ?? "https://unknown").host}), deployment ${this.model}`
+      : `Anthropic API (${cfg.baseURL || "api.anthropic.com"}), model ${this.model}`;
   }
 
   async run(run: AgentRun): Promise<AgentResult> {
@@ -50,7 +62,7 @@ export class AnthropicProvider implements LlmProvider {
       input_schema: jsonSchemaOf(t.schema) as Anthropic.Beta.Messages.BetaTool.InputSchema,
       ...(this.directApi ? { eager_input_streaming: true } : {}),
     }));
-    if (run.webSearch) tools.push({ type: "web_search_20260209", name: "web_search", max_uses: 10 });
+    if (run.webSearch) tools.push({ type: this.foundry ? "web_search_20250305" : "web_search_20260209", name: "web_search", max_uses: 10 });
 
     const fallbacks = this.directApi && process.env.ACAI_FALLBACKS !== "off" && FALLBACK_MODELS.has(this.model);
     const messages: BetaMessageParam[] = [{ role: "user", content: run.prompt }];

@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { ResponseInputItem, ResponseOutputItem, Tool } from "openai/resources/responses/responses";
+import { presetById } from "./catalog";
 import {
   type AgentResult,
   type AgentRun,
@@ -14,21 +15,33 @@ const DEFAULT_MODEL = "gpt-5.5";
 /**
  * OpenAI's own API through the Responses API: function tools, built-in web search for research,
  * and reasoning items carried between turns. Runs with store=false (nothing kept server-side);
- * the conversation, including encrypted reasoning, is replayed each turn.
+ * the conversation, including encrypted reasoning, is replayed each turn. Azure OpenAI in
+ * Microsoft Foundry speaks the same v1 API, with a deployment name as the model.
  */
 export class OpenAIResponsesProvider implements LlmProvider {
   readonly id = "openai" as const;
   readonly model: string;
-  readonly supportsWebSearch = true;
+  readonly supportsWebSearch: boolean;
   readonly destination: string;
   private client: OpenAI;
   private effort: NonNullable<ProviderConfig["effort"]>;
+  /** Off after a deployment rejects reasoning options (models without reasoning). */
+  private reasoning = true;
 
   constructor(cfg: ProviderConfig, deps: { client?: OpenAI } = {}) {
+    const preset = presetById(cfg.preset);
+    const foundry = preset?.group === "azure";
+    if (foundry && !deps.client && !cfg.baseURL) throw new Error(`${preset.label} needs your resource endpoint (${preset.endpointHint}), or set ${preset.endpointEnv?.join(" or ")}`);
+    if (foundry && !cfg.model) throw new Error(`Enter the deployment name for ${preset.label} (ACAI_MODEL)`);
+    // Without a key the SDK would read OPENAI_API_KEY and send it to Azure.
+    if (foundry && !deps.client && !cfg.apiKey) throw new Error(`${preset.label} needs the key of your Foundry resource (${preset.keyEnv})`);
     this.model = cfg.model || DEFAULT_MODEL;
     this.effort = cfg.effort ?? "medium";
+    this.supportsWebSearch = preset?.webSearch ?? true;
     this.client = deps.client ?? new OpenAI({ apiKey: cfg.apiKey, baseURL: cfg.baseURL || undefined, maxRetries: 3, timeout: 10 * 60_000 });
-    this.destination = `OpenAI API (${cfg.baseURL || "api.openai.com"}), model ${this.model}`;
+    this.destination = foundry
+      ? `Microsoft Foundry (${new URL(cfg.baseURL ?? "https://unknown").host}), deployment ${this.model}`
+      : `OpenAI API (${cfg.baseURL || "api.openai.com"}), model ${this.model}`;
   }
 
   async run(run: AgentRun): Promise<AgentResult> {
@@ -39,26 +52,38 @@ export class OpenAIResponsesProvider implements LlmProvider {
       parameters: jsonSchemaOf(t.schema),
       strict: false,
     }));
-    if (run.webSearch) tools.push({ type: "web_search" });
+    if (run.webSearch && this.supportsWebSearch) tools.push({ type: "web_search" });
+    else if (run.webSearch) run.onEvent?.({ type: "notice", message: "Web research is not available with this provider; using the built-in registry only." });
     const input: ResponseInputItem[] = [{ role: "user", content: run.prompt }];
     const usage = { inputTokens: 0, outputTokens: 0 };
     const texts: string[] = [];
 
     for (let turn = 1; turn <= run.maxTurns; turn++) {
       if (run.signal?.aborted) return { text: texts.join("\n"), turns: turn - 1, usage, stopReason: "aborted" };
-      const res = await this.client.responses.create(
-        {
-          model: this.model,
-          instructions: run.system,
-          input,
-          tools,
-          store: false,
-          include: ["reasoning.encrypted_content"],
-          reasoning: { effort: this.effort },
-          parallel_tool_calls: true,
-        },
-        { signal: run.signal },
-      );
+      let res: OpenAI.Responses.Response;
+      try {
+        res = await this.client.responses.create(
+          {
+            model: this.model,
+            instructions: run.system,
+            input,
+            tools,
+            store: false,
+            ...(this.reasoning ? { include: ["reasoning.encrypted_content" as const], reasoning: { effort: this.effort } } : {}),
+            parallel_tool_calls: true,
+          },
+          { signal: run.signal },
+        );
+      } catch (err) {
+        // Deployments of models without reasoning (gpt-4.1, some Foundry models) reject these options.
+        if (this.reasoning && err instanceof OpenAI.BadRequestError && /reasoning|encrypted_content/i.test(err.message)) {
+          this.reasoning = false;
+          run.onEvent?.({ type: "notice", message: `${this.model} does not take reasoning options; continuing without them.` });
+          turn--;
+          continue;
+        }
+        throw err;
+      }
       usage.inputTokens += res.usage?.input_tokens ?? 0;
       usage.outputTokens += res.usage?.output_tokens ?? 0;
       run.onEvent?.({ type: "turn", turn, ...usage });

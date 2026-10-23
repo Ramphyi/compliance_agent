@@ -1,13 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { Workspace } from "@acai/core";
+import { acaiHome, Workspace } from "@acai/core";
 
 export type ProjectEntry = { id: string; name: string; root: string; stateDir?: string; addedAt: string };
 
-export const acaiHome = () => resolve(process.env.ACAI_HOME ?? join(homedir(), ".acai"));
+export { acaiHome };
 
 const idFor = (root: string) => createHash("sha256").update(root).digest("hex").slice(0, 10);
 

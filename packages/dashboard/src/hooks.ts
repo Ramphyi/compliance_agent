@@ -6,7 +6,7 @@ import { api, prefs } from "./api";
 
 export const TABS = ["overview", "profile", "scope", "findings", "fixes", "controls", "research", "activity", "settings"] as const;
 export type Tab = (typeof TABS)[number];
-export const ADMIN_TABS = ["users", "tokens", "activity", "server"] as const;
+export const ADMIN_TABS = ["users", "tokens", "frameworks", "activity", "server"] as const;
 export type AdminTab = (typeof ADMIN_TABS)[number];
 export type Route =
   | { page: "projects" }

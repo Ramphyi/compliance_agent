@@ -80,6 +80,30 @@ export type ScopeRow = {
   jurisdictions: string[];
   controls: number;
   keyDates: { date: string; note: string }[];
+  origin?: FrameworkOrigin;
+  replaces?: { origin: FrameworkOrigin; version: string };
+};
+
+/** built-in: shipped with Acai; custom: added on this server (Admin → Frameworks); project: the project's own rules. */
+export type FrameworkOrigin = "built-in" | "custom" | "project";
+export type ServerFramework = {
+  id: string;
+  title: string;
+  shortTitle: string;
+  version: string;
+  kind: string;
+  authority: string;
+  controls: number;
+  origin: FrameworkOrigin;
+  replaces?: { origin: FrameworkOrigin; version: string };
+};
+export type ServerFrameworks = { dir: string; writable: boolean; frameworks: ServerFramework[]; errors: { file: string; message: string }[]; warnings: { file: string; message: string }[] };
+export type FrameworkCheck = {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+  framework?: { id: string; title: string; shortTitle: string; version: string; kind: string; controls: number };
+  replaces?: { origin: FrameworkOrigin; version: string };
 };
 
 export type FrameworkDetail = Omit<ScopeRow, "frameworkId" | "status" | "reason" | "missingFacts" | "unconfirmedFacts" | "active" | "controls" | "override"> & {
@@ -140,8 +164,27 @@ export type Finding = {
   updatedAt: string;
   // added by findingView()
   actions: ReviewAction[];
-  controls: { id: string; framework: string; ref: string; title: string; requirement: string }[];
+  controls: { id: string; frameworkId: string; framework: string; frameworkKind?: string; ref: string; title: string; requirement: string }[];
 };
+
+const FRAMEWORK_KIND_LABELS: Record<string, string> = {
+  regulation: "Regulation", standard: "Standard", guideline: "Guideline", "platform-policy": "Platform policy", contract: "Contractual",
+};
+export const frameworkKindLabel = (k?: string) => (k && FRAMEWORK_KIND_LABELS[k]) ?? "Framework";
+
+const KIND_ORDER = ["regulation", "standard", "platform-policy", "contract", "guideline"];
+const kindRank = (k?: string) => (k && KIND_ORDER.includes(k) ? KIND_ORDER.indexOf(k) : KIND_ORDER.length);
+
+/** The distinct frameworks a finding maps to: regulations first, then standards, then the rest. */
+export function findingFrameworks(f: Pick<Finding, "controls">) {
+  const out = new Map<string, { id: string; title: string; kind?: string; refs: string[] }>();
+  for (const c of f.controls) {
+    const fw = out.get(c.frameworkId) ?? { id: c.frameworkId, title: c.framework, kind: c.frameworkKind, refs: [] };
+    fw.refs.push(c.ref);
+    out.set(c.frameworkId, fw);
+  }
+  return [...out.values()].sort((a, b) => kindRank(a.kind) - kindRank(b.kind) || a.title.localeCompare(b.title));
+}
 
 export type Summary = {
   total: number;
@@ -349,6 +392,10 @@ export type ProviderPresetInfo = {
   local?: boolean;
   docs?: string;
   keyInEnvironment: boolean;
+  group?: "azure";
+  endpointHint?: string;
+  endpointEnv?: string[];
+  deployments?: boolean;
 };
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 export type ModelState = {

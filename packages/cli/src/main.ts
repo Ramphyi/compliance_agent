@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
-  type Actor, createProvider, fixTasks, PROVIDER_PRESETS, tasksMarkdown, fixFinding, gate, loadRegistry, report, research, SEVERITIES, summarize, Workspace,
+  type Actor, createProvider, fixTasks, PROVIDER_PRESETS, tasksMarkdown, fixFinding, gate, report, research, SEVERITIES, summarize, Workspace,
+  customFrameworksDir, type FrameworkCheck, FrameworkError, frameworkSource, frameworkTemplate, listFrameworks, removeFramework, saveFramework, serverRegistry, validateFramework,
 } from "@acai/core";
 import { AuthStore, type ChangedBy } from "./auth";
 import { CLIENTS, type Client, connectInstructions, connectOverview } from "./connect";
@@ -43,7 +44,13 @@ Profile and rules
   scope [path]          Frameworks that apply and why
   presets               List presets
   providers             Model providers for Acai's own agents, and how to select one
-  frameworks            List the registry
+  frameworks            List the registry (built-in, and this server's own frameworks)
+  frameworks add <file.yaml>   Add a framework for every project, or update a built-in one by
+                        reusing its id (a newer ISO revision, an internal standard). - reads stdin
+  frameworks validate <file>   Check a file without saving it
+  frameworks show <id>  Print a framework's YAML: the starting point for an update
+  frameworks remove <id>  Remove one of this server's frameworks (a replaced built-in comes back)
+  frameworks template   Print a template for a new framework
   research [path]       Web research for guardrails (Anthropic or OpenAI provider)
   journal [path]        Audit trail; --verify checks the hash chain
 
@@ -73,7 +80,8 @@ Common options
 
 Model: choose it on the dashboard's Model page, or set ANTHROPIC_API_KEY (Claude) or OPENAI_API_KEY (GPT),
 or ACAI_PROVIDER=<provider> ACAI_MODEL=<model> with that provider's key: \`acai providers\` lists them
-(Gemini, OpenRouter, Mistral, Groq, DeepSeek, xAI, Together, Ollama, LM Studio, any OpenAI-compatible URL).
+(Gemini, OpenRouter, Mistral, Groq, DeepSeek, xAI, Together, Microsoft Foundry on Azure, Ollama, LM Studio,
+any OpenAI-compatible URL).
 ACAI_PARALLEL sets parallel investigation batches (default 3).
 Without a model, Acai runs detectors and an MCP host can do the reasoning.`;
 
@@ -300,16 +308,12 @@ async function main() {
       return;
     }
     case "presets": {
-      const { registry } = loadRegistry();
+      const { registry } = serverRegistry();
       for (const p of registry.presets) console.log(`${c.bold(p.id)}  ${p.title}\n  ${c.dim(p.description.trim().split("\n")[0])}`);
       return;
     }
-    case "frameworks": {
-      const { registry, errors } = loadRegistry();
-      console.log(table(registry.frameworks.map((f) => [f.id, f.shortTitle, c.dim(f.version), c.dim(f.kind), `${f.controls.length}`])));
-      console.log(c.dim(`\n${registry.frameworks.length} frameworks, ${registry.controls.size} controls, ${registry.presets.length} presets, registry ${registry.hash}${errors.length ? `, ${errors.length} errors` : ""}`));
-      return;
-    }
+    case "frameworks":
+      return frameworks(rest);
     case "review": {
       const ws = open();
       await reviewOnly(ws, ws.getAudit(flags.audit as string | undefined).id, provider, me);
@@ -437,6 +441,70 @@ async function main() {
       console.error(`Unknown command "${command}".\n`);
       console.log(HELP);
       process.exitCode = 2;
+  }
+}
+
+/** `acai frameworks ...`: the server's own frameworks in customFrameworksDir(); a running server applies changes at once. */
+function frameworks([sub = "list", arg]: string[]) {
+  const read = (file?: string) => {
+    if (!file) throw new Error(`Usage: acai frameworks ${sub} <file.yaml>`);
+    return readFileSync(file === "-" ? 0 : file, "utf8");
+  };
+  const show = (check: FrameworkCheck) => {
+    for (const e of check.errors) console.log(c.red(`  ✗ ${e}`));
+    for (const w of check.warnings) console.log(c.yellow(`  ! ${w}`));
+  };
+  const what = (check: FrameworkCheck) => {
+    const f = check.framework!;
+    return `${c.bold(f.id)} ${f.shortTitle}, ${f.version}, ${f.controls} control${f.controls === 1 ? "" : "s"}${check.replaces ? c.dim(` (replaces the ${check.replaces.origin} version ${check.replaces.version})`) : ""}`;
+  };
+  switch (sub) {
+    case "list": {
+      const { frameworks: list, errors } = listFrameworks();
+      const { registry } = serverRegistry();
+      const origin = (f: (typeof list)[number]) => (f.origin === "built-in" ? c.dim("built-in") : c.teal(f.replaces ? "updated" : "custom"));
+      console.log(table(list.map((f) => [f.id, f.shortTitle, c.dim(f.version), c.dim(f.kind), `${f.controls}`, origin(f)])));
+      for (const e of errors) console.log(c.red(`✗ ${e.file}: ${e.message}`));
+      console.log(c.dim(`\n${list.length} frameworks, ${registry.controls.size} controls, ${registry.presets.length} presets, registry ${registry.hash}. This server's frameworks: ${customFrameworksDir()}`));
+      return;
+    }
+    case "validate": {
+      const check = validateFramework(read(arg));
+      if (check.framework) console.log(what(check));
+      show(check);
+      console.log(check.ok ? c.green("✓ valid") : c.red("✗ not valid"));
+      process.exitCode = check.ok ? 0 : 1;
+      return;
+    }
+    case "add": {
+      try {
+        const saved = saveFramework(read(arg));
+        show({ ...saved, errors: [] });
+        console.log(c.green(`✓ ${saved.replaces ? "Updated" : "Added"} ${what(saved)}`));
+        console.log(c.dim(`  ${saved.file}. A running server applies it to every project; re-audit to check against it.`));
+      } catch (e) {
+        if (!(e instanceof FrameworkError)) throw e;
+        show(e.check);
+        console.log(c.red("✗ not saved"));
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case "show":
+      if (!arg) throw new Error("Usage: acai frameworks show <id>");
+      process.stdout.write(frameworkSource(arg).yaml);
+      return;
+    case "remove": {
+      if (!arg) throw new Error("Usage: acai frameworks remove <id>");
+      const { restored } = removeFramework(arg);
+      console.log(c.green(`✓ Removed ${arg}`) + (restored ? c.dim(` (the built-in version ${restored.version} applies again)`) : ""));
+      return;
+    }
+    case "template":
+      process.stdout.write(frameworkTemplate());
+      return;
+    default:
+      throw new Error(`Unknown subcommand "frameworks ${sub}". Use list, add, validate, show, remove or template.`);
   }
 }
 

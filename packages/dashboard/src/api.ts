@@ -85,6 +85,7 @@ export const paths = {
   events: (pid: string) => `api/events?project=${enc(pid)}`,
   adminUser: (id: string, rest = "") => `api/admin/users/${enc(id)}${rest}`,
   adminToken: (id: string) => `api/admin/tokens/${enc(id)}`,
+  adminFramework: (id: string, rest = "") => `api/admin/frameworks/${enc(id)}${rest}`,
   accountToken: (id: string) => `api/account/tokens/${enc(id)}`,
 };
 

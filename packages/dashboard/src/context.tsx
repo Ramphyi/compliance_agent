@@ -55,7 +55,8 @@ export function useToast() {
       error: (e: unknown, title?: string) => {
         const msg = e instanceof Error ? e.message : String(e);
         if (e instanceof ApiError && e.status === 401) return; // the login screen takes over
-        push("error", msg, title ?? (e instanceof ApiError && e.status === 409 ? "Not allowed in the current state" : undefined));
+        const status = e instanceof ApiError ? e.status : 0;
+        push("error", msg, title ?? (status === 403 ? "Not allowed" : status === 409 ? "Not possible right now" : undefined));
       },
     }),
     [push],

@@ -1,7 +1,6 @@
-import { Cpu, FolderGit2, FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { Empty, ErrorBox, Loading, Spinner } from "../components/ui";
+import { Empty, ErrorBox, Loading, PageHeader, Spinner } from "../components/ui";
 import { useToast } from "../context";
 import { ago, go, href, useResource } from "../hooks";
 import { type Meta, type ProjectListItem, SEVERITIES } from "../types";
@@ -9,11 +8,11 @@ import { type Meta, type ProjectListItem, SEVERITIES } from "../types";
 export function ProviderLine({ meta }: { meta: Meta }) {
   return meta.provider ? (
     <p className="provider">
-      <Cpu size={14} aria-hidden /> Model <strong>{meta.provider.model}</strong> <span className="muted">sends prompts to</span> {meta.provider.destination}
+      Model <strong>{meta.provider.model}</strong> via {meta.provider.destination}. <a href="#/model">Change</a>
     </p>
   ) : (
-    <p className="provider muted">
-      <Cpu size={14} aria-hidden /> No model configured: detectors only; use an MCP host for reasoning.
+    <p className="provider">
+      {meta.providerError ? `Model unavailable: ${meta.providerError}.` : "No model: detectors only, or connect an agent over MCP."} <a href="#/model">Choose a model</a>
     </p>
   );
 }
@@ -21,6 +20,7 @@ export function ProviderLine({ meta }: { meta: Meta }) {
 export function Projects({ meta }: { meta: Meta }) {
   const { data, error, reload } = useResource<ProjectListItem[]>("api/projects");
   const [adding, setAdding] = useState(false);
+  const viewer = meta.account?.role === "viewer";
   // No event stream spans all projects; poll so running jobs and new audits show up.
   useEffect(() => {
     const t = setInterval(reload, 15000);
@@ -29,62 +29,72 @@ export function Projects({ meta }: { meta: Meta }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h1>Projects</h1>
-        <span className="grow" />
-        <button className="btn btn-primary" onClick={() => setAdding((a) => !a)} aria-expanded={adding}>
-          <Plus size={14} aria-hidden /> Add project
-        </button>
-      </div>
-      <ProviderLine meta={meta} />
+      <PageHeader
+        title="Projects"
+        description={<ProviderLine meta={meta} />}
+        actions={
+          !viewer && (
+            <button className="btn btn-primary" onClick={() => setAdding((a) => !a)} aria-expanded={adding}>
+              Add project
+            </button>
+          )
+        }
+      />
       {adding && <AddProject clone={meta.cloneEnabled} onCancel={() => setAdding(false)} />}
       {error && <ErrorBox error={error} retry={reload} />}
       {!data ? (
         !error && <Loading what="projects" />
       ) : !data.length ? (
-        <Empty icon={<FolderPlus size={28} />} title="No projects yet">
-          Add a repository on this machine, or start the server with <code>assay serve &lt;path&gt;</code>.
+        <Empty title="No projects yet">
+          Add a repository on this machine, or start the server with <code>acai serve &lt;path&gt;</code>.
         </Empty>
       ) : (
-        <div className="cards">
+        <ul className="list" aria-label="Projects">
           {data.map((p) => (
-            <a key={p.id} className="card project-card" href={href(p.id, "overview")}>
-              <h2>{p.name}</h2>
-              <div className="mono muted truncate" title={p.root}>
-                {p.root}
-              </div>
-              {p.classification && <p className="clamp">{p.classification}</p>}
-              {p.latest ? (
-                <div className="project-latest">
-                  <div className="sev-counts" aria-label="Open findings by severity">
-                    {SEVERITIES.map((s) => (
-                      <span key={s} className={`sev sev-${s}`} title={`${s}: ${p.latest!.summary.bySeverity[s]}`}>
-                        <i aria-hidden />
-                        {p.latest!.summary.bySeverity[s]}
-                        <span className="sr-only"> {s}</span>
-                      </span>
-                    ))}
-                  </div>
-                  <span className="muted">
-                    {p.latest.summary.total} findings · {p.latest.summary.open + p.latest.summary.reinvestigating} need a decision · {ago(p.latest.createdAt)}
+            <li key={p.id}>
+              <a className="list-row" href={href(p.id, "overview")}>
+                <div className="list-main">
+                  <span className="list-title">{p.name}</span>
+                  <span className="mono muted small truncate" title={p.root}>
+                    {p.root}
                   </span>
+                  {p.classification && <span className="muted small clamp-1">{p.classification}</span>}
                 </div>
-              ) : (
-                <p className="muted">No audit yet</p>
-              )}
-              {p.running && (
-                <div className="running-line">
-                  <Spinner label={`Running: ${p.running}`} />
+                <div className="list-side">
+                  {p.running ? (
+                    <Spinner label={p.running} />
+                  ) : p.latest ? (
+                    <>
+                      <span className="sev-counts" aria-label="Findings by severity">
+                        {SEVERITIES.filter((s) => s !== "info").map((s) => {
+                          const n = p.latest!.summary.bySeverity[s];
+                          return (
+                            <span key={s} className={`sev sev-${s}${n ? "" : " zero"}`} title={`${s}: ${n}`}>
+                              <i aria-hidden />
+                              {n}
+                              <span className="sr-only"> {s}</span>
+                            </span>
+                          );
+                        })}
+                      </span>
+                      <span className="nowrap">{p.latest.summary.open + p.latest.summary.reinvestigating} to review</span>
+                      <span className="nowrap">{ago(p.latest.createdAt)}</span>
+                    </>
+                  ) : (
+                    <span>No audit yet</span>
+                  )}
                 </div>
-              )}
-            </a>
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
       <footer className="registry-foot">
         {meta.registry ? (
           <>
-            Registry {meta.registry.frameworks} frameworks · {meta.registry.controls} controls · {meta.registry.presets} presets ·{" "}
+            <span>
+              Registry: {meta.registry.frameworks} frameworks, {meta.registry.controls} controls, {meta.registry.presets} presets
+            </span>
             <span className="mono" title="Registry content hash, recorded with each audit">
               {meta.registry.hash}
             </span>
@@ -101,11 +111,9 @@ export function Projects({ meta }: { meta: Meta }) {
               </details>
             )}
           </>
-        ) : (
-          "Registry statistics appear once a project is added."
-        )}
+        ) : null}
         <span className="grow" />
-        Assay {meta.version}
+        <span>Acai {meta.version}</span>
       </footer>
     </div>
   );
@@ -131,32 +139,31 @@ function AddProject({ clone, onCancel }: { clone: boolean; onCancel: () => void 
   };
   return (
     <form
-      className="card add-project"
+      className="card stack"
+      style={{ marginBottom: 20 }}
+      aria-label="Add a project"
       onSubmit={(e) => {
         e.preventDefault();
         void submit();
       }}
     >
-      <h2>
-        <FolderGit2 size={16} aria-hidden /> Add a project
-      </h2>
       <div className="field-row">
         <label className="field grow">
           <span>Path on the server</span>
-          <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="/srv/repos/my-service" disabled={Boolean(gitUrl)} required={!gitUrl} className="mono" />
+          <input value={path} onChange={(e) => setPath(e.target.value)} placeholder="/srv/repos/my-service" disabled={Boolean(gitUrl)} required={!gitUrl} className="mono" autoFocus />
         </label>
         <label className="field">
-          <span>Display name (optional)</span>
+          <span>Name (optional)</span>
           <input value={name} onChange={(e) => setName(e.target.value)} />
         </label>
       </div>
       {clone && (
         <label className="field">
-          <span>…or clone a git repository</span>
+          <span>Or clone a git repository</span>
           <input value={gitUrl} onChange={(e) => setGitUrl(e.target.value)} placeholder="https://git.example.com/team/repo.git" className="mono" />
         </label>
       )}
-      <div className="row">
+      <div className="form-actions">
         <button className="btn btn-primary" type="submit" disabled={busy || (!path && !gitUrl)}>
           {busy ? <Spinner label={gitUrl ? "Cloning…" : "Adding…"} /> : "Add project"}
         </button>

@@ -1,33 +1,98 @@
-# Internal deployment. Mount the repositories to audit under ./repos (read-write so fixes can be committed),
-# or set ASSAY_ALLOW_CLONE=true and add repositories by URL in the dashboard.
+# Acai as a service: dashboard, API and MCP over HTTP on http://127.0.0.1:4317.
+#
+#   cp .env.example .env            # set ACAI_ADMIN_TOKEN (and a model key if you want Acai's own agents)
+#   mkdir -p repos && git clone <repo> repos/<name>
+#   docker compose up -d --build
+#
+# Sign in to the dashboard with ACAI_ADMIN_TOKEN, then create accounts under Admin, or with
+#   docker compose exec acai node /opt/acai/acai.mjs users add <name> --role member
+# HTTPS for the team: set ACAI_DOMAIN in .env and add `--profile tls` (Caddy, see deploy/Caddyfile).
+# Full guide, including air-gapped installs and Kubernetes: docs/DEPLOY.md.
+#
+# Every git repository under ./repos (or ACAI_REPOS) becomes a project. On macOS, Docker Desktop
+# only mounts folders it shares (Settings → Resources → File sharing; /Users is shared by default). Add more later in the dashboard
+# (path /workspace/<name>), or set ACAI_ALLOW_CLONE=true and add them by URL.
+
+# Compose stops here unless the server has a way to sign the first person in.
+x-require-accounts: ${ACAI_ADMIN_TOKEN:-${ACAI_TOKENS:?Set ACAI_ADMIN_TOKEN in .env (the first administrator token, e.g. openssl rand -hex 32), or ACAI_TOKENS}}
+
 services:
-  assay:
+  acai:
     build: .
-    image: assay:latest
+    image: acai:latest
+    container_name: acai
     ports:
-      - "127.0.0.1:4317:4317"   # put a TLS reverse proxy in front for team access
+      - "127.0.0.1:${ACAI_HOST_PORT:-4317}:4317"   # local only; use the tls profile or your own reverse proxy for team access
+    env_file:
+      - path: .env
+        required: false
     environment:
-      # Per-reviewer tokens (name:token, comma separated). Required when listening beyond localhost.
-      ASSAY_TOKENS: ${ASSAY_TOKENS:?set ASSAY_TOKENS, e.g. alice:<random>,bob:<random>}
-      # Model: Claude via the Anthropic API...
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      # ...or an on-premise model behind an OpenAI-compatible endpoint (vLLM, Ollama, LM Studio):
-      # ASSAY_PROVIDER: openai-compatible
-      # ASSAY_OPENAI_BASE_URL: http://llm.internal:8000/v1
-      # ASSAY_MODEL: your-model
-      ASSAY_ALLOW_CLONE: ${ASSAY_ALLOW_CLONE:-false}
+      # First administrator: created on start when no enabled local administrator exists (at least 16 characters).
+      ACAI_ADMIN_TOKEN: ${ACAI_ADMIN_TOKEN:-}
+      # Optional read-only accounts from the environment (name:token, comma separated); ACAI_ADMINS limits which are administrators.
+      ACAI_TOKENS: ${ACAI_TOKENS:-}
+      ACAI_ADMINS: ${ACAI_ADMINS:-}
+      # Public HTTPS origin behind your proxy or tunnel; turns on OAuth for ChatGPT and Claude.ai connectors.
+      ACAI_PUBLIC_URL: ${ACAI_PUBLIC_URL:-}
+      # 1 behind a reverse proxy (the tls profile): client addresses and HTTPS come from X-Forwarded-* headers.
+      ACAI_TRUST_PROXY: ${ACAI_TRUST_PROXY:-0}
+      ACAI_ALLOW_CLONE: ${ACAI_ALLOW_CLONE:-false}
       # Directories where projects may be added by path from the dashboard.
-      ASSAY_PROJECT_ROOTS: /workspace:/data/repos
-      # Only these reviewers may approve build/test commands (they execute project code in this container).
-      ASSAY_APPROVERS: ${ASSAY_APPROVERS:-}
+      ACAI_PROJECT_ROOTS: /workspace:/data/repos
+      # Repository webhooks (/hooks/github, /hooks/gitlab, /hooks/generic) and results back on GitHub.
+      ACAI_WEBHOOK_SECRET: ${ACAI_WEBHOOK_SECRET:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      # Members who may also approve build/test commands and change the model (administrators always may).
+      ACAI_APPROVERS: ${ACAI_APPROVERS:-}
+      # The model can also be chosen on the dashboard's Model page; keys for it come from .env:
+      # ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, MISTRAL_API_KEY,
+      # GROQ_API_KEY, DEEPSEEK_API_KEY, XAI_API_KEY, TOGETHER_API_KEY (see `acai providers`).
+    # One service needs no network of its own (and Docker hosts with many projects run out of subnets).
+    network_mode: bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # Ollama or LM Studio on this computer (automatic on Docker Desktop)
     volumes:
-      - assay-data:/data
-      - ./repos:/workspace
+      - acai-data:/data   # accounts (auth.json), model.json, oauth.json, projects.json, cloned repos: back this up
+      - ${ACAI_REPOS:-./repos}:/workspace
+      # More repositories from elsewhere on this computer:
+      # - /path/to/another-repo:/workspace/another-repo
+    # On Linux, run as your own user so the container can write to the mounted repositories:
+    # user: "${UID:-1000}:${GID:-1000}"
     command: ["serve", "/workspace"]
     read_only: true
     tmpfs: ["/tmp"]
     cap_drop: ["ALL"]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
+
+  # HTTPS in front of Acai: docker compose --profile tls up -d
+  # Set in .env: ACAI_DOMAIN (the name people open), ACAI_PUBLIC_URL=https://<ACAI_DOMAIN>,
+  # ACAI_TRUST_PROXY=1, and ACAI_TLS=acme (public name), internal (intranet name) or files
+  # (your own certificate in deploy/certs/cert.pem and key.pem). Caddy uses the host network
+  # (Linux hosts) to reach Acai on 127.0.0.1 and to serve ports 80 and 443.
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: acai-caddy
+    profiles: ["tls"]
+    depends_on: [acai]
+    network_mode: host
+    environment:
+      ACAI_DOMAIN: ${ACAI_DOMAIN:-localhost}
+      ACAI_TLS: ${ACAI_TLS:-acme}
+      ACAI_HOST_PORT: ${ACAI_HOST_PORT:-4317}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/certs:/etc/caddy/certs:ro
+      - caddy-data:/data       # certificates and Caddy's internal CA: back this up too
+      - caddy-config:/config
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    cap_add: ["NET_BIND_SERVICE"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
 volumes:
-  assay-data:
+  acai-data:
+  caddy-data:
+  caddy-config:

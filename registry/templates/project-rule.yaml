@@ -1,0 +1,45 @@
+# Your own rules, written as a framework. Save a copy as <project>/.acai/rules/<id>.yaml for one
+# project, or as registry/frameworks/<id>.yaml for every project. The id must equal the file name.
+# Format, categories and fact values: registry/README.md and registry/questionnaire.yaml.
+id: internal-security-policy
+title: Internal security policy for products that handle health data
+shortTitle: Internal security policy
+version: "2026-10"
+authority: Your company
+kind: guideline
+jurisdictions: [company]
+url: https://intranet.example.com/security-policy
+textPolicy: paraphrased
+summary: >
+  The company's own rules on top of the law, so the audit checks them alongside
+  GDPR and the standards.
+applicability:
+  { fact: dataCategories, in: [health, genetic-biometric] }
+applicabilityNote: >
+  Applies when the product processes health, genetic or biometric data.
+controls:
+  - ref: ISP-1
+    title: No personal data in logs
+    requirement: >
+      Application logs must not contain names, emails, health values or genetic results;
+      log pseudonymous identifiers instead.
+    category: logging-monitoring
+    severity: high
+    fixability: code
+    guidance: >
+      Search logging calls (console.log, logger.info, print, Log.d) near user, patient or
+      result objects. Good: a redaction helper or structured logging that drops these fields.
+    evidence:
+      - A logging helper that removes personal fields, with a test
+  - ref: ISP-2
+    title: Health data encrypted at rest on the device
+    requirement: >
+      Health and genetic data stored on the device must be encrypted with a key held in the
+      platform keystore (iOS Keychain, Android Keystore).
+    category: data-protection
+    severity: high
+    fixability: code
+    when: { fact: productTypes, in: [mobile-app] }
+    guidance: >
+      Look at local storage (AsyncStorage, SQLite, files, MMKV) for health or genetic
+      records. Good: encrypted storage with a keystore-backed key. Bad: plain AsyncStorage.

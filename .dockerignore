@@ -3,7 +3,9 @@ node_modules
 dist
 **/dist
 .git
-**/.assay
+**/.acai
 examples/apps/*/build
 *.vsix
 .env
+repos
+deploy/certs

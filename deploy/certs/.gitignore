@@ -1,0 +1,4 @@
+# Your own TLS certificate for the tls profile with ACAI_TLS=files: cert.pem (full chain) and key.pem.
+# Never commit them.
+*
+!.gitignore

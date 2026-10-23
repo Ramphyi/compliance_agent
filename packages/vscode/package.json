@@ -1,9 +1,9 @@
 {
-  "name": "assay-vscode",
-  "displayName": "Assay Compliance",
-  "description": "Self-hosted compliance audits in the editor: findings in the Problems panel, human review actions, the Assay dashboard, and an MCP server for agent mode.",
+  "name": "acai-vscode",
+  "displayName": "Acai Compliance",
+  "description": "Self-hosted compliance audits in the editor: findings in the Problems panel, human review actions, the Acai dashboard, and an MCP server for agent mode.",
   "version": "0.1.0",
-  "publisher": "assay-internal",
+  "publisher": "acai-internal",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
@@ -24,17 +24,17 @@
   "activationEvents": [
     "workspaceContains:**/*",
     "onStartupFinished",
-    "onView:assay.findings",
-    "onView:assay.status",
-    "onCommand:assay.openDashboard",
-    "onCommand:assay.runAudit",
-    "onCommand:assay.runAgentAudit",
-    "onCommand:assay.setApiKey"
+    "onView:acai.findings",
+    "onView:acai.status",
+    "onCommand:acai.openDashboard",
+    "onCommand:acai.runAudit",
+    "onCommand:acai.runAgentAudit",
+    "onCommand:acai.setApiKey"
   ],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false,
-      "description": "Assay starts a local server that reads the workspace and its audit state, and can run approved build and test commands. It only runs in trusted workspaces."
+      "description": "Acai starts a local server that reads the workspace and its audit state, and can run approved build and test commands. It only runs in trusted workspaces."
     },
     "virtualWorkspaces": false
   },
@@ -42,302 +42,302 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "assay",
-          "title": "Assay",
-          "icon": "media/assay.svg"
+          "id": "acai",
+          "title": "Acai",
+          "icon": "media/acai.svg"
         }
       ]
     },
     "views": {
-      "assay": [
+      "acai": [
         {
-          "id": "assay.findings",
+          "id": "acai.findings",
           "name": "Findings",
-          "icon": "media/assay.svg",
-          "contextualTitle": "Assay"
+          "icon": "media/acai.svg",
+          "contextualTitle": "Acai"
         },
         {
-          "id": "assay.status",
+          "id": "acai.status",
           "name": "Overview",
-          "icon": "media/assay.svg",
-          "contextualTitle": "Assay"
+          "icon": "media/acai.svg",
+          "contextualTitle": "Acai"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "assay.findings",
-        "contents": "Open a folder to audit it with Assay.\n[Open Folder](command:vscode.openFolder)",
-        "when": "!assay.hasFolder"
+        "view": "acai.findings",
+        "contents": "Open a folder to audit it with Acai.\n[Open Folder](command:vscode.openFolder)",
+        "when": "!acai.hasFolder"
       },
       {
-        "view": "assay.findings",
-        "contents": "Starting the Assay server\u2026",
-        "when": "assay.hasFolder && assay.serverState == starting"
+        "view": "acai.findings",
+        "contents": "Starting the Acai server\u2026",
+        "when": "acai.hasFolder && acai.serverState == starting"
       },
       {
-        "view": "assay.findings",
-        "contents": "The Assay server is not running. The Assay output channel has the details.\n[Restart Server](command:assay.restartServer)",
-        "when": "assay.hasFolder && assay.serverState == error"
+        "view": "acai.findings",
+        "contents": "The Acai server is not running. The Acai output channel has the details.\n[Restart Server](command:acai.restartServer)",
+        "when": "acai.hasFolder && acai.serverState == error"
       },
       {
-        "view": "assay.findings",
-        "contents": "No audit yet for this folder.\n[Run Audit (Detectors)](command:assay.runAudit)\n[Run Agent Audit](command:assay.runAgentAudit)\nDetectors run locally. An agent audit needs a model: [set an Anthropic API key](command:assay.setApiKey) or ask Copilot Chat in agent mode to \"audit this project with Assay\".",
-        "when": "assay.hasFolder && assay.serverState == running && !assay.hasAudit"
+        "view": "acai.findings",
+        "contents": "No audit yet for this folder.\n[Run Audit (Detectors)](command:acai.runAudit)\n[Run Agent Audit](command:acai.runAgentAudit)\nDetectors run locally. An agent audit needs a model: [set an Anthropic API key](command:acai.setApiKey) or ask Copilot Chat in agent mode to \"audit this project with Acai\".",
+        "when": "acai.hasFolder && acai.serverState == running && !acai.hasAudit"
       },
       {
-        "view": "assay.findings",
-        "contents": "The latest audit has no findings.\n[Run Audit Again](command:assay.runAudit)\n[Open Dashboard](command:assay.openDashboard)",
-        "when": "assay.hasFolder && assay.serverState == running && assay.hasAudit"
+        "view": "acai.findings",
+        "contents": "The latest audit has no findings.\n[Run Audit Again](command:acai.runAudit)\n[Open Dashboard](command:acai.openDashboard)",
+        "when": "acai.hasFolder && acai.serverState == running && acai.hasAudit"
       }
     ],
     "commands": [
       {
-        "command": "assay.openDashboard",
+        "command": "acai.openDashboard",
         "title": "Open Dashboard",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(dashboard)"
       },
       {
-        "command": "assay.openDashboardExternal",
+        "command": "acai.openDashboardExternal",
         "title": "Open Dashboard in Browser",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(link-external)"
       },
       {
-        "command": "assay.runAudit",
+        "command": "acai.runAudit",
         "title": "Run Audit (Detectors)",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(play)"
       },
       {
-        "command": "assay.runAgentAudit",
+        "command": "acai.runAgentAudit",
         "title": "Run Agent Audit",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(sparkle)"
       },
       {
-        "command": "assay.refresh",
+        "command": "acai.refresh",
         "title": "Refresh",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(refresh)"
       },
       {
-        "command": "assay.confirmFinding",
+        "command": "acai.confirmFinding",
         "title": "Confirm Finding",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(check)"
       },
       {
-        "command": "assay.rejectFinding",
+        "command": "acai.rejectFinding",
         "title": "Reject Finding\u2026",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(close)"
       },
       {
-        "command": "assay.reinvestigateFinding",
+        "command": "acai.reinvestigateFinding",
         "title": "Re-investigate Finding\u2026",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(search)"
       },
       {
-        "command": "assay.modifyFinding",
+        "command": "acai.modifyFinding",
         "title": "Modify Finding in Dashboard",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(edit)"
       },
       {
-        "command": "assay.openFindingLocation",
+        "command": "acai.openFindingLocation",
         "title": "Go to Finding Location",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "assay.fixConfirmed",
+        "command": "acai.fixConfirmed",
         "title": "Fix Confirmed Findings",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(wrench)"
       },
       {
-        "command": "assay.acceptFix",
+        "command": "acai.acceptFix",
         "title": "Accept Fix",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(pass)"
       },
       {
-        "command": "assay.revertFix",
+        "command": "acai.revertFix",
         "title": "Revert Fix",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(discard)"
       },
       {
-        "command": "assay.setApiKey",
+        "command": "acai.setApiKey",
         "title": "Set Anthropic API Key",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(key)"
       },
       {
-        "command": "assay.setOpenAIKey",
+        "command": "acai.setOpenAIKey",
         "title": "Set OpenAI API Key",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(key)"
       },
       {
-        "command": "assay.clearApiKey",
+        "command": "acai.clearApiKey",
         "title": "Clear API Keys",
-        "category": "Assay"
+        "category": "Acai"
       },
       {
-        "command": "assay.showReport",
+        "command": "acai.showReport",
         "title": "Show Report",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(output)"
       },
       {
-        "command": "assay.restartServer",
+        "command": "acai.restartServer",
         "title": "Restart Server",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(debug-restart)"
       },
       {
-        "command": "assay.selectFolder",
+        "command": "acai.selectFolder",
         "title": "Select Workspace Folder",
-        "category": "Assay",
+        "category": "Acai",
         "icon": "$(root-folder)"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "assay.openDashboardExternal",
-          "when": "assay.serverState == running"
+          "command": "acai.openDashboardExternal",
+          "when": "acai.serverState == running"
         },
         {
-          "command": "assay.selectFolder",
+          "command": "acai.selectFolder",
           "when": "workspaceFolderCount > 1"
         }
       ],
       "view/title": [
         {
-          "command": "assay.runAudit",
-          "when": "view == assay.findings",
+          "command": "acai.runAudit",
+          "when": "view == acai.findings",
           "group": "navigation@1"
         },
         {
-          "command": "assay.openDashboard",
-          "when": "view == assay.findings || view == assay.status",
+          "command": "acai.openDashboard",
+          "when": "view == acai.findings || view == acai.status",
           "group": "navigation@2"
         },
         {
-          "command": "assay.refresh",
-          "when": "view == assay.findings || view == assay.status",
+          "command": "acai.refresh",
+          "when": "view == acai.findings || view == acai.status",
           "group": "navigation@3"
         },
         {
-          "command": "assay.runAgentAudit",
-          "when": "view == assay.findings",
+          "command": "acai.runAgentAudit",
+          "when": "view == acai.findings",
           "group": "1_audit@1"
         },
         {
-          "command": "assay.fixConfirmed",
-          "when": "view == assay.findings",
+          "command": "acai.fixConfirmed",
+          "when": "view == acai.findings",
           "group": "1_audit@2"
         },
         {
-          "command": "assay.showReport",
-          "when": "view == assay.findings || view == assay.status",
+          "command": "acai.showReport",
+          "when": "view == acai.findings || view == acai.status",
           "group": "1_audit@3"
         },
         {
-          "command": "assay.selectFolder",
-          "when": "(view == assay.findings || view == assay.status) && workspaceFolderCount > 1",
+          "command": "acai.selectFolder",
+          "when": "(view == acai.findings || view == acai.status) && workspaceFolderCount > 1",
           "group": "2_server@1"
         },
         {
-          "command": "assay.setApiKey",
-          "when": "view == assay.findings || view == assay.status",
+          "command": "acai.setApiKey",
+          "when": "view == acai.findings || view == acai.status",
           "group": "2_server@2"
         },
         {
-          "command": "assay.restartServer",
-          "when": "view == assay.findings || view == assay.status",
+          "command": "acai.restartServer",
+          "when": "view == acai.findings || view == acai.status",
           "group": "2_server@3"
         }
       ],
       "view/item/context": [
         {
-          "command": "assay.confirmFinding",
-          "when": "view == assay.findings && viewItem == finding.open",
+          "command": "acai.confirmFinding",
+          "when": "view == acai.findings && viewItem == finding.open",
           "group": "inline@1"
         },
         {
-          "command": "assay.rejectFinding",
-          "when": "view == assay.findings && viewItem == finding.open",
+          "command": "acai.rejectFinding",
+          "when": "view == acai.findings && viewItem == finding.open",
           "group": "inline@2"
         },
         {
-          "command": "assay.reinvestigateFinding",
-          "when": "view == assay.findings && viewItem == finding.open",
+          "command": "acai.reinvestigateFinding",
+          "when": "view == acai.findings && viewItem == finding.open",
           "group": "inline@3"
         },
         {
-          "command": "assay.acceptFix",
-          "when": "view == assay.findings && viewItem == finding.fix_ready",
+          "command": "acai.acceptFix",
+          "when": "view == acai.findings && viewItem == finding.fix_ready",
           "group": "inline@1"
         },
         {
-          "command": "assay.revertFix",
-          "when": "view == assay.findings && viewItem == finding.fix_ready",
+          "command": "acai.revertFix",
+          "when": "view == acai.findings && viewItem == finding.fix_ready",
           "group": "inline@2"
         },
         {
-          "command": "assay.confirmFinding",
-          "when": "view == assay.findings && viewItem =~ /^finding\\.(open|withdrawn|fix_failed|reinvestigating)$/",
+          "command": "acai.confirmFinding",
+          "when": "view == acai.findings && viewItem =~ /^finding\\.(open|withdrawn|fix_failed|reinvestigating)$/",
           "group": "1_review@1"
         },
         {
-          "command": "assay.rejectFinding",
-          "when": "view == assay.findings && viewItem =~ /^finding\\.(open|confirmed|withdrawn|fix_failed|reinvestigating)$/",
+          "command": "acai.rejectFinding",
+          "when": "view == acai.findings && viewItem =~ /^finding\\.(open|confirmed|withdrawn|fix_failed|reinvestigating)$/",
           "group": "1_review@2"
         },
         {
-          "command": "assay.reinvestigateFinding",
-          "when": "view == assay.findings && viewItem =~ /^finding\\.(open|confirmed|withdrawn|fix_failed|rejected)$/",
+          "command": "acai.reinvestigateFinding",
+          "when": "view == acai.findings && viewItem =~ /^finding\\.(open|confirmed|withdrawn|fix_failed|rejected)$/",
           "group": "1_review@3"
         },
         {
-          "command": "assay.acceptFix",
-          "when": "view == assay.findings && viewItem == finding.fix_ready",
+          "command": "acai.acceptFix",
+          "when": "view == acai.findings && viewItem == finding.fix_ready",
           "group": "1_review@4"
         },
         {
-          "command": "assay.revertFix",
-          "when": "view == assay.findings && viewItem == finding.fix_ready",
+          "command": "acai.revertFix",
+          "when": "view == acai.findings && viewItem == finding.fix_ready",
           "group": "1_review@5"
         },
         {
-          "command": "assay.openFindingLocation",
-          "when": "view == assay.findings && viewItem =~ /^finding\\./",
+          "command": "acai.openFindingLocation",
+          "when": "view == acai.findings && viewItem =~ /^finding\\./",
           "group": "2_open@1"
         },
         {
-          "command": "assay.modifyFinding",
-          "when": "view == assay.findings && viewItem =~ /^finding\\./",
+          "command": "acai.modifyFinding",
+          "when": "view == acai.findings && viewItem =~ /^finding\\./",
           "group": "2_open@2"
         }
       ],
       "editor/title": [
         {
-          "command": "assay.openDashboardExternal",
-          "when": "activeWebviewPanelId == assay.dashboard",
+          "command": "acai.openDashboardExternal",
+          "when": "activeWebviewPanelId == acai.dashboard",
           "group": "navigation"
         }
       ]
     },
     "configuration": {
-      "title": "Assay",
+      "title": "Acai",
       "properties": {
-        "assay.provider": {
+        "acai.provider": {
           "type": "string",
           "enum": [
             "auto",
@@ -348,36 +348,36 @@
           ],
           "enumDescriptions": [
             "Anthropic when its key is set, else an OpenAI-compatible endpoint when a base URL is set, else OpenAI when its key is set, else none.",
-            "Claude through the Anthropic API (Assay: Set Anthropic API Key or ANTHROPIC_API_KEY).",
-            "OpenAI's API through the Responses API, with web search for research (Assay: Set OpenAI API Key or OPENAI_API_KEY).",
-            "An on-premise or self-hosted model behind an OpenAI-compatible API (set Assay: Openai Base Url and Assay: Model).",
+            "Claude through the Anthropic API (Acai: Set Anthropic API Key or ANTHROPIC_API_KEY).",
+            "OpenAI's API through the Responses API, with web search for research (Acai: Set OpenAI API Key or OPENAI_API_KEY).",
+            "An on-premise or self-hosted model behind an OpenAI-compatible API (set Acai: Openai Base Url and Acai: Model).",
             "No model. Detectors run locally; agent mode in Copilot Chat can do the reasoning through MCP."
           ],
           "default": "auto",
-          "description": "Model provider for agent audits, re-investigations and fixes run by the Assay server."
+          "description": "Model provider for agent audits, re-investigations and fixes run by the Acai server."
         },
-        "assay.model": {
+        "acai.model": {
           "type": "string",
           "default": "",
           "description": "Model id. Empty means the provider default (claude-opus-5-5 for Anthropic, gpt-5.5 for OpenAI). Required for openai-compatible."
         },
-        "assay.openaiBaseUrl": {
+        "acai.openaiBaseUrl": {
           "type": "string",
           "default": "",
           "scope": "machine",
           "description": "Base URL of an OpenAI-compatible endpoint, for example http://gpu-box:8000/v1. Only settable in user settings, so a repository cannot redirect code excerpts."
         },
-        "assay.stateDir": {
+        "acai.stateDir": {
           "type": "string",
           "default": "",
-          "description": "Where audit state lives. Empty means <folder>/.assay. Relative paths resolve against the workspace folder."
+          "description": "Where audit state lives. Empty means <folder>/.acai. Relative paths resolve against the workspace folder."
         },
-        "assay.diagnostics": {
+        "acai.diagnostics": {
           "type": "boolean",
           "default": true,
           "description": "Show findings that need attention in the Problems panel and as squiggles in the editor."
         },
-        "assay.reviewerName": {
+        "acai.reviewerName": {
           "type": "string",
           "default": "",
           "description": "Name recorded in the audit trail for your review decisions. Empty means your OS user name."
@@ -386,15 +386,15 @@
     },
     "mcpServerDefinitionProviders": [
       {
-        "id": "assay",
-        "label": "Assay compliance audit"
+        "id": "acai",
+        "label": "Acai compliance audit"
       }
     ]
   },
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "package": "node build.mjs && vsce package --no-dependencies --allow-missing-repository --out ../../dist/assay-vscode.vsix"
+    "package": "node build.mjs && vsce package --no-dependencies --allow-missing-repository --out ../../dist/acai-vscode.vsix"
   },
   "devDependencies": {
     "@types/vscode": "^1.101.0",

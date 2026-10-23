@@ -16,7 +16,7 @@ export type AgentOptions = {
   maxTurns?: number;
 };
 
-export const agentActor = (p: LlmProvider): Actor => ({ type: "agent", name: `assay-agent/${p.model}` });
+export const agentActor = (p: LlmProvider): Actor => ({ type: "agent", name: `acai-agent/${p.model}` });
 
 /** Investigation batches: related categories are reviewed together to share context. */
 export const BATCHES: { id: string; title: string; categories: Category[] }[] = [
@@ -199,7 +199,7 @@ export async function understandProduct(ws: Workspace, opts: AgentOptions) {
 
 /**
  * Agent investigation of the in-scope controls. Batches are independent (read-only tools; findings
- * are written through the locked store), so they run in parallel (ASSAY_PARALLEL, default 3), and a
+ * are written through the locked store), so they run in parallel (ACAI_PARALLEL, default 3), and a
  * failure in one batch is recorded without losing the others.
  */
 export async function investigate(ws: Workspace, auditId: string, opts: AgentOptions & { batches?: string[]; parallel?: number }) {
@@ -229,7 +229,7 @@ export async function investigate(ws: Workspace, auditId: string, opts: AgentOpt
           `\nInvestigate each control against the code. Record new findings, annotate detector findings you can confirm or refute, mark controls you verified, then call finish.`,
         ].join("\n"),
         tools: [...readTools(toolContext(ws)), ...auditTools(ws, auditId, new Set(batchControls.map((c) => c.id)), actor, recorded)],
-        maxTurns: opts.maxTurns ?? Number(process.env.ASSAY_MAX_TURNS ?? 40),
+        maxTurns: opts.maxTurns ?? Number(process.env.ACAI_MAX_TURNS ?? 40),
         finishTool: "finish",
         onEvent: emit(opts, batch.id),
         signal: opts.signal,
@@ -247,7 +247,7 @@ export async function investigate(ws: Workspace, auditId: string, opts: AgentOpt
     }
   };
 
-  const limit = Math.max(1, opts.parallel ?? Number(process.env.ASSAY_PARALLEL ?? 3));
+  const limit = Math.max(1, opts.parallel ?? Number(process.env.ACAI_PARALLEL ?? 3));
   const queue = [...work];
   await Promise.all(Array.from({ length: Math.min(limit, queue.length) }, async () => {
     for (let b = queue.shift(); b; b = queue.shift()) await runBatch(b);

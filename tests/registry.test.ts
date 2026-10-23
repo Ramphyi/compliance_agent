@@ -59,7 +59,7 @@ describe("host-agent playbook", () => {
   it("the Claude Code skill matches the MCP playbook", async () => {
     const { PLAYBOOK } = await import("../packages/cli/src/playbook");
     const { readFileSync } = await import("node:fs");
-    const skill = readFileSync(new URL("../skills/assay-audit/SKILL.md", import.meta.url), "utf8");
+    const skill = readFileSync(new URL("../skills/acai-audit/SKILL.md", import.meta.url), "utf8");
     expect(skill.endsWith(PLAYBOOK)).toBe(true);
   });
 });

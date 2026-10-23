@@ -1,5 +1,5 @@
-// Shapes returned by the Assay API (packages/cli/src/server.ts, packages/core/src/workspace.ts).
-// Kept in sync by hand: the dashboard has no build-time dependency on @assay/core.
+// Shapes returned by the Acai API (packages/cli/src/server.ts, packages/core/src/workspace.ts).
+// Kept in sync by hand: the dashboard has no build-time dependency on @acai/core.
 
 export const SEVERITIES = ["critical", "high", "medium", "low", "info"] as const;
 export type Severity = (typeof SEVERITIES)[number];
@@ -174,6 +174,7 @@ export type Audit = {
   notes: { category: string; text: string; by: Actor; at: string }[];
   model?: string;
   error?: string;
+  trigger?: { source: "webhook"; provider: string; event: string; ref?: string; sha?: string; url?: string };
   summary: Summary;
 };
 
@@ -183,6 +184,7 @@ export type ProjectListItem = {
   id: string;
   name: string;
   root: string;
+  rulesDir?: string;
   addedAt: string;
   classification?: string;
   latest?: { id: string; createdAt: string; phase: string; summary: Summary } | null;
@@ -191,12 +193,62 @@ export type ProjectListItem = {
 
 export type Provider = { id: string; model: string; destination: string; webSearch: boolean };
 
+// ------------------------------------------------------------------ accounts
+export type Role = "admin" | "member" | "viewer";
+export type AccountRef = { id: string; name: string; role: Role };
+export type UserInfo = {
+  id: string;
+  name: string;
+  role: Role;
+  disabled: boolean;
+  source: "local" | "env";
+  createdAt: string;
+  lastSeenAt?: string;
+  tokens: number;
+  sessions: number;
+};
+export type TokenInfo = {
+  id: string;
+  userId: string;
+  userName: string;
+  label: string;
+  prefix: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  expiresAt?: string;
+};
+export type AuthEvent = { at: string; actor: string; action: string; target?: string; ip?: string };
+export type AccountInfo = { account: UserInfo; tokens: TokenInfo[] };
+export type NewToken = { token: string; info: TokenInfo };
+export type ServerInfo = {
+  version: string;
+  uptimeSec: number;
+  node: string;
+  authMode: string;
+  publicUrl?: string;
+  oauth: boolean;
+  trustProxy: boolean;
+  webhookSecret: boolean;
+  githubToken: boolean;
+  allowClone: boolean;
+  projectRoots: string[];
+  approvers: string[];
+  admins?: string[];
+  dataDir: string;
+  provider: { id: string; model: string } | null;
+  projects: number;
+};
+
 export type Meta = {
   name: string;
   version: string;
   user: string;
-  auth: "none" | "shared" | "users";
+  /** "none": local single-user mode; "tokens": accounts with access tokens. */
+  auth: "none" | "tokens";
+  /** The signed-in account in "tokens" mode. */
+  account?: AccountRef | null;
   provider: Provider | null;
+  providerError?: string;
   registry: { frameworks: number; controls: number; presets: number; hash: string; errors: { file: string; message: string }[] } | null;
   cloneEnabled: boolean;
 };
@@ -255,4 +307,87 @@ export const categoryLabel = (c: string) => CATEGORY_LABELS[c] ?? c.charAt(0).to
 export const STATUS_LABELS: Record<FindingStatus, string> = {
   open: "Open", confirmed: "Confirmed", rejected: "Rejected", reinvestigating: "Re-investigating", withdrawn: "Withdrawn",
   fixing: "Fixing", fix_ready: "Fix ready", fix_failed: "Fix failed", resolved: "Resolved",
+};
+
+// ------------------------------------------------------------- connect agents
+/** Text uses `backticks` for inline code; code blocks are copied as they are. */
+export type GuideBlock = { kind: "text"; text: string } | { kind: "steps"; items: string[] } | { kind: "code"; label: string; text: string };
+export type Guide = { client: string; label: string; mode: "local" | "remote"; blocks: GuideBlock[] };
+export type ConnectInfo = {
+  container: boolean;
+  mcpUrl: string;
+  publicUrl: string | null;
+  auth: Meta["auth"];
+  oauth: boolean;
+  bundleBuilt: boolean;
+  stdioCommand: string[];
+  project?: { id: string; name: string; root: string };
+  clients: { id: string; label: string; remoteOnly: boolean; local: Guide | null; remote: Guide }[];
+};
+
+export type RegistryInfo = {
+  hash: string;
+  root: string;
+  ruleTemplate: string | null;
+  batches: { id: string; title: string }[];
+  frameworks: { id: string; shortTitle: string; title: string; kind: string; version: string; jurisdictions: string[]; controlCount: number }[];
+  presets: { id: string; title: string; description: string }[];
+  checks: { id: string; title: string }[];
+  artifacts: { id: string; title: string }[];
+};
+
+// ------------------------------------------------------------------ model
+export type ProviderPresetInfo = {
+  id: string;
+  label: string;
+  engine: "anthropic" | "openai" | "openai-compatible";
+  baseURL?: string;
+  keyEnv?: string;
+  needsKey: boolean;
+  defaultModel?: string;
+  webSearch: boolean;
+  local?: boolean;
+  docs?: string;
+  keyInEnvironment: boolean;
+};
+export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
+export type ModelState = {
+  active: { preset: string; model: string; destination: string; webSearch: boolean } | null;
+  source: "settings" | "environment" | "none";
+  error: string | null;
+  locked: boolean;
+  inContainer: boolean;
+  saved: { preset: string; model?: string; baseURL?: string; effort?: Effort; hasKey: boolean } | null;
+  presets: ProviderPresetInfo[];
+};
+
+// ------------------------------------------------------------- automation
+export type Automation = {
+  push: "off" | "scan" | "agent";
+  pullRequest: "off" | "scan";
+  report: { commitStatus: boolean; prComment: boolean };
+  failOn: Severity;
+};
+export type Delivery = {
+  id: string;
+  at: string;
+  provider: string;
+  event: string;
+  repo: string;
+  sha?: string;
+  status: "queued" | "running" | "done" | "ignored" | "skipped" | "failed";
+  message: string;
+  auditId?: string;
+  pr?: { number: number; added: number; fixed: number; known: number; url?: string };
+  reported?: string[];
+};
+export type AutomationInfo = {
+  settings: Automation;
+  publicUrl: string | null;
+  secretSet: boolean;
+  githubToken: boolean;
+  model: boolean;
+  origin?: string;
+  branch?: string;
+  deliveries: Delivery[];
 };

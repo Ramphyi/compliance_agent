@@ -3,24 +3,24 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { Workspace } from "@assay/core";
+import { Workspace } from "@acai/core";
 
 export type ProjectEntry = { id: string; name: string; root: string; stateDir?: string; addedAt: string };
 
-export const assayHome = () => resolve(process.env.ASSAY_HOME ?? join(homedir(), ".assay"));
+export const acaiHome = () => resolve(process.env.ACAI_HOME ?? join(homedir(), ".acai"));
 
 const idFor = (root: string) => createHash("sha256").update(root).digest("hex").slice(0, 10);
 
 /**
- * Projects known to this Assay instance. A single developer usually has one; an internal
- * deployment can register many repositories (local paths or clones under ASSAY_HOME/repos).
+ * Projects known to this Acai instance. A single developer usually has one; an internal
+ * deployment can register many repositories (local paths or clones under ACAI_HOME/repos).
  */
 export class Projects {
   private file: string;
   private cache = new Map<string, Workspace>();
 
   constructor(private opts: { stateDir?: string; persist?: boolean } = {}) {
-    this.file = join(assayHome(), "projects.json");
+    this.file = join(acaiHome(), "projects.json");
   }
 
   private read(): ProjectEntry[] {
@@ -39,7 +39,7 @@ export class Projects {
       this.memory = list;
       return;
     }
-    mkdirSync(assayHome(), { recursive: true });
+    mkdirSync(acaiHome(), { recursive: true });
     writeFileSync(this.file, JSON.stringify(list, null, 2));
   }
 
@@ -63,16 +63,21 @@ export class Projects {
     this.cache.delete(id);
   }
 
-  /** Clone a repository into ASSAY_HOME/repos (internal deployments). Disabled unless ASSAY_ALLOW_CLONE=true. */
+  /** Clone a repository into ACAI_HOME/repos (internal deployments). Disabled unless ACAI_ALLOW_CLONE=true. */
   clone(url: string, name?: string): ProjectEntry {
-    if (process.env.ASSAY_ALLOW_CLONE !== "true") throw new Error("Cloning is disabled. Set ASSAY_ALLOW_CLONE=true on the server to enable it.");
+    if (process.env.ACAI_ALLOW_CLONE !== "true") throw new Error("Cloning is disabled. Set ACAI_ALLOW_CLONE=true on the server to enable it.");
     if (!/^(https:\/\/|git@|ssh:\/\/)[\w.@:/~-]+$/.test(url)) throw new Error("Only https, ssh or git@ repository URLs are accepted");
-    const dir = join(assayHome(), "repos", `${(name ?? basename(url).replace(/\.git$/, "")).replace(/[^\w.-]/g, "_")}-${idFor(url).slice(0, 6)}`);
+    const dir = join(acaiHome(), "repos", `${(name ?? basename(url).replace(/\.git$/, "")).replace(/[^\w.-]/g, "_")}-${idFor(url).slice(0, 6)}`);
     if (!existsSync(dir)) {
-      mkdirSync(join(assayHome(), "repos"), { recursive: true });
+      mkdirSync(join(acaiHome(), "repos"), { recursive: true });
       execFileSync("git", ["clone", "--", url, dir], { stdio: "pipe", timeout: 600_000, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } });
     }
     return this.add(dir, name);
+  }
+
+  /** Re-read the registry and project rules of every open project, after rule files changed on disk. */
+  reloadRegistries() {
+    for (const ws of this.cache.values()) ws.reloadRegistry();
   }
 
   get(idOrPath: string): { entry: ProjectEntry; ws: Workspace } {

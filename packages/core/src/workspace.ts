@@ -14,7 +14,7 @@ import { classify } from "./scan/classify";
 import { scanProject, type Snapshot } from "./scan/walk";
 import { Store } from "./store";
 import type {
-  Actor, Answer, AnswerValue, Audit, Category, Classification, CodeRef, ControlAssessment, Finding,
+  Actor, Answer, AnswerValue, Audit, AuditTrigger, Automation, Category, Classification, CodeRef, ControlAssessment, Finding,
   FindingStatus, Fixability, ProjectConfig, ResearchRule, Severity, VerificationRun,
 } from "./types";
 
@@ -34,7 +34,7 @@ export type FindingDraft = {
 
 export type QuestionView = Question & { answer?: Answer };
 
-export const SYSTEM: Actor = { type: "system", name: "assay" };
+export const SYSTEM: Actor = { type: "system", name: "acai" };
 
 const now = () => new Date().toISOString();
 
@@ -92,7 +92,7 @@ export class Workspace {
         answers: {},
         scopeOverrides: {},
         verify: { commands: detected.commands, approved: false, timeoutSec: 600 },
-        fix: { useBranch: true, branchPrefix: "assay/fixes", maxAttempts: 3 },
+        fix: { useBranch: true, branchPrefix: "acai/fixes", maxAttempts: 3 },
         research: { enabled: false },
       };
       this.store.writeProject(p);
@@ -271,6 +271,28 @@ export class Workspace {
     return this.project().verify;
   }
 
+  automation(): Automation {
+    const a = this.project().automation;
+    return {
+      push: a?.push ?? "scan",
+      pullRequest: a?.pullRequest ?? "scan",
+      report: { commitStatus: a?.report?.commitStatus ?? true, prComment: a?.report?.prComment ?? true },
+      failOn: a?.failOn ?? "high",
+    };
+  }
+
+  setAutomation(next: Partial<Automation>, actor: Actor) {
+    const current = this.automation();
+    const merged: Automation = { ...current, ...next, report: { ...current.report, ...next.report } };
+    if (!["off", "scan", "agent"].includes(merged.push) || !["off", "scan"].includes(merged.pullRequest) || !SEVERITIES.includes(merged.failOn))
+      throw new ReviewError("Invalid automation settings");
+    this.mutate((p) => {
+      p.automation = merged;
+    });
+    this.store.journal(actor, "automation.updated", undefined, merged);
+    return merged;
+  }
+
   setFixOptions(opts: Partial<ProjectConfig["fix"]> & { researchEnabled?: boolean }, actor: Actor) {
     this.mutate((p) => {
       const { researchEnabled, ...fix } = opts;
@@ -314,7 +336,7 @@ export class Workspace {
   }
 
   /** New audit: fresh scan, deterministic checks, carry-over of earlier human decisions. */
-  createAudit(opts: { mode: Audit["mode"]; actor: Actor }): Audit {
+  createAudit(opts: { mode: Audit["mode"]; actor: Actor; trigger?: AuditTrigger }): Audit {
     this.project();
     this.refreshProfile(opts.actor);
     const p = this.project();
@@ -374,6 +396,7 @@ export class Workspace {
       updatedAt: now(),
       phase: opts.mode === "agent" ? "investigating" : "review",
       mode: opts.mode,
+      ...(opts.trigger ? { trigger: opts.trigger } : {}),
       registryHash: this.registry.hash,
       profileHash: this.profileHash(p),
       scan: snapshot.stats,
@@ -679,7 +702,7 @@ export class Workspace {
     const retry = Boolean(error) && !opts.final && attempts < p.fix.maxAttempts;
     let commit: string | undefined;
     if (!error) {
-      commit = commitPaths(this.root, files, `assay: fix ${findingId} ${finding.title}\n\n${opts.summary}\n\nAssay-Finding: ${findingId}\nAssay-Audit: ${auditId}\nControls: ${finding.controlIds.join(", ") || "none"}\n`);
+      commit = commitPaths(this.root, files, `acai: fix ${findingId} ${finding.title}\n\n${opts.summary}\n\nAcai-Finding: ${findingId}\nAcai-Audit: ${auditId}\nControls: ${finding.controlIds.join(", ") || "none"}\n`);
     } else if (!retry) {
       restorePaths(this.root, base, files);
     }

@@ -17,9 +17,9 @@ import {
 
 export type RegistryIssue = { file: string; message: string };
 
-/** Locate the registry next to the running code: repo checkout, bundle or ASSAY_REGISTRY. */
+/** Locate the registry next to the running code: repo checkout, bundle or ACAI_REGISTRY. */
 export function findRegistryRoot(): string {
-  const fromEnv = process.env.ASSAY_REGISTRY;
+  const fromEnv = process.env.ACAI_REGISTRY;
   if (fromEnv) return resolve(fromEnv);
   let dir = dirname(fileURLToPath(import.meta.url));
   for (let i = 0; i < 8; i++) {
@@ -30,7 +30,7 @@ export function findRegistryRoot(): string {
     dir = parent;
   }
   throw new Error(
-    "Assay registry not found. Set ASSAY_REGISTRY to the registry directory.",
+    "Acai registry not found. Set ACAI_REGISTRY to the registry directory.",
   );
 }
 

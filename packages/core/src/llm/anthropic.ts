@@ -21,7 +21,7 @@ const DEFAULT_MODEL = "claude-opus-5-5";
 const FALLBACK_MODELS = new Set(["claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5"]);
 
 /**
- * Claude provider: a manual streaming tool loop, so Assay keeps control of budgets,
+ * Claude provider: a manual streaming tool loop, so Acai keeps control of budgets,
  * journaling and human-in-the-loop gates. Thinking blocks are passed back unchanged.
  */
 export class AnthropicProvider implements LlmProvider {
@@ -39,7 +39,7 @@ export class AnthropicProvider implements LlmProvider {
     this.model = cfg.model || DEFAULT_MODEL;
     this.effort = cfg.effort ?? "high";
     this.directApi = deps.directApi ?? !cfg.baseURL;
-    this.client = deps.client ?? new Anthropic({ baseURL: cfg.baseURL || undefined, maxRetries: 4, timeout: 15 * 60_000 });
+    this.client = deps.client ?? new Anthropic({ apiKey: cfg.apiKey || undefined, baseURL: cfg.baseURL || undefined, maxRetries: 4, timeout: 15 * 60_000 });
     this.destination = `Anthropic API (${cfg.baseURL || "api.anthropic.com"}), model ${this.model}`;
   }
 
@@ -52,7 +52,7 @@ export class AnthropicProvider implements LlmProvider {
     }));
     if (run.webSearch) tools.push({ type: "web_search_20260209", name: "web_search", max_uses: 10 });
 
-    const fallbacks = this.directApi && process.env.ASSAY_FALLBACKS !== "off" && FALLBACK_MODELS.has(this.model);
+    const fallbacks = this.directApi && process.env.ACAI_FALLBACKS !== "off" && FALLBACK_MODELS.has(this.model);
     const messages: BetaMessageParam[] = [{ role: "user", content: run.prompt }];
     const usage = { inputTokens: 0, outputTokens: 0 };
     const texts: string[] = [];

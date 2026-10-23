@@ -1,5 +1,5 @@
-// Quick, cheap check that the configured model provider works with Assay's tool loop.
-// Usage: OPENAI_API_KEY=... npx tsx scripts/provider-smoke.ts   (or ANTHROPIC_API_KEY, or ASSAY_PROVIDER=openai-compatible ...)
+// Quick, cheap check that the configured model provider works with Acai's tool loop.
+// Usage: OPENAI_API_KEY=... npx tsx scripts/provider-smoke.ts   (or ANTHROPIC_API_KEY, or ACAI_PROVIDER=openai-compatible ...)
 import { z } from "zod";
 import { createProvider, providerConfigFromEnv } from "../packages/core/src/index";
 import { tool } from "../packages/core/src/llm/provider";
@@ -7,7 +7,7 @@ import { tool } from "../packages/core/src/llm/provider";
 const cfg = providerConfigFromEnv();
 const provider = await createProvider({ ...cfg, effort: "low" });
 if (!provider) {
-  console.error("No model provider configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or ASSAY_PROVIDER=openai-compatible with ASSAY_OPENAI_BASE_URL and ASSAY_MODEL.");
+  console.error("No model provider configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or ACAI_PROVIDER=openai-compatible with ACAI_OPENAI_BASE_URL and ACAI_MODEL.");
   process.exit(2);
 }
 console.log(`provider ${cfg.provider} → ${provider.destination}`);

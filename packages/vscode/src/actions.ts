@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
-import type { AssayClient, AuditDetail, Finding, Job, JobEvent, RejectReason, ReviewAction } from "./api";
+import type { AcaiClient, AuditDetail, Finding, Job, JobEvent, RejectReason, ReviewAction } from "./api";
 import { can, FindingNode, loc, locationPath, STATUS_LABEL } from "./findings";
-import type { AssayState } from "./state";
+import type { AcaiState } from "./state";
 
 export type ActionContext = {
-  state: AssayState;
+  state: AcaiState;
   context: vscode.ExtensionContext;
   output: vscode.OutputChannel;
   openDashboard(findingId?: string): Promise<void>;
@@ -14,29 +14,29 @@ export type ActionContext = {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Show the API's {error} message, with a shortcut when the cause is a missing model. */
-export async function showError(e: unknown, prefix = "Assay") {
+export async function showError(e: unknown, prefix = "Acai") {
   const message = (e as Error)?.message ?? String(e);
   const noModel = /no model provider/i.test(message);
   const choice = await vscode.window.showErrorMessage(`${prefix}: ${message}`, ...(noModel ? ["Set API Key", "Ask Copilot"] : ["Show Output"]));
-  if (choice === "Set API Key") void vscode.commands.executeCommand("assay.setApiKey");
+  if (choice === "Set API Key") void vscode.commands.executeCommand("acai.setApiKey");
   else if (choice === "Ask Copilot") void askCopilot();
-  else if (choice === "Show Output") void vscode.commands.executeCommand("workbench.action.output.show.extension-output-assay-internal.assay-vscode-#1-Assay");
+  else if (choice === "Show Output") void vscode.commands.executeCommand("workbench.action.output.show.extension-output-acai-internal.acai-vscode-#1-Acai");
 }
 
-/** Open Copilot Chat in agent mode with a prompt that uses the Assay MCP tools. */
-export async function askCopilot(prompt = "Audit this project for compliance using the Assay MCP tools. Ask me to decide on each finding.") {
+/** Open Copilot Chat in agent mode with a prompt that uses the Acai MCP tools. */
+export async function askCopilot(prompt = "Audit this project for compliance using the Acai MCP tools. Ask me to decide on each finding.") {
   try {
     await vscode.commands.executeCommand("workbench.action.chat.open", { query: prompt, mode: "agent" });
   } catch {
-    void vscode.window.showInformationMessage(`Open Copilot Chat in agent mode, enable the Assay tools, and ask: "${prompt}"`);
+    void vscode.window.showInformationMessage(`Open Copilot Chat in agent mode, enable the Acai tools, and ask: "${prompt}"`);
   }
 }
 
-function connection(ctx: ActionContext): { client: AssayClient; pid: string } | undefined {
+function connection(ctx: ActionContext): { client: AcaiClient; pid: string } | undefined {
   const { client, projectId } = ctx.state;
   if (client && projectId) return { client, pid: projectId };
-  void vscode.window.showWarningMessage(ctx.state.folder ? "The Assay server is not running." : "Open a folder to use Assay.", ...(ctx.state.folder ? ["Restart Server"] : [])).then((c) => {
-    if (c) void vscode.commands.executeCommand("assay.restartServer");
+  void vscode.window.showWarningMessage(ctx.state.folder ? "The Acai server is not running." : "Open a folder to use Acai.", ...(ctx.state.folder ? ["Restart Server"] : [])).then((c) => {
+    if (c) void vscode.commands.executeCommand("acai.restartServer");
   });
   return undefined;
 }
@@ -44,8 +44,8 @@ function connection(ctx: ActionContext): { client: AssayClient; pid: string } | 
 function latestAudit(ctx: ActionContext): AuditDetail | undefined {
   const a = ctx.state.audit;
   if (!a) {
-    void vscode.window.showInformationMessage("No Assay audit yet for this folder.", "Run Audit").then((c) => {
-      if (c) void vscode.commands.executeCommand("assay.runAudit");
+    void vscode.window.showInformationMessage("No Acai audit yet for this folder.", "Run Audit").then((c) => {
+      if (c) void vscode.commands.executeCommand("acai.runAudit");
     });
   }
   return a;
@@ -119,7 +119,7 @@ async function review(ctx: ActionContext, f: Finding, body: { action: ReviewActi
 export async function confirmFinding(ctx: ActionContext, arg: unknown) {
   const f = await targetFinding(ctx, arg, "confirm", "confirm");
   if (!f) return;
-  if (await review(ctx, f, { action: "confirm" })) vscode.window.setStatusBarMessage(`$(check) Assay: confirmed ${f.id}`, 4000);
+  if (await review(ctx, f, { action: "confirm" })) vscode.window.setStatusBarMessage(`$(check) Acai: confirmed ${f.id}`, 4000);
 }
 
 const REJECT_REASONS: { label: string; reason: RejectReason; detail: string }[] = [
@@ -145,7 +145,7 @@ export async function rejectFinding(ctx: ActionContext, arg: unknown) {
   });
   if (note === undefined) return;
   if (await review(ctx, f, { action: "reject", reason: pick.reason, note: note.trim() || undefined }))
-    vscode.window.setStatusBarMessage(`$(close) Assay: rejected ${f.id} (${pick.label.toLowerCase()})`, 4000);
+    vscode.window.setStatusBarMessage(`$(close) Acai: rejected ${f.id} (${pick.label.toLowerCase()})`, 4000);
 }
 
 export async function reinvestigateFinding(ctx: ActionContext, arg: unknown) {
@@ -164,18 +164,18 @@ export async function reinvestigateFinding(ctx: ActionContext, arg: unknown) {
   if (out.jobId) return void trackJob(ctx, out.jobId, `Re-investigating ${f.id}`);
   const running = ctx.state.project?.running;
   const message = !ctx.state.meta?.provider
-    ? `${f.id} is marked for re-investigation. No model is configured for the Assay server: ask Copilot Chat in agent mode to re-investigate it with the Assay tools, or set an API key.`
+    ? `${f.id} is marked for re-investigation. No model is configured for the Acai server: ask Copilot Chat in agent mode to re-investigate it with the Acai tools, or set an API key.`
     : `${f.id} is marked for re-investigation.${running ? ` Another job is running (${running}); start the re-investigation from the dashboard when it finishes.` : ""}`;
   const choice = await vscode.window.showInformationMessage(message, ...(!ctx.state.meta?.provider ? ["Ask Copilot", "Set API Key"] : ["Open Dashboard"]));
-  if (choice === "Ask Copilot") void askCopilot(`Re-investigate Assay finding ${f.id} using the Assay MCP tools. My note: ${note.trim()}`);
-  else if (choice === "Set API Key") void vscode.commands.executeCommand("assay.setApiKey");
+  if (choice === "Ask Copilot") void askCopilot(`Re-investigate Acai finding ${f.id} using the Acai MCP tools. My note: ${note.trim()}`);
+  else if (choice === "Set API Key") void vscode.commands.executeCommand("acai.setApiKey");
   else if (choice === "Open Dashboard") void ctx.openDashboard(f.id);
 }
 
 export async function acceptFix(ctx: ActionContext, arg: unknown) {
   const f = await targetFinding(ctx, arg, "accept-fix", "accept the fix of");
   if (!f) return;
-  if (await review(ctx, f, { action: "accept-fix" })) vscode.window.setStatusBarMessage(`$(pass) Assay: accepted the fix for ${f.id}`, 4000);
+  if (await review(ctx, f, { action: "accept-fix" })) vscode.window.setStatusBarMessage(`$(pass) Acai: accepted the fix for ${f.id}`, 4000);
 }
 
 export async function revertFix(ctx: ActionContext, arg: unknown) {
@@ -187,7 +187,7 @@ export async function revertFix(ctx: ActionContext, arg: unknown) {
     "Revert Fix",
   );
   if (ok !== "Revert Fix") return;
-  if (await review(ctx, f, { action: "revert-fix" })) vscode.window.setStatusBarMessage(`$(discard) Assay: reverted the fix for ${f.id}`, 4000);
+  if (await review(ctx, f, { action: "revert-fix" })) vscode.window.setStatusBarMessage(`$(discard) Acai: reverted the fix for ${f.id}`, 4000);
 }
 
 export async function modifyFinding(ctx: ActionContext, arg: unknown) {
@@ -219,7 +219,7 @@ export async function runAudit(ctx: ActionContext) {
   const c = connection(ctx);
   if (!c) return;
   const result = await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: "Assay: running detectors…" },
+    { location: vscode.ProgressLocation.Notification, title: "Acai: running detectors…" },
     async () => {
       try {
         return await c.client.post<{ audit: AuditDetail }>(`/api/projects/${c.pid}/audits`, { mode: "static" }, 15 * 60_000);
@@ -233,7 +233,7 @@ export async function runAudit(ctx: ActionContext) {
   await ctx.state.refresh();
   const s = ctx.state.audit?.summary;
   const choice = await vscode.window.showInformationMessage(
-    `Assay audit ${result.audit.id}: ${s?.total ?? result.audit.findings.length} findings${s ? `, ${s.open} to decide` : ""}.`,
+    `Acai audit ${result.audit.id}: ${s?.total ?? result.audit.findings.length} findings${s ? `, ${s.open} to decide` : ""}.`,
     "Show Findings",
     "Open Dashboard",
   );
@@ -247,17 +247,17 @@ async function consentToProvider(ctx: ActionContext): Promise<boolean> {
   const p = ctx.state.meta?.provider;
   if (!p) {
     const choice = await vscode.window.showWarningMessage(
-      "Agent audits need a model. Set an Anthropic API key (or configure an OpenAI-compatible endpoint in settings), or let Copilot Chat drive the audit through the Assay MCP server.",
+      "Agent audits need a model. Set an Anthropic API key (or configure an OpenAI-compatible endpoint in settings), or let Copilot Chat drive the audit through the Acai MCP server.",
       "Set API Key",
       "Ask Copilot",
       "Open Settings",
     );
-    if (choice === "Set API Key") void vscode.commands.executeCommand("assay.setApiKey");
+    if (choice === "Set API Key") void vscode.commands.executeCommand("acai.setApiKey");
     else if (choice === "Ask Copilot") void askCopilot();
-    else if (choice === "Open Settings") void vscode.commands.executeCommand("workbench.action.openSettings", "assay.");
+    else if (choice === "Open Settings") void vscode.commands.executeCommand("workbench.action.openSettings", "acai.");
     return false;
   }
-  const key = `assay.consent:${p.destination}`;
+  const key = `acai.consent:${p.destination}`;
   if (ctx.context.globalState.get<boolean>(key)) return true;
   const ok = await vscode.window.showInformationMessage(
     "Send code excerpts to the model provider?",
@@ -273,7 +273,7 @@ export async function runAgentAudit(ctx: ActionContext) {
   const c = connection(ctx);
   if (!c || !(await consentToProvider(ctx))) return;
   try {
-    const out = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Assay: scanning before the agent audit…" }, () =>
+    const out = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Acai: scanning before the agent audit…" }, () =>
       c.client.post<{ audit: AuditDetail; jobId?: string }>(`/api/projects/${c.pid}/audits`, { mode: "agent" }, 15 * 60_000),
     );
     void ctx.state.refresh();
@@ -297,7 +297,7 @@ export async function fixConfirmed(ctx: ActionContext) {
     `Fix ${ids.length} confirmed finding(s)?`,
     {
       modal: true,
-      detail: `${ids.join(", ")}\n\nAssay edits files in this working tree and runs the approved build and test commands. Every fix waits for your review (Accept Fix or Revert Fix).`,
+      detail: `${ids.join(", ")}\n\nAcai edits files in this working tree and runs the approved build and test commands. Every fix waits for your review (Accept Fix or Revert Fix).`,
     },
     "Fix",
   );
@@ -326,7 +326,7 @@ export async function trackJob(ctx: ActionContext, jobId: string, title: string)
   const c = ctx.state.client;
   if (!c) return;
   const job = await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: `Assay: ${title}`, cancellable: true },
+    { location: vscode.ProgressLocation.Notification, title: `Acai: ${title}`, cancellable: true },
     async (progress, token) => {
       token.onCancellationRequested(() => {
         c.post(`/api/jobs/${encodeURIComponent(jobId)}/cancel`).catch(() => undefined);
@@ -337,7 +337,7 @@ export async function trackJob(ctx: ActionContext, jobId: string, title: string)
         try {
           j = await c.get<Job>(`/api/jobs/${encodeURIComponent(jobId)}`);
         } catch (e) {
-          void showError(e, `Assay: lost track of "${title}"`);
+          void showError(e, `Acai: lost track of "${title}"`);
           return undefined;
         }
         if (j.status !== "running") return j;
@@ -352,11 +352,11 @@ export async function trackJob(ctx: ActionContext, jobId: string, title: string)
   );
   await ctx.state.refresh();
   if (!job) return;
-  if (job.status === "failed") return void showError(new Error(job.error ?? "the job failed"), `Assay: ${title} failed`);
-  if (job.status === "cancelled") return void vscode.window.showInformationMessage(`Assay: ${title} was cancelled.`);
+  if (job.status === "failed") return void showError(new Error(job.error ?? "the job failed"), `Acai: ${title} failed`);
+  if (job.status === "cancelled") return void vscode.window.showInformationMessage(`Acai: ${title} was cancelled.`);
   const s = ctx.state.audit?.summary;
   const detail = s ? ` ${s.open} to decide, ${s.fixReady} fix(es) to review.` : "";
-  const choice = await vscode.window.showInformationMessage(`Assay: ${title} finished.${detail}`, "Show Findings", "Open Dashboard");
+  const choice = await vscode.window.showInformationMessage(`Acai: ${title} finished.${detail}`, "Show Findings", "Open Dashboard");
   if (choice === "Show Findings") ctx.revealFindings();
   else if (choice === "Open Dashboard") void ctx.openDashboard(job.findingId);
 }

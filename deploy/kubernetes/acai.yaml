@@ -1,0 +1,141 @@
+# Acai on Kubernetes: one replica (state is files on a ReadWriteOnce volume), non-root,
+# read-only root filesystem. See docs/DEPLOY.md ("Kubernetes").
+#
+#   docker build -t registry.example.com/acai:0.1.0 . && docker push registry.example.com/acai:0.1.0
+#   kubectl create namespace acai
+#   # Set ACAI_ADMIN_TOKEN in the Secret below (openssl rand -hex 32), or delete that Secret from this
+#   # file and create it outside version control:
+#   #   kubectl -n acai create secret generic acai-secrets --from-literal=ACAI_ADMIN_TOKEN="$(openssl rand -hex 32)"
+#   kubectl -n acai apply -f deploy/kubernetes/acai.yaml
+#
+# Repositories: set ACAI_ALLOW_CLONE=true and add them by URL in the dashboard (cloned into the
+# volume under /data/repos), or mount them under /workspace.
+# Accounts: kubectl -n acai exec deploy/acai -- node /opt/acai/acai.mjs users list
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: acai-secrets
+  labels: { app.kubernetes.io/name: acai }
+type: Opaque
+# Do not commit real values. Other keys used when present: ACAI_TOKENS, ANTHROPIC_API_KEY,
+# OPENAI_API_KEY, ACAI_OPENAI_API_KEY, ACAI_WEBHOOK_SECRET, GITHUB_TOKEN.
+stringData:
+  # Shorter than 16 characters on purpose: Acai refuses to start until you set a real token.
+  ACAI_ADMIN_TOKEN: "change-me"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: acai-data
+  labels: { app.kubernetes.io/name: acai }
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 20Gi
+  # storageClassName: <your class>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acai
+  labels: { app.kubernetes.io/name: acai }
+spec:
+  replicas: 1 # state lives in files on one volume: do not scale out
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: acai }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: acai }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: acai
+          image: registry.example.com/acai:0.1.0
+          imagePullPolicy: IfNotPresent
+          args: ["serve", "/workspace"]
+          ports:
+            - { name: http, containerPort: 4317 }
+          env:
+            - { name: ACAI_HOME, value: /data }
+            - { name: ACAI_HOST, value: 0.0.0.0 }
+            - { name: ACAI_PORT, value: "4317" }
+            - { name: ACAI_PROJECT_ROOTS, value: "/workspace:/data/repos" }
+            - { name: ACAI_ALLOW_CLONE, value: "true" }
+            # Behind the Ingress (TLS terminates there):
+            - { name: ACAI_TRUST_PROXY, value: "1" }
+            - { name: ACAI_PUBLIC_URL, value: "https://acai.example.com" }
+            # Members who may also approve build/test commands and change the model:
+            # - { name: ACAI_APPROVERS, value: "alice,bob" }
+            # On-premise model (vLLM, Ollama, LiteLLM) reachable from the cluster:
+            # - { name: ACAI_PROVIDER, value: openai-compatible }
+            # - { name: ACAI_OPENAI_BASE_URL, value: "http://vllm.models.svc:8000/v1" }
+            # - { name: ACAI_MODEL, value: "qwen3-coder" }
+          envFrom:
+            - secretRef: { name: acai-secrets }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: workspace, mountPath: /workspace }
+            - { name: tmp, mountPath: /tmp }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 4Gi } # builds and tests of audited projects run in this container
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: acai-data }
+        - name: workspace
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acai
+  labels: { app.kubernetes.io/name: acai }
+spec:
+  selector: { app.kubernetes.io/name: acai }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+# Example Ingress (adjust the class, host and TLS secret). Long-lived event streams need a
+# generous read timeout on the controller.
+# ---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: acai
+#   annotations:
+#     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+#     nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+# spec:
+#   ingressClassName: nginx
+#   tls:
+#     - hosts: [acai.example.com]
+#       secretName: acai-tls
+#   rules:
+#     - host: acai.example.com
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service: { name: acai, port: { name: http } }

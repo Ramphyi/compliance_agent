@@ -1,8 +1,8 @@
 {
-  "name": "assay",
+  "name": "acai",
   "version": "0.1.0",
   "private": true,
-  "description": "Assay: self-hosted compliance audit agent, MCP server, dashboard and IDE extension.",
+  "description": "Acai: self-hosted compliance audit agent, MCP server, dashboard and IDE extension.",
   "type": "module",
   "workspaces": [
     "packages/core",
@@ -14,14 +14,14 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "assay": "tsx packages/cli/src/main.ts",
+    "acai": "tsx packages/cli/src/main.ts",
     "dev": "tsx packages/cli/src/main.ts serve --dev",
-    "dev:dashboard": "npm run dev -w @assay/dashboard",
+    "dev:dashboard": "npm run dev -w @acai/dashboard",
     "registry:validate": "tsx scripts/validate-registry.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck -w @assay/dashboard && npm run typecheck -w assay-vscode",
+    "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck -w @acai/dashboard && npm run typecheck -w acai-vscode",
     "test": "vitest run",
-    "build": "npm run build -w @assay/dashboard && node scripts/build.mjs",
-    "build:vscode": "npm run build && npm run package -w assay-vscode",
+    "build": "npm run build -w @acai/dashboard && node scripts/build.mjs",
+    "build:vscode": "npm run build && npm run package -w acai-vscode",
     "check": "npm run registry:validate && npm run typecheck && npm test && npm run eval:detectors && npm run build",
     "eval:detectors": "tsx scripts/eval-detectors.ts",
     "skill:sync": "tsx scripts/sync-skill.ts"

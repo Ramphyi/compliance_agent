@@ -2,11 +2,11 @@ import { userInfo } from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
 
-export const SECRET_KEY = "assay.anthropicApiKey";
-export const OPENAI_SECRET_KEY = "assay.openaiApiKey";
+export const SECRET_KEY = "acai.anthropicApiKey";
+export const OPENAI_SECRET_KEY = "acai.openaiApiKey";
 
 /** Settings that change how the server and the MCP server are launched. */
-export const LAUNCH_SETTINGS = ["assay.provider", "assay.model", "assay.openaiBaseUrl", "assay.stateDir"];
+export const LAUNCH_SETTINGS = ["acai.provider", "acai.model", "acai.openaiBaseUrl", "acai.stateDir"];
 
 export type Settings = {
   provider: "auto" | "anthropic" | "openai" | "openai-compatible" | "none";
@@ -18,7 +18,7 @@ export type Settings = {
 };
 
 export function settings(): Settings {
-  const c = vscode.workspace.getConfiguration("assay");
+  const c = vscode.workspace.getConfiguration("acai");
   return {
     provider: c.get<Settings["provider"]>("provider", "auto"),
     model: c.get<string>("model", "").trim(),
@@ -39,7 +39,7 @@ export function reviewerName() {
   }
 }
 
-/** assay.stateDir resolved against the folder; supports ~ and ${workspaceFolder}. */
+/** acai.stateDir resolved against the folder; supports ~ and ${workspaceFolder}. */
 export function resolveStateDir(folder: string, s = settings()): string | undefined {
   if (!s.stateDir) return undefined;
   let dir = s.stateDir.replace(/\$\{workspaceFolder\}/g, folder);
@@ -47,16 +47,16 @@ export function resolveStateDir(folder: string, s = settings()): string | undefi
   return path.resolve(folder, dir);
 }
 
-/** Environment for the Assay processes: model provider settings and the API key from SecretStorage. */
-export async function assayEnv(secrets: vscode.SecretStorage, s = settings()): Promise<Record<string, string>> {
+/** Environment for the Acai processes: model provider settings and the API key from SecretStorage. */
+export async function acaiEnv(secrets: vscode.SecretStorage, s = settings()): Promise<Record<string, string>> {
   const env: Record<string, string> = {};
   const key = await secrets.get(SECRET_KEY);
   if (key) env.ANTHROPIC_API_KEY = key;
   const openaiKey = await secrets.get(OPENAI_SECRET_KEY);
   if (openaiKey) env.OPENAI_API_KEY = openaiKey;
-  if (s.provider !== "auto") env.ASSAY_PROVIDER = s.provider;
-  if (s.model) env.ASSAY_MODEL = s.model;
-  if (s.openaiBaseUrl) env.ASSAY_OPENAI_BASE_URL = s.openaiBaseUrl;
+  if (s.provider !== "auto") env.ACAI_PROVIDER = s.provider;
+  if (s.model) env.ACAI_MODEL = s.model;
+  if (s.openaiBaseUrl) env.ACAI_OPENAI_BASE_URL = s.openaiBaseUrl;
   return env;
 }
 

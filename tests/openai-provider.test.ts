@@ -74,7 +74,7 @@ describe("OpenAI Responses provider (fake API, real SDK)", () => {
   it("picks the provider from the environment", () => {
     expect(providerConfigFromEnv({ OPENAI_API_KEY: "k" })).toMatchObject({ provider: "openai", apiKey: "k" });
     expect(providerConfigFromEnv({ OPENAI_API_KEY: "k", ANTHROPIC_API_KEY: "a" }).provider).toBe("anthropic");
-    expect(providerConfigFromEnv({ ASSAY_OPENAI_BASE_URL: "http://gpu:8000/v1", ASSAY_MODEL: "qwen" })).toMatchObject({ provider: "openai-compatible", baseURL: "http://gpu:8000/v1" });
+    expect(providerConfigFromEnv({ ACAI_OPENAI_BASE_URL: "http://gpu:8000/v1", ACAI_MODEL: "qwen" })).toMatchObject({ provider: "openai-compatible", baseURL: "http://gpu:8000/v1" });
     expect(providerConfigFromEnv({}).provider).toBe("none");
   });
 });

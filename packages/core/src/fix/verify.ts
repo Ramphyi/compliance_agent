@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { MODEL_KEY_ENVS } from "../llm/catalog";
 import type { VerificationRun } from "../types";
 
 /** Propose build and test commands from the project's own manifests. A human approves them. */
@@ -13,10 +14,10 @@ export function detectVerifyCommands(root: string): { commands: string[]; source
       return "";
     }
   };
-  if (has("assay.json")) {
+  if (has("acai.json")) {
     try {
-      const cfg = JSON.parse(read("assay.json")) as { verify?: string[] };
-      if (Array.isArray(cfg.verify) && cfg.verify.length) return { commands: cfg.verify, source: "assay.json" };
+      const cfg = JSON.parse(read("acai.json")) as { verify?: string[] };
+      if (Array.isArray(cfg.verify) && cfg.verify.length) return { commands: cfg.verify, source: "acai.json" };
     } catch {
       /* fall through to detection */
     }
@@ -52,11 +53,11 @@ export function detectVerifyCommands(root: string): { commands: string[]; source
   return { commands: [], source: "none detected" };
 }
 
-/** Environment for project commands: never pass Assay's or model providers' secrets to project code. */
+/** Environment for project commands: never pass Acai's or model providers' secrets to project code. */
 function projectEnv() {
   const env = { ...process.env };
   for (const k of Object.keys(env))
-    if (/^(ASSAY_|ANTHROPIC_|OPENAI_|CLAUDE_)/.test(k)) delete env[k];
+    if (/^(ACAI_|ANTHROPIC_|OPENAI_|CLAUDE_)/.test(k) || MODEL_KEY_ENVS.includes(k)) delete env[k];
   env.CI = "true";
   return env;
 }

@@ -1,10 +1,10 @@
-# ◆ Assay — compliance audit agent
+# ◆ Acai — compliance audit agent
 
-Assay audits a codebase against regulations and standards, with a person deciding every step.
+Acai audits a codebase against regulations and standards, with a person deciding every step.
 
-You point it at a repository. It works out what the product is, for example a web SaaS, embedded firmware, an automotive ECU, medical software or an AI system. It asks the compliance questions that decide which rules apply, such as where you sell, to whom, what data you handle and the safety level. It then maps the code to the applicable frameworks and lists the problems. A reviewer confirms, rejects, modifies or sends each finding back for re-investigation. Assay fixes the confirmed findings on a separate branch, compiles and tests every fix, and waits for the reviewer to accept or revert it. The audit trail is hash-chained.
+You point it at a repository. It works out what the product is, for example a web SaaS, embedded firmware, an automotive ECU, medical software or an AI system. It asks the compliance questions that decide which rules apply, such as where you sell, to whom, what data you handle and the safety level. It then maps the code to the applicable frameworks and lists the problems. A reviewer confirms, rejects, modifies or sends each finding back for re-investigation. Acai fixes the confirmed findings on a separate branch, compiles and tests every fix, and waits for the reviewer to accept or revert it. The audit trail is hash-chained.
 
-It is self-hosted and local-first: no SaaS, no accounts and no database. All state is plain JSON in `<repo>/.assay/`.
+It is self-hosted and local-first: no SaaS and no database. All state is plain JSON in `<repo>/.acai/`; a shared server keeps its accounts in one file as well.
 
 ```
 understand ─▶ ask / preset ─▶ scope ─▶ audit ─▶ human review ─▶ fix + verify ─▶ accept / revert ─▶ report ─▶ re-audit
@@ -16,12 +16,17 @@ understand ─▶ ask / preset ─▶ scope ─▶ audit ─▶ human review ─
 
 | Surface | Use it for | Who does the reasoning |
 | --- | --- | --- |
-| **CLI agent:** `assay audit` | An interactive terminal session from start to finish | Assay's own agent (Claude, or an on-premise model) |
-| **MCP server:** `assay mcp` | Inside Claude Code, Cursor, VS Code agent mode or any MCP client | **The host agent and its harness**: its model, file tools, web search and terminal |
-| **Dashboard and service:** `assay serve` or Docker | A team review UI and internal deployment across many repositories | Assay's agent, or MCP hosts connected over HTTP |
+| **CLI agent:** `acai audit` | An interactive terminal session from start to finish | Acai's own agent (Claude, or an on-premise model) |
+| **MCP server:** `acai mcp` | Inside Claude Code, Codex, Cursor, VS Code agent mode, Gemini CLI, Claude Desktop, ChatGPT, Claude.ai or any MCP client ([docs/MCP.md](docs/MCP.md)) | **The host agent and its harness**: its model, file tools, web search and terminal |
+| **Dashboard and service:** `acai serve` or Docker | A team review UI and internal deployment across many repositories | Acai's agent, or MCP hosts connected over HTTP |
 | **VS Code extension** | Findings in the Problems panel and a tree view, the dashboard in a panel, and MCP registration for Copilot agent mode | Either of the above |
 
-With no model configured, Assay still runs its 41 deterministic detectors and 30 evidence checks against the registry, and an MCP host can do the reasoning.
+With no model configured, Acai still runs its 41 deterministic detectors and 30 evidence checks against the registry, and an MCP host can do the reasoning.
+
+### The two main modes
+
+1. **Automatic, per repository.** Add a webhook (GitHub, GitLab, or a signed call from any CI). On every push Acai updates its copy, audits it and tells you what to do; in automatic mode its agent explains each finding. On every pull request it scans the new code in a separate worktree and reports what the change adds or fixes: in the dashboard and, with `GITHUB_TOKEN`, as a commit status and one pull request comment with instructions for a coding agent.
+2. **From your coding agent.** Connect Claude Code, Codex, Copilot, Cursor or any MCP client. Acai identifies the problems and hands them over as tasks (`acai_tasks`): where, why, what to change and when it is done. The agent fixes them; Acai builds, tests and commits each fix on a branch for you to accept. Without MCP, `acai tasks --out TASKS.md` or *Findings → Hand off to a coding agent* gives the same brief to paste into any agent.
 
 ## Quick start
 
@@ -29,8 +34,8 @@ Requires Node.js 22.12 or later, and git.
 
 ```sh
 npm ci
-npm run build                      # builds dist/assay (CLI + server + MCP + dashboard + registry)
-node dist/assay/assay.mjs audit examples/apps/telehealth-api --static
+npm run build                      # builds dist/acai (CLI + server + MCP + dashboard + registry)
+node dist/acai/acai.mjs audit examples/apps/telehealth-api --static
 ```
 
 With a model as the agent:
@@ -39,32 +44,32 @@ With a model as the agent:
 export ANTHROPIC_API_KEY=...       # Claude, default model claude-opus-5-5
 # or: export OPENAI_API_KEY=...    # OpenAI, default model gpt-5.5
 npx tsx scripts/provider-smoke.ts  # cheap check that the model and tool loop work
-node dist/assay/assay.mjs audit /path/to/your/repo
+node dist/acai/acai.mjs audit /path/to/your/repo
 ```
 
 Dashboard on <http://127.0.0.1:4317>:
 
 ```sh
-node dist/assay/assay.mjs serve /path/to/repo-a /path/to/repo-b
+node dist/acai/acai.mjs serve /path/to/repo-a /path/to/repo-b
 ```
 
-During development you can run the TypeScript directly with `npm run assay -- <command>`.
+During development you can run the TypeScript directly with `npm run acai -- <command>`.
 
-### Inside Claude Code (MCP)
+### Inside Claude Code, Codex, ChatGPT and other agents (MCP)
 
 ```sh
-claude mcp add assay -- node /abs/path/dist/assay/assay.mjs mcp . --dashboard
+claude mcp add acai -- node /abs/path/dist/acai/acai.mjs mcp . --dashboard
 ```
 
-Then ask: *"Audit this app for compliance with Assay."* The `audit` prompt and the `assay://playbook` resource tell the host the workflow (see [skills/assay-audit/SKILL.md](skills/assay-audit/SKILL.md)). The host reads the code with its own tools, records findings, and relays your decisions. It must pass `user_confirmed: true`, which the tool descriptions reserve for decisions you made explicitly. It makes fixes with its own edit tools. Assay runs the build and tests, re-runs the detector, and commits on a fix branch. You can also review in the dashboard; `assay_wait_for_review` picks those decisions up.
+Then ask: *"Audit this app for compliance with Acai."* The `audit` prompt and the `acai://playbook` resource tell the host the workflow (see [skills/acai-audit/SKILL.md](skills/acai-audit/SKILL.md)). The host reads the code with its own tools, records findings, and relays your decisions. It must pass `user_confirmed: true`, which the tool descriptions reserve for decisions you made explicitly. It makes fixes with its own edit tools. Acai runs the build and tests, re-runs the detector, and commits on a fix branch. You can also review in the dashboard; `acai_wait_for_review` picks those decisions up.
 
-For HTTP MCP, for example against a shared server, use `{"mcpServers":{"assay":{"type":"http","url":"https://assay.internal/mcp","headers":{"Authorization":"Bearer <token>"}}}}`.
+`node dist/acai/acai.mjs connect <client>` prints the setup for Codex, Cursor, VS Code, Gemini CLI, Windsurf, Claude Desktop, ChatGPT, Claude.ai and the OpenAI and Claude APIs. Clients without access to your files, such as ChatGPT and Claude.ai, read and edit the code through Acai's confined file tools. They connect to `acai serve` over HTTPS and sign in with OAuth. See [docs/MCP.md](docs/MCP.md).
 
 ### VS Code
 
 ```sh
-npm run build:vscode               # produces dist/assay-vscode.vsix
-code --install-extension dist/assay-vscode.vsix
+npm run build:vscode               # produces dist/acai-vscode.vsix
+code --install-extension dist/acai-vscode.vsix
 ```
 
 ## The workflow in detail
@@ -82,9 +87,9 @@ code --install-extension dist/assay-vscode.vsix
 
    Agents cannot make these decisions; the state machine is in [review.ts](packages/core/src/review.ts).
 6. **Fix and verify.** These steps need git and a clean working tree.
-   1. A person approves the build and test commands, because they execute project code. Assay detects them from `assay.json`, `package.json`, the Makefile, CMake, Cargo, Go, Gradle and other build files.
-   2. Fixes go to `assay/fixes-<audit>`, one commit per finding, with `Assay-Finding` trailers.
-   3. Every fix must build, pass the tests and make the detector stop matching. Otherwise Assay feeds the failure back to the agent for another attempt, up to the configured maximum, and then rolls the change back.
+   1. A person approves the build and test commands, because they execute project code. Acai detects them from `acai.json`, `package.json`, the Makefile, CMake, Cargo, Go, Gradle and other build files.
+   2. Fixes go to `acai/fixes-<audit>`, one commit per finding, with `Acai-Finding` trailers.
+   3. Every fix must build, pass the tests and make the detector stop matching. Otherwise Acai feeds the failure back to the agent for another attempt, up to the configured maximum, and then rolls the change back.
    4. Missing documents are drafted with `[OWNER TO CONFIRM]` placeholders, never with invented facts.
    5. You **accept** the fix or **revert** it; reverting runs `git revert`.
 7. **Report and repeat.** Reports come as Markdown, JSON or SARIF. Re-audits carry decisions over by fingerprint: rejected findings stay rejected, and a finding that was fixed and reappears is reopened.
@@ -107,7 +112,7 @@ code --install-extension dist/assay-vscode.vsix
 - **Medical:** IEC 62304, ISO 14971, EU MDR (software), FDA premarket cybersecurity / 524B, IEC 81001-5-1
 - **Platforms:** Apple App Review, Google Play policy
 
-**Research.** With the Anthropic provider, `assay research` (or the dashboard) searches official sources for guardrails beyond the registry. An MCP host can do the same with its own web search through `assay_propose_rules`. A person accepts or rejects each proposed rule. Accepted rules become a project-local framework in `.assay/rules/`.
+**Research.** With the Anthropic provider, `acai research` (or the dashboard) searches official sources for guardrails beyond the registry. An MCP host can do the same with its own web search through `acai_propose_rules`. A person accepts or rejects each proposed rule. Accepted rules become a project-local framework in `.acai/rules/`.
 
 **Dates and versions** were checked against official sources in October 2026 where possible; each framework's `keyDates` and notes say what was verified. Re-check anything you rely on with counsel.
 
@@ -126,53 +131,65 @@ All four build and test with only `cc`, `make`, `node` and `python3`. `npx tsx s
 
 ## Models and data handling
 
-| Setting | Effect |
-| --- | --- |
-| `ANTHROPIC_API_KEY` | Claude via the Messages API. Default model `claude-opus-5-5`, adaptive thinking, effort `high` (`ASSAY_EFFORT`), streaming tool loop, server-side refusal fallback, web search for research. |
-| `OPENAI_API_KEY` | OpenAI via the Responses API. Default model `gpt-5.5` (`ASSAY_MODEL`), reasoning effort `medium` (`ASSAY_EFFORT`), web search for research. Runs with `store: false`, so OpenAI keeps no conversation state. |
-| `ASSAY_PROVIDER=openai-compatible` with `ASSAY_OPENAI_BASE_URL` and `ASSAY_MODEL` | A self-hosted model (vLLM, Ollama, LM Studio, an internal gateway), for fully on-premise operation. No web research. |
-| neither | Detectors and evidence checks only. MCP hosts can still do the reasoning. |
+Acai's own agents (product analyst, auditor, re-investigator, fixer, researcher) can run on any of these providers. Choose one on the dashboard's **Model** page: pick the provider, paste a key, click **Load models** to get the provider's real model list, then **Save and use**. The change takes effect right away. You can also set it in the environment: `ACAI_PROVIDER=<id> ACAI_MODEL=<model>` plus that provider's key. `acai providers` lists them all.
 
-Ollama, vLLM and LM Studio go through `openai-compatible`; OpenAI's own API uses the `openai` provider, which Assay picks automatically when only `OPENAI_API_KEY` is set.
+| Provider (`ACAI_PROVIDER`) | Key | Notes |
+| --- | --- | --- |
+| `anthropic`: Claude | `ANTHROPIC_API_KEY` | Messages API. Default `claude-opus-5-5`, adaptive thinking, effort `high` (`ACAI_EFFORT`), refusal fallback, web search for research. |
+| `openai`: GPT | `OPENAI_API_KEY` | Responses API with `store: false`. Default `gpt-5.5`, web search for research. |
+| `gemini`, `openrouter`, `mistral`, `groq`, `deepseek`, `xai`, `together` | `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, … | Their OpenAI-compatible endpoints. OpenRouter gives access to most other models. No web research. |
+| `ollama`, `lmstudio` | none | Models on your own machine, fully on-premise. In Docker they are reached through `host.docker.internal`. |
+| `openai-compatible` with `ACAI_OPENAI_BASE_URL` | `ACAI_OPENAI_API_KEY` | Any other endpoint: vLLM, LiteLLM, an internal gateway. |
+| none | | Detectors and evidence checks only. Agents connected over MCP can still do the reasoning with their own model. |
 
-**What leaves the machine:** only when you run agent features, Assay sends file excerpts the agent asks to read, with secrets redacted. `.env`, key and keystore files are never sent. Detectors, scoping, verification and reports run locally. Commands that verify fixes run with model and Assay credentials removed from their environment.
+A key typed on the Model page is stored on the server in `~/.acai/model.json` (mode 600) and is never sent back to the browser. On a shared server only administrators (and members listed in `ACAI_APPROVERS`) may change the model, because it decides where code goes. `ACAI_MODEL_LOCKED=1` pins it to the environment.
+
+**What leaves the machine:** only when you run agent features, Acai sends file excerpts the agent asks to read, with secrets redacted. `.env`, key and keystore files are never sent. Detectors, scoping, verification and reports run locally. Commands that verify fixes run with model and Acai credentials removed from their environment.
 
 ## Internal deployment
 
 ```sh
-cp .env.example .env                       # set ASSAY_TOKENS=alice:<random>,bob:<random>, model settings
+cp .env.example .env                       # set ACAI_ADMIN_TOKEN=$(openssl rand -hex 32)
 mkdir repos && git clone <repo> repos/<name>
 docker compose up -d --build               # dashboard and /mcp on 127.0.0.1:4317
+docker compose --profile tls up -d         # optional: Caddy with HTTPS (set ACAI_DOMAIN, ACAI_TLS)
 ```
 
-- **Authentication and network.** Without tokens the server binds to localhost only and rejects requests whose `Host` header isn't local, which blocks DNS rebinding. Listening on any other interface requires `ASSAY_TOKENS`: per-reviewer tokens, so every decision is attributed to a named person. `ASSAY_TOKEN` (one shared token) also works.
-- **Requests.** Mutating API calls need the `X-Assay-Request` header, so a browser cannot send them cross-site.
-- **Approvals and paths.** Approving build and test commands lets them run on the server, which is the point of fix verification, so it is equivalent to shell access. `ASSAY_APPROVERS=alice` limits who may approve. Adding projects by path from the dashboard requires `ASSAY_PROJECT_ROOTS`. The file viewer resolves symlinks and never serves credential files.
-- **TLS.** Put a TLS reverse proxy in front of the server and set `ASSAY_TRUST_PROXY=1`.
-- **Container hardening.** The container runs as a non-root user, with a read-only root filesystem and all capabilities dropped.
-- **Adding repositories.** Mount repositories under `/workspace`, or set `ASSAY_ALLOW_CLONE=true` to add them by URL in the dashboard.
-- **Persistence.** State lives in each repository's `.assay/`, which you can commit as an audit record. The project list lives in the `/data` volume.
+Sign in with `ACAI_ADMIN_TOKEN`, then add people under **Admin** or with `docker compose exec acai node /opt/acai/acai.mjs users add <name> --role member`. Every git repository in `./repos` becomes a project; add more later from the dashboard (`/workspace/<name>`). In `.env`, `ACAI_REPOS` points the container at another folder of repositories and `ACAI_HOST_PORT` changes the port. On macOS, Docker Desktop can only mount folders it shares (Settings → Resources → File sharing); `/Users` is shared by default, `/Applications` is not. Agents on your computer connect over HTTP with an API token, for example `claude mcp add --transport http acai http://127.0.0.1:4317/mcp --header "Authorization: Bearer $ACAI_TOKEN"`. Open the agent in the repository's folder on your computer; the container sees the same files.
+
+**[docs/DEPLOY.md](docs/DEPLOY.md)** covers TLS and reverse proxies, systemd and Kubernetes, backups, upgrades, air-gapped installs with a local model, and a hardening checklist.
+
+- **Accounts.** Each person has an account with a role: `viewer` (read only), `member` (audits, reviews, fixes, MCP) or `admin` (also users, tokens, approvals, the model). They sign in with API tokens (`acai_…`); Acai stores only hashes, in `$ACAI_HOME/auth.json`. The dashboard exchanges a token for a session cookie. Revoking a token or disabling an account ends its sessions and OAuth grants. Manage accounts under **Admin**, with `acai users` and `acai tokens`, or through `/api/admin`. `ACAI_TOKENS=name:token,...` still works for read-only accounts from the environment.
+- **Network.** Without accounts the server is a local single-user tool: it binds to localhost only and rejects requests whose `Host` header isn't local, which blocks DNS rebinding. Listening on any other interface requires an account (`ACAI_ADMIN_TOKEN` or `acai users add`).
+- **Requests.** Mutating API calls need the `X-Acai-Request` header, so a browser cannot send them cross-site. Failed sign-ins are rate-limited per address and logged under **Admin → Events**.
+- **Approvals and paths.** Approving build and test commands lets them run on the server, which is the point of fix verification, so it is equivalent to shell access. Administrators may approve; `ACAI_APPROVERS=alice` also allows named members. Adding projects by path from the dashboard requires `ACAI_PROJECT_ROOTS`. The file viewer resolves symlinks and never serves credential files.
+- **TLS.** Put a TLS reverse proxy in front of the server (the Compose `tls` profile runs Caddy) and set `ACAI_TRUST_PROXY=1`.
+- **Webhooks.** Set `ACAI_WEBHOOK_SECRET` and add `https://<host>/hooks/github` (or `/hooks/gitlab`, `/hooks/generic`) to the repository with that secret, for push and pull request events. A delivery is matched to a project by its `origin` remote. A push only fast-forwards the audited branch when the working tree is clean. `GITHUB_TOKEN` (statuses and pull request write access) posts results back to GitHub and lets the server fetch private repositories. Configure each project in *Settings → Automation*.
+- **Remote MCP and OAuth.** Agents connect to `/mcp` with an API token. Set `ACAI_PUBLIC_URL` (the public HTTPS origin) to turn on OAuth, so ChatGPT and Claude.ai connectors can sign in: the person approves on a consent page with their API token. Viewers cannot use MCP. See [docs/MCP.md](docs/MCP.md).
+- **Container hardening.** The container runs as a non-root user, with a read-only root filesystem and all capabilities dropped. `/healthz` answers health checks without sign-in.
+- **Adding repositories.** Mount repositories under `/workspace`, or set `ACAI_ALLOW_CLONE=true` to add them by URL in the dashboard.
+- **Persistence.** State lives in each repository's `.acai/`, which you can commit as an audit record. Accounts, the model settings and the project list live in the `/data` volume: back it up.
 - **Toolchains.** Fix verification runs project builds inside the container. The image includes git, make, gcc and python3; derive your own image for other toolchains.
 
 ## CI
 
 ```sh
-node dist/assay/assay.mjs ci . --fail-on high --sarif assay.sarif
+node dist/acai/acai.mjs ci . --fail-on high --sarif acai.sarif
 ```
 
-`assay ci` runs a detector audit with the profile and decisions committed in `.assay/`. It exits with code 1 while unresolved findings remain at or above the threshold, and writes SARIF for code-scanning upload.
+`acai ci` runs a detector audit with the profile and decisions committed in `.acai/`. It exits with code 1 while unresolved findings remain at or above the threshold, and writes SARIF for code-scanning upload.
 
 ## Repository layout
 
 ```
 packages/core       engine: registry, scanner, classifier, detectors, scoping, review state machine,
                     store and journal, agent (Claude or OpenAI-compatible), fix and verify, reports
-packages/cli        `assay` CLI, terminal HITL, HTTP API + SSE, MCP server (stdio and HTTP)
+packages/cli        `acai` CLI, terminal HITL, HTTP API + SSE, MCP server (stdio and HTTP)
 packages/dashboard  React review UI
 packages/vscode     VS Code extension
 registry/           questionnaire, frameworks, presets
 examples/           example apps and answer keys
-skills/assay-audit  the playbook for host agents (generated from packages/cli/src/playbook.ts)
+skills/acai-audit  the playbook for host agents (generated from packages/cli/src/playbook.ts)
 tests/              vitest: registry, detectors, the full review→fix→verify flow, MCP, HTTP security, provider loop
 ```
 
@@ -182,4 +199,4 @@ npm run check        # registry validation, typecheck, tests, build
 
 ## Scope and limits
 
-Assay maps code and repository evidence to requirements and records human decisions. It is not legal advice and not a certification. A "verified" control means a reviewer or the agent saw a compliant implementation; it is not a conformity assessment. Detectors are heuristics: expect some false positives (reject them with a reason, and the decision carries over) and gaps that only the agent investigation or a reviewer will find.
+Acai maps code and repository evidence to requirements and records human decisions. It is not legal advice and not a certification. A "verified" control means a reviewer or the agent saw a compliant implementation; it is not a conformity assessment. Detectors are heuristics: expect some false positives (reject them with a reason, and the decision carries over) and gaps that only the agent investigation or a reviewer will find.

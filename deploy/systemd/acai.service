@@ -1,0 +1,66 @@
+# Acai on a Linux host without containers. See docs/DEPLOY.md ("Bare metal with systemd").
+#
+#   sudo useradd --system --home-dir /var/lib/acai --shell /usr/sbin/nologin acai
+#   sudo install -d -o root -g root -m 0755 /opt/acai && sudo cp -r dist/acai/. /opt/acai/
+#   sudo install -d -o acai -g acai -m 0750 /srv/acai/repos
+#   sudo install -d -m 0750 /etc/acai && sudo install -m 0640 -g acai /dev/null /etc/acai/acai.env
+#   # put ACAI_ADMIN_TOKEN=... (and model keys) in /etc/acai/acai.env
+#   sudo cp deploy/systemd/acai.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now acai
+#
+# Manage accounts as the service user:
+#   sudo -u acai env ACAI_HOME=/var/lib/acai node /opt/acai/acai.mjs users list
+
+[Unit]
+Description=Acai compliance audit service
+Documentation=file:///opt/acai/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=acai
+Group=acai
+# Accounts (auth.json), model.json, oauth.json and projects.json live here.
+StateDirectory=acai
+StateDirectoryMode=0700
+Environment=ACAI_HOME=/var/lib/acai
+Environment=HOME=/var/lib/acai
+Environment=NODE_ENV=production
+Environment=ACAI_PROJECT_ROOTS=/srv/acai/repos:/var/lib/acai/repos
+# Behind a reverse proxy on the same host (recommended): listen on loopback only.
+Environment=ACAI_HOST=127.0.0.1
+Environment=ACAI_PORT=4317
+# Secrets: ACAI_ADMIN_TOKEN, model keys, ACAI_WEBHOOK_SECRET, GITHUB_TOKEN, ACAI_PUBLIC_URL, ACAI_TRUST_PROXY=1.
+EnvironmentFile=/etc/acai/acai.env
+WorkingDirectory=/var/lib/acai
+ExecStart=/usr/bin/node /opt/acai/acai.mjs serve /srv/acai/repos
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+# Hardening. Fix verification runs project builds as this user, so it gets write access to the
+# repositories and its state directory only.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/srv/acai/repos
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

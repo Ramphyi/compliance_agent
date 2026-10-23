@@ -70,7 +70,7 @@ export function useReviewFlow(onDone?: (updated: Finding[], action: ReviewAction
   const act = (action: ReviewAction, findings: Finding[]) => {
     const targets = findings.filter((f) => f.actions.includes(action));
     const skipped = findings.length - targets.length;
-    if (skipped) toast.info(`${skipped} finding(s) skipped: ${ACTION_LABELS[action].toLowerCase()} is not allowed in their current state.`);
+    if (skipped) toast.info(`${skipped} finding(s) skipped: "${ACTION_LABELS[action]}" is not available in their current state.`);
     if (!targets.length || busy) return;
     if (action === "confirm" || action === "reopen" || action === "accept-fix") void run(targets, { action });
     else setPending({ action, targets });
@@ -95,8 +95,8 @@ export function useReviewFlow(onDone?: (updated: Finding[], action: ReviewAction
           title={`Re-investigate ${label}`}
           intro={
             shell.meta.provider
-              ? "The agent looks at it again with your note and either keeps, revises or withdraws the finding."
-              : "No model is configured here: an MCP host such as Claude Code picks this up with your note."
+              ? "The agent looks again with your note and keeps, revises or withdraws the finding."
+              : "No model here. A connected agent such as Claude Code picks this up with your note."
           }
           label="What should the agent look at?"
           required
@@ -110,8 +110,8 @@ export function useReviewFlow(onDone?: (updated: Finding[], action: ReviewAction
       dialogs = (
         <NoteDialog
           title={`Resolve ${label}`}
-          intro="Mark it resolved, for example because it was fixed outside Assay."
-          label="Note (how was it resolved?)"
+          intro="For example, because it was fixed outside Acai."
+          label="How was it resolved?"
           submitLabel="Resolve"
           busy={busy}
           onClose={close}
@@ -122,7 +122,7 @@ export function useReviewFlow(onDone?: (updated: Finding[], action: ReviewAction
       dialogs = (
         <NoteDialog
           title={`Revert fix for ${label}`}
-          intro={`This reverts ${one?.fix?.commit ? `commit ${one.fix.commit.slice(0, 10)}` : "the fix commit"}${one?.fix?.branch ? ` on ${one.fix.branch}` : ""} and returns the finding to Confirmed.`}
+          intro={`Reverts ${one?.fix?.commit ? `commit ${one.fix.commit.slice(0, 10)}` : "the fix commit"}${one?.fix?.branch ? ` on ${one.fix.branch}` : ""}. The finding goes back to Confirmed.`}
           label="Note (optional)"
           submitLabel="Revert fix"
           danger
@@ -167,7 +167,7 @@ function RejectDialog(props: { label: string; busy: boolean; onClose: () => void
       </label>
       <label className="field">
         <span>Note</span>
-        <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why is this not an issue? Recorded in the audit trail." />
+        <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Recorded in the audit trail" />
       </label>
     </Modal>
   );
@@ -196,7 +196,7 @@ function ModifyDialog(props: { finding: Finding; busy: boolean; onClose: () => v
       onSubmit={() => changed && props.onSubmit(changes, false)}
       footer={
         <>
-          <span className="muted grow">{changed ? `${Object.keys(changes!).length} field(s) changed` : "No changes yet"}</span>
+          <span className="muted small grow">{changed ? `${Object.keys(changes!).length} field(s) changed` : "No changes"}</span>
           <button type="button" className="btn" onClick={props.onClose}>
             Cancel
           </button>
@@ -227,9 +227,9 @@ function ModifyDialog(props: { finding: Finding; busy: boolean; onClose: () => v
         <label className="field">
           <span>Fixability</span>
           <select value={v.fixability} onChange={(e) => setV({ ...v, fixability: e.target.value as Fixability })}>
-            <option value="code">code (the agent can change code)</option>
-            <option value="document">document (the agent drafts a document)</option>
-            <option value="process">process (a person must act)</option>
+            <option value="code">Code</option>
+            <option value="document">Document</option>
+            <option value="process">Process (needs a person)</option>
           </select>
         </label>
         <div className="field">
@@ -247,7 +247,7 @@ function ModifyDialog(props: { finding: Finding; busy: boolean; onClose: () => v
           rows={4}
           value={v.fixInstructions}
           onChange={set("fixInstructions")}
-          placeholder="For example: use the existing config loader in src/config.js; do not add new dependencies."
+          placeholder="e.g. Use the config loader in src/config.js. No new dependencies."
         />
       </label>
     </Modal>

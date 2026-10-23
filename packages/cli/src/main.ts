@@ -1,25 +1,28 @@
 #!/usr/bin/env node
-import { writeFileSync } from "node:fs";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
-  type Actor, createProvider, fixFinding, gate, loadRegistry, report, research, SEVERITIES, summarize, Workspace,
-} from "@assay/core";
+  type Actor, createProvider, fixTasks, PROVIDER_PRESETS, tasksMarkdown, fixFinding, gate, loadRegistry, report, research, SEVERITIES, summarize, Workspace,
+} from "@acai/core";
+import { AuthStore, type ChangedBy } from "./auth";
+import { CLIENTS, type Client, connectInstructions, connectOverview } from "./connect";
 import { createMcpServer } from "./mcp";
-import { Projects } from "./projects";
+import { resolveProviderConfig } from "./models";
+import { acaiHome, Projects } from "./projects";
 import { startServer } from "./server";
 import { c, logo, Prompter, sev, table } from "./term";
 import { auditFlow, printEvent, reviewOnly } from "./tui";
 
 const HELP = `${logo()}
 
-Usage: assay <command> [path] [options]
+Usage: acai <command> [path] [options]
 
 Audit
   audit [path]          Interactive audit: understand, ask, scope, audit, review, fix, report
-      --preset <id>       Start from a preset answer set (see \`assay presets\`)
+      --preset <id>       Start from a preset answer set (see \`acai presets\`)
       --static            Detectors only, no model
       --no-fix            Stop after review
       --research          Offer web research for extra guardrails
@@ -28,6 +31,8 @@ Audit
   fix [path]            Fix confirmed findings (--finding F-001 for one)
   verify [path]         Show build/test commands; --set "make all; make test" --approve; --run
   report [path]         --format md|json|sarif  --out <file>  --audit <id>
+  tasks [path]          The findings as instructions for a coding agent (Claude Code, Codex, Copilot,
+                        Cursor…): --status confirmed,open  --finding F-001  --out TASKS.md  --json
   ci [path]             Detector audit for pipelines; exit 1 on unresolved findings
       --fail-on <sev>     critical|high|medium|low (default high)
       --sarif <file>      Also write SARIF for code scanning
@@ -37,23 +42,40 @@ Profile and rules
   profile [path]        Show answers; --set fact=value[,value] (repeatable); --confirm
   scope [path]          Frameworks that apply and why
   presets               List presets
+  providers             Model providers for Acai's own agents, and how to select one
   frameworks            List the registry
   research [path]       Web research for guardrails (Anthropic or OpenAI provider)
   journal [path]        Audit trail; --verify checks the hash chain
 
 Run as a service
   serve [paths...]      Dashboard + API + MCP over HTTP (default http://127.0.0.1:4317)
-      --port <n> --host <addr>   Non-local hosts need ASSAY_TOKEN or ASSAY_TOKENS
-  mcp [path]            MCP server on stdio for Claude Code, Cursor, VS Code and others
+      --port <n> --host <addr>   Non-local hosts need accounts (ACAI_ADMIN_TOKEN or \`acai users add\`)
+  mcp [path]            MCP server on stdio for Claude Code, Codex, Cursor, VS Code and others
       --dashboard         Also serve the dashboard (--port, default 4317)
+  connect [client] [path]  Show how to add Acai to an MCP client (claude-code, codex, cursor,
+                        vscode, claude-desktop, gemini, windsurf, chatgpt, claude-ai, openai-api,
+                        anthropic-api, agent-sdk)
+      --url <url>         Connect to a running \`acai serve\` (https://host/mcp) instead of stdio
+
+Accounts for a shared server (in $ACAI_HOME/auth.json; a running server applies changes at once)
+  users [list]          Accounts, roles and when they were last seen
+  users add <name>      Create an account and print its first API token once
+      --role <role>       admin, member (default) or viewer
+  users set <name>      --role <role> | --disable | --enable | --rename <new name>
+  users remove <name>   Delete an account with its tokens and sessions
+  tokens [list] [user]  API tokens (only prefixes are shown)
+  tokens create <user>  New API token: --label <text> --expires <days>d
+  tokens revoke <id>    Revoke by id or prefix; ends the sessions opened with it
+  In Docker: docker compose exec acai node /opt/acai/acai.mjs users list
 
 Common options
-  --state-dir <dir>     Where audit state lives (default <project>/.assay)
+  --state-dir <dir>     Where audit state lives (default <project>/.acai)
 
-Model: ANTHROPIC_API_KEY (Claude, default claude-opus-5-5), OPENAI_API_KEY (OpenAI, default gpt-5.5),
-or ASSAY_PROVIDER=openai-compatible ASSAY_OPENAI_BASE_URL=... ASSAY_MODEL=... for on-premise models.
-ASSAY_MODEL overrides the model; ASSAY_PARALLEL sets parallel investigation batches (default 3).
-Without a model, Assay runs detectors and an MCP host can do the reasoning.`;
+Model: choose it on the dashboard's Model page, or set ANTHROPIC_API_KEY (Claude) or OPENAI_API_KEY (GPT),
+or ACAI_PROVIDER=<provider> ACAI_MODEL=<model> with that provider's key: \`acai providers\` lists them
+(Gemini, OpenRouter, Mistral, Groq, DeepSeek, xAI, Together, Ollama, LM Studio, any OpenAI-compatible URL).
+ACAI_PARALLEL sets parallel investigation batches (default 3).
+Without a model, Acai runs detectors and an MCP host can do the reasoning.`;
 
 const { values: flags, positionals } = parseArgs({
   allowPositionals: true,
@@ -72,15 +94,23 @@ const { values: flags, positionals } = parseArgs({
     format: { type: "string" },
     out: { type: "string" },
     audit: { type: "string" },
+    status: { type: "string" },
     "fail-on": { type: "string" },
     sarif: { type: "string" },
     port: { type: "string" },
     host: { type: "string" },
+    url: { type: "string" },
     dashboard: { type: "boolean" },
     "allow-insecure": { type: "boolean" },
     "state-dir": { type: "string" },
     verify: { type: "boolean" },
     json: { type: "boolean" },
+    role: { type: "string" },
+    disable: { type: "boolean" },
+    enable: { type: "boolean" },
+    rename: { type: "string" },
+    label: { type: "string" },
+    expires: { type: "string" },
     help: { type: "boolean", short: "h" },
     version: { type: "boolean", short: "v" },
   },
@@ -89,13 +119,131 @@ const { values: flags, positionals } = parseArgs({
 const [command = "help", ...rest] = positionals;
 const target = resolve(rest[0] ?? ".");
 const stateDir = flags["state-dir"] ? resolve(String(flags["state-dir"])) : undefined;
-const me: Actor = { type: "human", name: process.env.ASSAY_USER || userInfo().username };
+const me: Actor = { type: "human", name: process.env.ACAI_USER || userInfo().username };
 const open = (path = target) => Workspace.open(path, { stateDir });
 
+/**
+ * A repository is served as one project; a folder of repositories (such as the container's
+ * /workspace) serves each one. An empty folder serves nothing: add projects in the dashboard.
+ */
+function projectDirs(path: string): string[] {
+  const abs = resolve(path);
+  if (existsSync(join(abs, ".git"))) return [abs];
+  const entries = readdirSync(abs, { withFileTypes: true }).filter((d) => !d.name.startsWith("."));
+  const repos = entries.filter((d) => d.isDirectory() && existsSync(join(abs, d.name, ".git"))).map((d) => join(abs, d.name));
+  return repos.length ? repos : entries.length ? [abs] : [];
+}
+
+const when = (at?: string) => (at ? at.slice(0, 16).replace("T", " ") : "-");
+
+/** `acai users ...` and `acai tokens ...`: edit $ACAI_HOME/auth.json directly (also inside the container). */
+function accounts(kind: "users" | "tokens", args: string[]) {
+  const store = new AuthStore({ file: join(acaiHome(), "auth.json") });
+  const by: ChangedBy = { name: `${process.env.ACAI_USER || userInfo().username} (cli)` };
+  const [sub = "list", arg] = args;
+  const print = (v: unknown) => console.log(JSON.stringify(v, null, 2));
+  const applied = () => console.log(c.dim(`Saved in ${store.file}. A running server applies it without a restart.`));
+  const need = (usage: string) => {
+    if (!arg) throw new Error(`Usage: ${usage}`);
+    return arg;
+  };
+  if (kind === "users") {
+    switch (sub) {
+      case "list": {
+        const users = store.listUsers();
+        if (flags.json) return print(users);
+        if (!users.length) return console.log("No accounts yet. Create the first administrator with `acai users add <name> --role admin`, or set ACAI_ADMIN_TOKEN.");
+        console.log(table([["NAME", "ROLE", "STATUS", "SOURCE", "TOKENS", "SESSIONS", "LAST SEEN"].map(c.dim), ...users.map((u) => [u.name, u.role, u.disabled ? c.red("disabled") : c.green("enabled"), u.source, String(u.tokens), String(u.sessions), when(u.lastSeenAt)])]));
+        return;
+      }
+      case "add": {
+        const { user, token } = store.createUser({ name: need("acai users add <name> [--role admin|member|viewer]"), role: flags.role ?? "member" }, by);
+        if (flags.json) return print({ user, token });
+        console.log(`Created ${c.bold(user.name)} (${user.role}). API token, shown only this once:\n\n  ${token}\n`);
+        console.log(c.dim("Sign in to the dashboard with it, or send it as `Authorization: Bearer <token>` from API and MCP clients."));
+        return applied();
+      }
+      case "set": {
+        const name = need("acai users set <name> --role <role> | --disable | --enable | --rename <new name>");
+        const patch: { role?: unknown; disabled?: boolean; name?: unknown } = {};
+        if (flags.role !== undefined) patch.role = flags.role;
+        if (flags.disable) patch.disabled = true;
+        if (flags.enable) patch.disabled = false;
+        if (flags.rename !== undefined) patch.name = flags.rename;
+        if (!Object.keys(patch).length) throw new Error("Nothing to change: use --role <role>, --disable, --enable or --rename <new name>.");
+        const u = store.updateUser(store.user(name).id, patch, by);
+        if (flags.json) return print(u);
+        console.log(`${c.bold(u.name)}: ${u.role}, ${u.disabled ? "disabled" : "enabled"}`);
+        return applied();
+      }
+      case "remove":
+      case "rm":
+      case "delete": {
+        const u = store.user(need("acai users remove <name>"));
+        store.deleteUser(u.id, by);
+        console.log(`Deleted ${c.bold(u.name)} with its tokens and sessions.`);
+        return applied();
+      }
+      default:
+        throw new Error(`Unknown subcommand "${sub}". Use: acai users list | add | set | remove`);
+    }
+  }
+  switch (sub) {
+    case "list": {
+      const tokens = store.listTokens(arg ? store.user(arg).id : undefined);
+      if (flags.json) return print(tokens);
+      if (!tokens.length) return console.log("No API tokens.");
+      const now = Date.now();
+      console.log(
+        table([
+          ["ID", "USER", "LABEL", "PREFIX", "CREATED", "LAST USED", "EXPIRES"].map(c.dim),
+          ...tokens.map((t) => [t.id, t.userName, t.label, t.prefix || "-", when(t.createdAt), when(t.lastUsedAt), t.expiresAt ? (Date.parse(t.expiresAt) <= now ? c.red("expired") : when(t.expiresAt)) : "never"]),
+        ]),
+      );
+      return;
+    }
+    case "create": {
+      const user = store.user(need("acai tokens create <user> [--label <text>] [--expires 90d]"));
+      const days = flags.expires === undefined ? undefined : /^\s*(\d+)\s*d?\s*$/i.exec(String(flags.expires))?.[1];
+      if (flags.expires !== undefined && !days) throw new Error("--expires takes a number of days, for example 90d");
+      const { token, info } = store.createToken(user.id, { label: flags.label, expiresInDays: days }, by);
+      if (flags.json) return print({ token, info });
+      console.log(`New token ${c.bold(info.id)} for ${c.bold(info.userName)}${info.expiresAt ? `, expires ${when(info.expiresAt)}` : ""}. Shown only this once:\n\n  ${token}\n`);
+      return applied();
+    }
+    case "revoke":
+    case "rm":
+    case "delete": {
+      const info = store.revokeToken(need("acai tokens revoke <id-or-prefix>"), by);
+      console.log(`Revoked ${c.bold(info.id)} (${info.userName}, ${info.label}). Sessions and OAuth connectors that used it no longer work.`);
+      return applied();
+    }
+    default:
+      throw new Error(`Unknown subcommand "${sub}". Use: acai tokens list | create | revoke`);
+  }
+}
+
 async function main() {
-  if (flags.version) return console.log("assay 0.1.0");
+  if (flags.version) return console.log("acai 0.1.0");
   if (flags.help || command === "help") return console.log(HELP);
-  const provider = await createProvider();
+  if (command === "users" || command === "tokens") return accounts(command, rest);
+  if (command === "connect") {
+    const [client, path = "."] = rest;
+    const opts = { project: resolve(path), url: flags.url ? String(flags.url) : undefined };
+    if (!client) return console.log(connectOverview(opts));
+    if (!(CLIENTS as readonly string[]).includes(client)) throw new Error(`Unknown client "${client}". Clients: ${CLIENTS.join(", ")}`);
+    return console.log(connectInstructions(client as Client, opts));
+  }
+  // Services start without a model if its settings are broken, so it can be fixed in the dashboard.
+  let provider: Awaited<ReturnType<typeof createProvider>> = null;
+  let providerError: string | undefined;
+  try {
+    provider = await createProvider(resolveProviderConfig().config);
+  } catch (e) {
+    if (command !== "serve" && command !== "mcp") throw e;
+    providerError = (e as Error).message;
+    console.error(c.yellow(`acai: model not available: ${providerError}`));
+  }
 
   switch (command) {
     case "audit": {
@@ -123,7 +271,7 @@ async function main() {
       if (flags.json) return console.log(JSON.stringify(v, null, 2));
       console.log(`${c.bold(v.classification?.summary ?? "")}\n`);
       for (const s of v.classification?.signals ?? []) console.log(`${c.teal("·")} ${s.label} ${c.dim(s.refs.slice(0, 2).map((r) => `${r.path}${r.line ? `:${r.line}` : ""}`).join(", "))}`);
-      console.log(`\n${c.bold("Draft answers")} ${c.dim("(confirm with `assay profile --confirm` or in the dashboard)")}`);
+      console.log(`\n${c.bold("Draft answers")} ${c.dim("(confirm with `acai profile --confirm` or in the dashboard)")}`);
       for (const q of v.questions.filter((x) => x.answer)) console.log(`  ${q.id}: ${[q.answer!.value].flat().join(", ")} ${q.answer!.confirmed ? c.green("confirmed") : c.dim(q.answer!.source)}`);
       return;
     }
@@ -143,6 +291,12 @@ async function main() {
     case "scope": {
       const ws = open();
       console.log(table(ws.scopeView().map((s) => [s.active ? c.teal("●") : s.status === "unknown" ? c.yellow("?") : c.dim("○"), s.shortTitle, c.dim(s.version), s.status === "unknown" ? c.yellow(`needs ${s.missingFacts.join(", ")}`) : c.dim(s.override ? `${s.override}d` : s.status)])));
+      return;
+    }
+    case "providers": {
+      const { config, source } = resolveProviderConfig();
+      console.log(table(PROVIDER_PRESETS.map((p) => [config.preset === p.id ? c.teal("●") : " ", p.id, p.label, c.dim(p.keyEnv ? `${p.keyEnv}${process.env[p.keyEnv] ? " (set)" : ""}` : "no key"), c.dim(p.baseURL ?? "")])));
+      console.log(c.dim(`\nActive: ${provider?.destination ?? "none"} (from ${source}). Select with ACAI_PROVIDER=<id> ACAI_MODEL=<model>, or on the dashboard's Model page.`));
       return;
     }
     case "presets": {
@@ -172,7 +326,7 @@ async function main() {
         const f = await fixFinding(ws, audit.id, id, { provider, onEvent: printEvent });
         console.log(f.status === "fix_ready" ? c.green(`  ✓ ${f.fix?.commit?.slice(0, 8)} on ${f.fix?.branch}`) : c.red(`  ✗ ${f.status}: ${f.fix?.error ?? ""}`));
       }
-      console.log(c.dim("Accept or revert fixes with `assay review` or in the dashboard."));
+      console.log(c.dim("Accept or revert fixes with `acai review` or in the dashboard."));
       return;
     }
     case "verify": {
@@ -196,6 +350,18 @@ async function main() {
       } else console.log(out);
       return;
     }
+    case "tasks": {
+      const ws = open();
+      const audit = ws.getAudit(flags.audit as string | undefined);
+      const statuses = String(flags.status ?? "confirmed").split(",") as never;
+      const tasks = fixTasks(ws, audit.id, { statuses, ids: flags.finding ? [String(flags.finding)] : undefined });
+      const out = flags.json ? JSON.stringify(tasks, null, 2) : tasksMarkdown(ws, tasks, { auditId: audit.id });
+      if (flags.out) {
+        writeFileSync(String(flags.out), out);
+        console.log(`Wrote ${tasks.length} task(s) to ${flags.out}`);
+      } else console.log(out);
+      return;
+    }
     case "ci": {
       const ws = open();
       if (flags.preset && !ws.project().presetId) ws.applyPreset(String(flags.preset), { type: "system", name: "ci" });
@@ -205,7 +371,7 @@ async function main() {
       const g = gate(audit, failOn);
       if (flags.sarif) writeFileSync(String(flags.sarif), report(ws, audit.id, "sarif"));
       const s = summarize(audit.findings);
-      console.log(`Assay ${audit.id}: ${s.total} findings (${SEVERITIES.map((x) => `${x} ${s.bySeverity[x]}`).join(", ")})`);
+      console.log(`Acai ${audit.id}: ${s.total} findings (${SEVERITIES.map((x) => `${x} ${s.bySeverity[x]}`).join(", ")})`);
       if (unconfirmed.length) console.log(`warning: profile answers not confirmed by a person: ${unconfirmed.join(", ")}`);
       for (const f of g.blocking) console.log(`${f.severity.toUpperCase()} ${f.id} ${f.title} ${f.locations[0] ? `(${f.locations[0].path}${f.locations[0].line ? `:${f.locations[0].line}` : ""})` : ""} [${f.status}]`);
       console.log(g.passed ? `PASS: no unresolved findings at ${failOn} or above` : `FAIL: ${g.blocking.length} unresolved finding(s) at ${failOn} or above`);
@@ -214,7 +380,7 @@ async function main() {
     }
     case "research": {
       const ws = open();
-      if (!provider) throw new Error("Research needs a model with web search (ANTHROPIC_API_KEY or OPENAI_API_KEY), or ask your MCP host to research and call assay_propose_rules.");
+      if (!provider) throw new Error("Research needs a model with web search (ANTHROPIC_API_KEY or OPENAI_API_KEY), or ask your MCP host to research and call acai_propose_rules.");
       const r = await research(ws, { provider, onEvent: printEvent });
       const p = new Prompter(Boolean(flags.yes));
       for (const rule of ws.store.readResearch().filter((x) => r.proposed.includes(x.id))) {
@@ -237,11 +403,13 @@ async function main() {
     }
     case "serve": {
       const projects = new Projects({ stateDir });
-      for (const p of rest.length ? rest : ["."]) projects.add(p);
-      const host = String(flags.host ?? process.env.ASSAY_HOST ?? "127.0.0.1");
-      const port = Number(flags.port ?? process.env.ASSAY_PORT ?? 4317);
-      const { url } = await startServer({ projects, provider, host, port, allowInsecure: Boolean(flags["allow-insecure"]) });
-      console.log(`${logo()}\nDashboard  ${c.bold(url)}\nMCP (HTTP) ${url}/mcp\nModel      ${provider ? provider.destination : c.yellow("none (detectors only; an MCP host can do the reasoning)")}`);
+      for (const p of rest.length ? rest : ["."]) for (const dir of projectDirs(p)) projects.add(dir);
+      const host = String(flags.host ?? process.env.ACAI_HOST ?? "127.0.0.1");
+      const port = Number(flags.port ?? process.env.ACAI_PORT ?? 4317);
+      const { url, oauth, authMode, auth } = await startServer({ projects, provider, providerError, host, port, allowInsecure: Boolean(flags["allow-insecure"]) });
+      const publicUrl = process.env.ACAI_PUBLIC_URL?.trim().replace(/\/+$/, "") || undefined;
+      const accountCount = auth.listUsers().length;
+      console.log(`${logo()}\nDashboard  ${c.bold(url)}\nMCP (HTTP) ${publicUrl ?? url}/mcp${oauth ? c.dim("  (OAuth on: ChatGPT and Claude.ai connectors can sign in)") : ""}\nSign-in    ${authMode === "tokens" ? `API tokens (${accountCount} account${accountCount === 1 ? "" : "s"}, ${auth.file})` : c.dim("none: local use only")}\nModel      ${provider ? provider.destination : c.yellow("none (detectors only; an MCP host can do the reasoning)")}`);
       console.log(c.dim(`Projects   ${projects.list().map((p) => p.root).join(", ")}`));
       return;
     }
@@ -259,7 +427,7 @@ async function main() {
           const { url } = await startServer({ projects, provider, host: "127.0.0.1", port: 0 });
           dashboard = url;
         }
-        console.error(`Assay dashboard: ${dashboard}`);
+        console.error(`Acai dashboard: ${dashboard}`);
       }
       const server = createMcpServer({ projects, defaultProject: entry.id, dashboardUrl: () => dashboard });
       await server.connect(new StdioServerTransport());
@@ -273,7 +441,7 @@ async function main() {
 }
 
 main().catch((e: Error) => {
-  console.error(c.red(`assay: ${e.message}`));
-  if (process.env.ASSAY_DEBUG) console.error(e.stack);
+  console.error(c.red(`acai: ${e.message}`));
+  if (process.env.ACAI_DEBUG) console.error(e.stack);
   process.exitCode = process.exitCode || 2;
 });

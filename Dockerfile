@@ -1,4 +1,5 @@
-# Assay: self-hosted compliance audit service (dashboard + API + MCP over HTTP).
+# Acai: self-hosted compliance audit service (dashboard + API + MCP over HTTP).
+# Build: docker build -t acai:0.1.0 .   Run: see compose.yaml and docs/DEPLOY.md.
 FROM node:22-bookworm-slim AS build
 WORKDIR /src
 COPY package.json package-lock.json ./
@@ -16,17 +17,28 @@ FROM node:22-bookworm-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates make gcc libc6-dev python3 \
  && rm -rf /var/lib/apt/lists/* \
- && useradd --create-home --uid 10001 assay
-COPY --from=build /src/dist/assay /opt/assay
-ENV ASSAY_HOME=/data \
-    ASSAY_HOST=0.0.0.0 \
-    ASSAY_PORT=4317 \
+ && useradd --create-home --uid 10001 acai
+COPY --from=build /src/dist/acai /opt/acai
+# ACAI_CONTAINER: agents reach this server over HTTP, and local model servers live on the host.
+# GIT_CONFIG_*: mounted repositories belong to the host user; let git work in them anyway.
+# HOME and npm cache on /tmp: the root filesystem is read-only in compose.yaml.
+ENV ACAI_HOME=/data \
+    ACAI_HOST=0.0.0.0 \
+    ACAI_PORT=4317 \
+    ACAI_CONTAINER=1 \
+    GIT_CONFIG_COUNT=1 \
+    GIT_CONFIG_KEY_0=safe.directory \
+    GIT_CONFIG_VALUE_0=* \
+    HOME=/tmp \
+    NPM_CONFIG_CACHE=/tmp/.npm \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
     NODE_ENV=production
-RUN mkdir -p /data /workspace && chown assay:assay /data /workspace
-USER assay
+RUN mkdir -p /data /workspace && chown acai:acai /data /workspace
+USER acai
 WORKDIR /workspace
 EXPOSE 4317
 VOLUME ["/data"]
-HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://127.0.0.1:4317/api/meta',{headers:{authorization:'Bearer '+(process.env.ASSAY_TOKEN||(process.env.ASSAY_TOKENS||'').split(',')[0].split(':')[1]||'')}}).then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
-ENTRYPOINT ["node", "/opt/assay/assay.mjs"]
+# /healthz needs no sign-in and returns only {"ok":true}.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD node -e "fetch('http://127.0.0.1:'+(process.env.ACAI_PORT||4317)+'/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+ENTRYPOINT ["node", "/opt/acai/acai.mjs"]
 CMD ["serve", "/workspace"]

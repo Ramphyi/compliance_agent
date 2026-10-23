@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { EventEmitter } from "node:events";
-import type { AgentEvent } from "@assay/core";
+import type { AgentEvent } from "@acai/core";
 
 export type JobEvent = { at: string; stage?: string } & (AgentEvent | { type: "status"; status: Job["status"]; error?: string });
 
@@ -24,6 +24,7 @@ export class Jobs {
   readonly events = new EventEmitter();
   private jobs = new Map<string, Job>();
   private controllers = new Map<string, AbortController>();
+  private settled = new Map<string, Promise<void>>();
 
   constructor() {
     this.events.setMaxListeners(200);
@@ -62,7 +63,7 @@ export class Jobs {
       this.events.emit("job", { jobId: job.id, projectId: job.projectId, event: e });
     };
     push({ type: "status", status: "running", at: job.startedAt });
-    fn({ signal: ctrl.signal, emit: (e) => push({ ...e, at: new Date().toISOString() }) })
+    const settled = fn({ signal: ctrl.signal, emit: (e) => push({ ...e, at: new Date().toISOString() }) })
       .then((result) => {
         job.result = result;
         job.status = ctrl.signal.aborted ? "cancelled" : "done";
@@ -76,7 +77,15 @@ export class Jobs {
         this.controllers.delete(job.id);
         push({ type: "status", status: job.status, error: job.error, at: job.finishedAt });
       });
+    this.settled.set(job.id, settled);
     return job;
+  }
+
+  /** Resolves with the job once it has finished, whatever the outcome. */
+  async wait(id: string): Promise<Job | undefined> {
+    await this.settled.get(id);
+    this.settled.delete(id);
+    return this.jobs.get(id);
   }
 
   cancel(id: string) {

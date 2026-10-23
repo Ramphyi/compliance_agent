@@ -1,6 +1,6 @@
-# Assay rule registry
+# Acai rule registry
 
-The registry is the standardised rule base Assay audits against. It is plain YAML so
+The registry is the standardised rule base Acai audits against. It is plain YAML so
 compliance owners can review it in pull requests, extend it, or pin it per release.
 
 ```
@@ -15,6 +15,15 @@ Validate every file with:
 ```sh
 npm run registry:validate
 ```
+
+## Rules for one project
+
+A project can add its own frameworks, for example a company policy, without touching this
+registry. Save a framework file as `<project>/.acai/rules/<id>.yaml`. Start from
+[templates/project-rule.yaml](templates/project-rule.yaml). Then click **Reload rules** on
+the dashboard's Guide page, or restart Acai. Invalid files are skipped and listed on the
+dashboard. Rules accepted from research are saved in the same folder as
+`project-research.yaml`.
 
 ## Framework file
 

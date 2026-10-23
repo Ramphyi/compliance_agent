@@ -24,13 +24,12 @@ export function Activity() {
   const [openJob, setOpenJob] = useState<string | null>(null);
   return (
     <div className="grid-2">
-      <section className="card span-2-sm">
-        <div className="card-head">
-          <h2>Audit trail</h2>
-          <span className="grow" />
+      <section className="section">
+        <div className="section-head">
+          <h2 className="grow">Audit trail</h2>
           {data &&
             (data.integrity.ok ? (
-              <span className="ok-text small"><ShieldCheck size={14} aria-hidden /> Hash chain intact ({data.integrity.entries} entries)</span>
+              <span className="ok-text small"><ShieldCheck size={14} aria-hidden /> Hash chain intact, {data.integrity.entries} entries</span>
             ) : (
               <span className="bad-text small"><ShieldAlert size={14} aria-hidden /> Hash chain broken at entry {data.integrity.brokenAt}</span>
             ))}
@@ -54,15 +53,15 @@ export function Activity() {
           </ol>
         )}
       </section>
-      <section className="card">
+      <section className="section">
         <h2>Agent jobs</h2>
         {!shell.jobs.length ? (
-          <p className="muted">No jobs in this server session.</p>
+          <p className="muted">None since the server started.</p>
         ) : (
           <ul className="jobs">
             {shell.jobs.map((j) => (
               <li key={j.id}>
-                <button className="link-btn row" onClick={() => setOpenJob(openJob === j.id ? null : j.id)} aria-expanded={openJob === j.id}>
+                <button className="link-btn" onClick={() => setOpenJob(openJob === j.id ? null : j.id)} aria-expanded={openJob === j.id}>
                   <JobStatusBadge status={j.status} />
                   <span>{j.title}</span>
                   <span className="muted small">{ago(j.startedAt)}</span>

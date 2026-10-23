@@ -3,7 +3,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import type { CodeRef, Finding, FindingStatus, ReviewAction, Severity } from "./api";
 import { settings } from "./config";
-import type { AssayState } from "./state";
+import type { AcaiState } from "./state";
 
 export const SEVERITY_RANK: Record<Severity, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
 
@@ -98,7 +98,7 @@ export class FindingsTreeProvider implements vscode.TreeDataProvider<Node> {
   private readonly emitter = new vscode.EventEmitter<Node | undefined>();
   readonly onDidChangeTreeData = this.emitter.event;
 
-  constructor(private readonly state: AssayState) {}
+  constructor(private readonly state: AcaiState) {}
 
   refresh() {
     this.emitter.fire(undefined);
@@ -133,7 +133,7 @@ export class FindingsTreeProvider implements vscode.TreeDataProvider<Node> {
     item.iconPath = f.status === "fixing" ? new vscode.ThemeIcon("sync~spin") : severityIcon(f.severity);
     item.tooltip = findingTooltip(f);
     item.contextValue = `finding.${f.status}`;
-    item.command = { command: "assay.openFindingLocation", title: "Go to Finding Location", arguments: [f.id] };
+    item.command = { command: "acai.openFindingLocation", title: "Go to Finding Location", arguments: [f.id] };
     return item;
   }
 
@@ -160,7 +160,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusNode> {
   readonly onDidChangeTreeData = this.emitter.event;
 
   constructor(
-    private readonly state: AssayState,
+    private readonly state: AcaiState,
     private readonly serverInfo: () => { state: string; url?: string; error?: string },
   ) {}
 
@@ -190,7 +190,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusNode> {
       description: s.project?.classification ? truncate(s.project.classification, 60) : undefined,
       tooltip: `${s.folder}${s.project?.classification ? `\n${s.project.classification}` : ""}`,
       icon: "repo",
-      command: { command: "assay.openDashboard", title: "Open Dashboard" },
+      command: { command: "acai.openDashboard", title: "Open Dashboard" },
     });
     nodes.push({
       key: "server",
@@ -198,7 +198,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusNode> {
       description: server.state === "running" ? server.url : server.state,
       tooltip: server.error ?? server.url,
       icon: server.state === "running" ? "server-process" : server.state === "starting" ? "loading~spin" : "debug-disconnect",
-      command: server.state === "error" ? { command: "assay.restartServer", title: "Restart Server" } : undefined,
+      command: server.state === "error" ? { command: "acai.restartServer", title: "Restart Server" } : undefined,
     });
     if (s.project?.running) nodes.push({ key: "job", label: "Running", description: s.project.running, icon: "sync~spin" });
     const p = s.meta?.provider;
@@ -206,9 +206,9 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusNode> {
       key: "model",
       label: "Model",
       description: p ? `${p.model} (${p.id})` : s.meta ? "none (detectors only)" : "…",
-      tooltip: p ? `Agent features send code excerpts to: ${p.destination}` : "No model configured. Detectors run locally; Copilot agent mode can reason through the Assay MCP server, or set an API key.",
+      tooltip: p ? `Agent features send code excerpts to: ${p.destination}` : "No model configured. Detectors run locally; Copilot agent mode can reason through the Acai MCP server, or set an API key.",
       icon: "hubot",
-      command: p ? undefined : { command: "assay.setApiKey", title: "Set Anthropic API Key" },
+      command: p ? undefined : { command: "acai.setApiKey", title: "Set Anthropic API Key" },
     });
     if (s.scope) {
       const active = s.scope.filter((x) => x.active);
@@ -234,7 +234,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusNode> {
         tooltip: `${a.id}\n${a.mode} audit, ${new Date(a.createdAt).toLocaleString()}${a.model ? `\nModel ${a.model}` : ""}${a.error ? `\nError: ${a.error}` : ""}`,
         icon: "checklist",
         children: [
-          { key: "a:id", label: a.id, description: `${a.mode} · ${new Date(a.createdAt).toLocaleString()}`, icon: "history", command: { command: "assay.showReport", title: "Show Report" } },
+          { key: "a:id", label: a.id, description: `${a.mode} · ${new Date(a.createdAt).toLocaleString()}`, icon: "history", command: { command: "acai.showReport", title: "Show Report" } },
           { key: "a:decide", label: "Needs decision", description: String(m.open + m.reinvestigating), icon: "question" },
           { key: "a:confirmed", label: "Confirmed", description: String(m.confirmed + m.fixing), icon: "check" },
           { key: "a:fixready", label: "Fixes to review", description: String(m.fixReady), icon: "git-pull-request" },
@@ -244,7 +244,7 @@ export class StatusTreeProvider implements vscode.TreeDataProvider<StatusNode> {
         ],
       });
     } else if (server.state === "running" && s.projectId) {
-      nodes.push({ key: "noaudit", label: "No audit yet", icon: "circle-large-outline", command: { command: "assay.runAudit", title: "Run Audit" } });
+      nodes.push({ key: "noaudit", label: "No audit yet", icon: "circle-large-outline", command: { command: "acai.runAudit", title: "Run Audit" } });
     }
     if (s.loadError) nodes.push({ key: "error", label: "Error", description: s.loadError, tooltip: s.loadError, icon: "warning" });
     return nodes;
@@ -264,7 +264,7 @@ const DIAG_SEVERITY: Record<Severity, vscode.DiagnosticSeverity> = {
 };
 
 export const dashboardCommandUri = (findingId: string) =>
-  vscode.Uri.parse(`command:assay.openDashboard?${encodeURIComponent(JSON.stringify([findingId]))}`);
+  vscode.Uri.parse(`command:acai.openDashboard?${encodeURIComponent(JSON.stringify([findingId]))}`);
 
 /** Absolute path of a finding location, or undefined if it escapes the folder or does not exist. */
 export function locationPath(folder: string, ref: CodeRef): string | undefined {
@@ -279,9 +279,9 @@ const lineRange = (ref: CodeRef) => {
 };
 
 export class FindingDiagnostics implements vscode.Disposable {
-  readonly collection = vscode.languages.createDiagnosticCollection("assay");
+  readonly collection = vscode.languages.createDiagnosticCollection("acai");
 
-  constructor(private readonly state: AssayState) {}
+  constructor(private readonly state: AcaiState) {}
 
   update() {
     this.collection.clear();
@@ -296,7 +296,7 @@ export class FindingDiagnostics implements vscode.Disposable {
         .filter((x): x is { ref: CodeRef; abs: string } => Boolean(x.abs));
       for (const { ref, abs } of places) {
         const d = new vscode.Diagnostic(lineRange(ref), `${f.title} (${f.id}, ${STATUS_LABEL[f.status]})`, DIAG_SEVERITY[f.severity] ?? vscode.DiagnosticSeverity.Information);
-        d.source = "Assay";
+        d.source = "Acai";
         d.code = { value: f.id, target: dashboardCommandUri(f.id) };
         const others = places.filter((p) => p.ref !== ref).slice(0, 5);
         if (others.length)
@@ -317,14 +317,14 @@ export class FindingDiagnostics implements vscode.Disposable {
 }
 
 export const findingIdOf = (d: vscode.Diagnostic): string | undefined => {
-  if (d.source !== "Assay" || d.code === undefined) return undefined;
+  if (d.source !== "Acai" || d.code === undefined) return undefined;
   return typeof d.code === "object" ? String(d.code.value) : String(d.code);
 };
 
 export class FindingCodeActions implements vscode.CodeActionProvider {
   static readonly kinds = [vscode.CodeActionKind.QuickFix];
 
-  constructor(private readonly state: AssayState) {}
+  constructor(private readonly state: AcaiState) {}
 
   provideCodeActions(_doc: vscode.TextDocument, _range: vscode.Range, ctx: vscode.CodeActionContext): vscode.CodeAction[] {
     const out: vscode.CodeAction[] = [];
@@ -340,9 +340,9 @@ export class FindingCodeActions implements vscode.CodeActionProvider {
         a.diagnostics = [d];
         out.push(a);
       };
-      if (f && can(f, "confirm")) add(`Assay: Confirm ${id}`, "assay.confirmFinding");
-      if (f && can(f, "reject")) add(`Assay: Reject ${id}…`, "assay.rejectFinding");
-      add("Assay: Open in dashboard", "assay.openDashboard");
+      if (f && can(f, "confirm")) add(`Acai: Confirm ${id}`, "acai.confirmFinding");
+      if (f && can(f, "reject")) add(`Acai: Reject ${id}…`, "acai.rejectFinding");
+      add("Acai: Open in dashboard", "acai.openDashboard");
     }
     return out;
   }

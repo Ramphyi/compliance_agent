@@ -1,7 +1,6 @@
-import { CheckCheck, RefreshCw, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api, paths } from "../api";
-import { Badge, Meter, Segmented, Spinner } from "../components/ui";
+import { Badge, Meter, SectionHead, Segmented, Spinner } from "../components/ui";
 import { useShell, useToast } from "../context";
 import { loc } from "../hooks";
 import type { AnswerValue, Question } from "../types";
@@ -33,38 +32,44 @@ export function ProfileView() {
     return [...m];
   }, [p.questions]);
   const c = p.completeness;
+  const viewer = shell.meta.account?.role === "viewer";
 
   return (
-    <div className="stack-lg">
-      <section className="card">
-        <div className="card-head">
-          <h2>What the product is for</h2>
-          <span className="grow" />
-          <button className="btn btn-sm" onClick={() => call("scan", "/scan", {}, "Rescanned the repository.")} disabled={busy !== null}>
-            {busy === "scan" ? <Spinner /> : <RefreshCw size={14} aria-hidden />} Rescan code
-          </button>
-        </div>
-        <p className="muted">{p.classification?.summary ?? "Not scanned yet."}</p>
+    <fieldset disabled={viewer}>
+      <section className="section" aria-labelledby="purpose-h">
+        <SectionHead
+          id="purpose-h"
+          title="Purpose"
+          description={p.classification?.summary ?? "Not scanned yet."}
+          actions={
+            <button className="btn btn-sm" onClick={() => call("scan", "/scan", {}, "Repository rescanned.")} disabled={busy !== null}>
+              {busy === "scan" ? <Spinner label="Scanning…" /> : "Rescan code"}
+            </button>
+          }
+        />
         <label className="field">
-          <span>Purpose (who uses it, where it runs, what data it handles, safety relevance)</span>
-          <textarea rows={3} value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="For example: firmware for a consumer smart thermostat sold in the EU and UK; Wi-Fi and BLE; OTA updates; no safety function." />
+          <span>
+            What the product is for <span className="hint">· who uses it, where it runs, what data it handles, safety relevance</span>
+          </span>
+          <textarea rows={3} value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="e.g. Firmware for a consumer smart thermostat sold in the EU and UK. Wi-Fi and BLE, OTA updates, no safety function." />
         </label>
-        <div className="row">
+        <div className="form-actions" style={{ marginTop: 8 }}>
           <button className="btn" disabled={busy !== null || purpose === (p.classification?.purpose ?? "")} onClick={() => call("purpose", "/purpose", { purpose }, "Purpose saved.")}>
-            <Save size={14} aria-hidden /> Save purpose
+            Save purpose
           </button>
         </div>
       </section>
 
-      <section className="card">
-        <div className="card-head">
-          <h2>Compliance questions</h2>
-          <span className="grow" />
+      <section className="section" aria-labelledby="questions-h">
+        <div className="section-head">
+          <h2 id="questions-h" className="grow">
+            Compliance questions
+          </h2>
           <label className="inline-field">
-            <span className="muted small">Start from a preset</span>
+            <span className="muted small">Preset</span>
             <select
               value=""
-              onChange={(e) => e.target.value && call("preset", "/preset", { presetId: e.target.value }, "Preset applied. Review the answers below.")}
+              onChange={(e) => e.target.value && call("preset", "/preset", { presetId: e.target.value }, "Preset applied. Review the answers.")}
               disabled={busy !== null}
             >
               <option value="">{p.presetId ? `Current: ${p.presetId}` : "Choose…"}</option>
@@ -74,15 +79,15 @@ export function ProfileView() {
             </select>
           </label>
           <button className="btn btn-primary btn-sm" disabled={busy !== null || !c.unconfirmed.length} onClick={() => call("all", "/answers/confirm", { ids: "all" }, "All answers confirmed.")}>
-            <CheckCheck size={14} aria-hidden /> Confirm all
+            Confirm all
           </button>
         </div>
         <div className="completeness">
-          <Meter value={c.confirmed} max={c.total} label="Confirmed answers" tone="teal" />
+          <Meter value={c.confirmed} max={c.total} label="Confirmed answers" />
           <span className="muted small">{c.confirmed} of {c.total} confirmed · {c.answered} answered</span>
         </div>
         {c.missingForScope.length > 0 && (
-          <p className="callout callout-warn">Answer these to decide which frameworks apply: <strong>{c.missingForScope.join(", ")}</strong></p>
+          <p className="callout callout-warn"><span>Needed to decide the scope: <strong>{c.missingForScope.join(", ")}</strong></span></p>
         )}
         {sections.map(([section, qs]) => (
           <fieldset key={section} className="q-section">
@@ -91,7 +96,7 @@ export function ProfileView() {
           </fieldset>
         ))}
       </section>
-    </div>
+    </fieldset>
   );
 }
 
@@ -112,7 +117,7 @@ function QuestionRow({ q, busy, onSave, onConfirm }: { q: Question; busy: boolea
           <div className="muted small">{q.why}</div>
         </div>
         <span className="grow" />
-        {a && <Badge tone={a.confirmed ? "teal" : "warn"}>{a.confirmed ? "confirmed" : `unconfirmed · ${a.source}`}</Badge>}
+        {a && (a.confirmed ? <span className="muted small">Confirmed</span> : <Badge tone="warn">Unconfirmed · {a.source}</Badge>)}
       </div>
       {q.type === "single" && q.options ? (
         <Segmented label={q.text} value={draft[0]} options={q.options.map((o) => ({ value: o.value, label: o.label, title: o.value }))} onChange={(v) => setDraft([v])} disabled={busy} />
@@ -126,8 +131,8 @@ function QuestionRow({ q, busy, onSave, onConfirm }: { q: Question; busy: boolea
         </div>
       ) : null}
       {a?.rationale && (
-        <div className="muted small q-why">
-          Suggested because: {a.rationale}
+        <div className="muted small">
+          Why: {a.rationale}
           {a.refs?.length ? <span className="mono"> ({a.refs.slice(0, 3).map(loc).join(", ")})</span> : null}
         </div>
       )}

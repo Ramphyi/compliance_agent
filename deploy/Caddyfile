@@ -1,0 +1,42 @@
+# Caddy in front of Acai: HTTPS on port 443 (HTTP on 80 redirects), proxied to Acai on
+# 127.0.0.1. Used by `docker compose --profile tls up -d`; a Caddy installed on the host can use
+# it as well. Settings come from the environment:
+#
+#   ACAI_DOMAIN     the name people open: acai.example.com, or acai.corp.internal on an intranet
+#   ACAI_TLS        acme      a public certificate (Let's Encrypt or ZeroSSL). The name must resolve
+#                             publicly and ports 80 and 443 must be reachable from the internet.
+#                   internal  a certificate from Caddy's own CA, for intranet and air-gapped names.
+#                             Install its root certificate on the clients: in the caddy-data volume
+#                             at caddy/pki/authorities/local/root.crt.
+#                   files     your company's certificate: deploy/certs/cert.pem (full chain) and
+#                             deploy/certs/key.pem.
+#   ACAI_HOST_PORT  the port Acai listens on at 127.0.0.1 (default 4317)
+#
+# Set ACAI_TRUST_PROXY=1 and ACAI_PUBLIC_URL=https://<ACAI_DOMAIN> for Acai as well, so it sees
+# client addresses (sign-in rate limits, event log), marks cookies Secure and enables OAuth.
+
+{
+	# No admin API: it would listen on the host's loopback interface.
+	admin off
+}
+
+(tls_acme) {
+	header Strict-Transport-Security "max-age=31536000"
+}
+
+(tls_internal) {
+	tls internal
+	header Strict-Transport-Security "max-age=31536000"
+}
+
+(tls_files) {
+	tls /etc/caddy/certs/cert.pem /etc/caddy/certs/key.pem
+	header Strict-Transport-Security "max-age=31536000"
+}
+
+{$ACAI_DOMAIN:localhost} {
+	import tls_{$ACAI_TLS:acme}
+	header -Server
+	# Server-sent events (/api/events) stream through: Caddy flushes them immediately.
+	reverse_proxy 127.0.0.1:{$ACAI_HOST_PORT:4317}
+}

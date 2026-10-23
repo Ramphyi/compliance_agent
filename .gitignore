@@ -4,8 +4,8 @@ dist/
 .env
 .env.*
 !.env.example
-.assay/
-.assay-home/
+.acai/
+.acai-home/
 coverage/
 test-results/
 *.log
@@ -13,3 +13,4 @@ test-results/
 examples/apps/*/build/
 examples/apps/**/__pycache__/
 .demo/
+repos/

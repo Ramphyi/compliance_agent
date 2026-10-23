@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
+import { presetById, type ProviderPreset, sanitizeSchema } from "./catalog";
 import {
   type AgentResult,
   type AgentRun,
@@ -10,9 +11,9 @@ import {
 } from "./provider";
 
 /**
- * For self-hosted models behind an OpenAI-compatible endpoint (Ollama, vLLM, LM Studio,
- * an internal gateway). Lets Assay run fully on-premise with no external model provider.
- * Web research is not available through this provider.
+ * Any OpenAI-compatible Chat Completions endpoint: hosted providers (Gemini, OpenRouter, Mistral,
+ * Groq, DeepSeek, xAI, Together) and self-hosted models (Ollama, vLLM, LM Studio, a gateway),
+ * which lets Acai run fully on-premise. Web research is not available through this provider.
  */
 export class OpenAICompatibleProvider implements LlmProvider {
   readonly id = "openai-compatible" as const;
@@ -20,20 +21,24 @@ export class OpenAICompatibleProvider implements LlmProvider {
   readonly supportsWebSearch = false;
   readonly destination: string;
   private client: OpenAI;
+  private dialect: ProviderPreset["schema"];
 
   constructor(cfg: ProviderConfig) {
-    if (!cfg.baseURL) throw new Error("ASSAY_OPENAI_BASE_URL is required for the openai-compatible provider");
-    if (!cfg.model) throw new Error("ASSAY_MODEL is required for the openai-compatible provider");
+    const preset = presetById(cfg.preset);
+    if (!cfg.baseURL) throw new Error(`An endpoint URL is required for ${preset?.label ?? "the openai-compatible provider"} (ACAI_OPENAI_BASE_URL)`);
+    if (!cfg.model) throw new Error(`Choose a model for ${preset?.label ?? "the openai-compatible provider"} (ACAI_MODEL)`);
     this.model = cfg.model;
+    this.dialect = preset?.schema;
     this.client = new OpenAI({ baseURL: cfg.baseURL, apiKey: cfg.apiKey || "not-needed", maxRetries: 3, timeout: 10 * 60_000 });
-    this.destination = `OpenAI-compatible endpoint ${cfg.baseURL}, model ${this.model}`;
+    const name = preset && preset.id !== "openai-compatible" ? preset.label : "OpenAI-compatible endpoint";
+    this.destination = `${name} at ${cfg.baseURL}, model ${this.model}`;
   }
 
   async run(run: AgentRun): Promise<AgentResult> {
     if (run.webSearch) run.onEvent?.({ type: "notice", message: "Web research is not available with this provider; using the built-in registry only." });
     const tools: ChatCompletionTool[] = run.tools.map((t) => ({
       type: "function",
-      function: { name: t.name, description: t.description, parameters: jsonSchemaOf(t.schema) },
+      function: { name: t.name, description: t.description, parameters: sanitizeSchema(jsonSchemaOf(t.schema), this.dialect) },
     }));
     const messages: ChatCompletionMessageParam[] = [
       { role: "system", content: run.system },

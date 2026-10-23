@@ -28,7 +28,7 @@ export const LIMITS = {
 
 const SKIP_DIRS = new Set([
   ".git", ".hg", ".svn", "node_modules", "bower_components", "vendor", "dist", "build", "out",
-  "target", ".next", ".nuxt", ".svelte-kit", "coverage", ".assay", ".venv", "venv", "env",
+  "target", ".next", ".nuxt", ".svelte-kit", "coverage", ".acai", ".venv", "venv", "env",
   "__pycache__", ".mypy_cache", ".pytest_cache", ".tox", ".gradle", ".idea", "Pods",
   "DerivedData", ".dart_tool", ".pio", ".cache", ".turbo", ".terraform", "site-packages",
 ]);

@@ -1,8 +1,7 @@
-import { Activity, ClipboardCheck, Download, FileSearch, Gauge, ListChecks, Microscope, Settings, ShieldCheck, Wrench } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, paths } from "../api";
 import { JobDrawer } from "../components/JobLog";
-import { Badge, ErrorBox, Loading, Spinner } from "../components/ui";
+import { ErrorBox, Loading, Spinner } from "../components/ui";
 import { type Shell, ShellCtx, useToast } from "../context";
 import { href, type Route, type Tab, useResource } from "../hooks";
 import type { Audit, AuditListItem, Finding, JobListItem, Meta, Profile } from "../types";
@@ -16,16 +15,16 @@ import { Research } from "./Research";
 import { Scope } from "./Scope";
 import { SettingsView } from "./Settings";
 
-const TAB_META: Record<Tab, { label: string; icon: typeof Gauge }> = {
-  overview: { label: "Overview", icon: Gauge },
-  profile: { label: "Profile", icon: ClipboardCheck },
-  scope: { label: "Scope", icon: ShieldCheck },
-  findings: { label: "Findings", icon: FileSearch },
-  fixes: { label: "Fixes", icon: Wrench },
-  controls: { label: "Controls", icon: ListChecks },
-  research: { label: "Research", icon: Microscope },
-  activity: { label: "Activity", icon: Activity },
-  settings: { label: "Settings", icon: Settings },
+const TAB_LABELS: Record<Tab, string> = {
+  overview: "Overview",
+  profile: "Profile",
+  scope: "Scope",
+  findings: "Findings",
+  fixes: "Fixes",
+  controls: "Controls",
+  research: "Research",
+  activity: "Activity",
+  settings: "Settings",
 };
 
 export function ProjectShell({ meta, route }: { meta: Meta; route: Extract<Route, { page: "project" }> }) {
@@ -151,45 +150,52 @@ export function ProjectShell({ meta, route }: { meta: Meta; route: Extract<Route
   return (
     <ShellCtx.Provider value={shell}>
       <div className="project">
-        <header className="project-head">
-          <div className="project-title">
-            <a href="#/" className="crumb">Projects</a>
-            <span aria-hidden className="muted">/</span>
-            <h1>{profile.data?.name ?? "…"}</h1>
-            {profile.data && <span className="mono muted truncate project-root" title={profile.data.root}>{profile.data.root}</span>}
-          </div>
-          <span className="grow" />
-          <Badge tone={meta.provider ? "teal" : "neutral"} title={meta.provider?.destination ?? "No model configured"}>
-            {meta.provider ? meta.provider.model : "detectors only"}
-          </Badge>
-          {running && (
-            <button className="btn btn-sm running-btn" onClick={() => setJobOpen(running.id)} title="Open the job log">
-              <Spinner label={running.title} />
-            </button>
-          )}
-          {audit && (
-            <div className="export" role="group" aria-label="Export report">
-              <Download size={14} aria-hidden />
-              {(["md", "json", "sarif"] as const).map((f) => (
-                <a key={f} className="btn btn-sm btn-ghost" href={paths.audit(pid, audit.id, `/report?format=${f}`)} download>
-                  {f.toUpperCase()}
-                </a>
-              ))}
-            </div>
-          )}
-        </header>
-        <nav className="tabs" aria-label="Project sections">
-          {(Object.keys(TAB_META) as Tab[]).map((t) => {
-            const M = TAB_META[t];
-            return (
-              <a key={t} href={href(pid, t)} className="tab" aria-current={route.tab === t ? "page" : undefined}>
-                <M.icon size={15} aria-hidden />
-                {M.label}
-                {counts[t] ? <span className="tab-count">{counts[t]}</span> : null}
+        <div className="project-top">
+          <header className="project-head">
+            <div className="project-title">
+              <a href="#/" className="crumb">
+                Projects
               </a>
-            );
-          })}
-        </nav>
+              <span aria-hidden className="muted">
+                /
+              </span>
+              <h1>{profile.data?.name ?? "…"}</h1>
+              {profile.data && (
+                <span className="mono muted truncate project-root" title={profile.data.root}>
+                  {profile.data.root}
+                </span>
+              )}
+            </div>
+            <span className="grow" />
+            {running && (
+              <button className="btn btn-sm running-btn" onClick={() => setJobOpen(running.id)} title="Open the job log">
+                <Spinner label={running.title} />
+              </button>
+            )}
+            {audit && (
+              <div className="export" role="group" aria-label="Export report">
+                <span className="label">Export</span>
+                {(["md", "json", "sarif"] as const).map((f) => (
+                  <a key={f} className="btn btn-sm btn-ghost" href={paths.audit(pid, audit.id, `/report?format=${f}`)} download>
+                    {f.toUpperCase()}
+                  </a>
+                ))}
+              </div>
+            )}
+          </header>
+          <nav className="tabs" aria-label="Project sections">
+            {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
+              <a key={t} href={href(pid, t)} className="tab" aria-current={route.tab === t ? "page" : undefined}>
+                {TAB_LABELS[t]}
+                {counts[t] ? (
+                  <span className="tab-count" aria-label={`${counts[t]} ${t === "findings" ? "to review" : "in progress"}`}>
+                    {counts[t]}
+                  </span>
+                ) : null}
+              </a>
+            ))}
+          </nav>
+        </div>
         <div className="project-body">{body}</div>
       </div>
       {jobOpen && <JobDrawer jobId={jobOpen} version={jobVersion} onClose={() => setJobOpen(null)} />}

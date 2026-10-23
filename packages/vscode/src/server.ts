@@ -2,7 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createServer } from "node:net";
 import * as vscode from "vscode";
-import { assayEnv, stateDirArgs } from "./config";
+import { acaiEnv, stateDirArgs } from "./config";
 
 export type ServerState = "stopped" | "starting" | "running" | "error";
 
@@ -26,10 +26,10 @@ export function freePort(): Promise<number> {
  * Variables inherited from the editor that would change how the local server behaves
  * (authentication, bind address, cloning). The extension always runs it locally, unauthenticated.
  */
-const STRIPPED_ENV = ["ASSAY_TOKEN", "ASSAY_TOKENS", "ASSAY_HOST", "ASSAY_PORT", "ASSAY_TRUST_PROXY", "ASSAY_ALLOW_CLONE", "ASSAY_DASHBOARD_DIR"];
+const STRIPPED_ENV = ["ACAI_TOKEN", "ACAI_TOKENS", "ACAI_ADMIN_TOKEN", "ACAI_ADMINS", "ACAI_HOST", "ACAI_PORT", "ACAI_TRUST_PROXY", "ACAI_ALLOW_CLONE", "ACAI_DASHBOARD_DIR"];
 
 /**
- * Runs `assay serve <folder>` from the bundled server with the editor's own runtime
+ * Runs `acai serve <folder>` from the bundled server with the editor's own runtime
  * (process.execPath + ELECTRON_RUN_AS_NODE=1), so no separate Node.js is needed.
  */
 export class ServerManager implements vscode.Disposable {
@@ -63,7 +63,7 @@ export class ServerManager implements vscode.Disposable {
   }
 
   get serverScript() {
-    return vscode.Uri.joinPath(this.context.extensionUri, "server", "assay.mjs").fsPath;
+    return vscode.Uri.joinPath(this.context.extensionUri, "server", "acai.mjs").fsPath;
   }
 
   private setState(s: ServerState) {
@@ -97,14 +97,14 @@ export class ServerManager implements vscode.Disposable {
       const args = [this.serverScript, "serve", folder, "--port", String(port), "--host", "127.0.0.1", ...stateDirArgs(folder)];
       const env: NodeJS.ProcessEnv = {
         ...process.env,
-        ...(await assayEnv(this.context.secrets)),
+        ...(await acaiEnv(this.context.secrets)),
         ELECTRON_RUN_AS_NODE: "1",
-        ASSAY_HOME: this.context.globalStorageUri.fsPath,
+        ACAI_HOME: this.context.globalStorageUri.fsPath,
         NO_COLOR: "1",
       };
       for (const k of STRIPPED_ENV) delete env[k];
 
-      this.output.appendLine(`[assay] starting: ${process.execPath} ${args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a)).join(" ")}`);
+      this.output.appendLine(`[acai] starting: ${process.execPath} ${args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a)).join(" ")}`);
       const child = spawn(process.execPath, args, { cwd: folder, env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
       this.child = child;
       let exited: string | undefined;
@@ -121,18 +121,18 @@ export class ServerManager implements vscode.Disposable {
       child.stderr?.on("data", pipe("[stderr] "));
       child.on("error", (e) => {
         exited = e.message;
-        this.output.appendLine(`[assay] failed to start: ${e.message}`);
+        this.output.appendLine(`[acai] failed to start: ${e.message}`);
       });
       child.on("exit", (code, signal) => {
         exited ??= `exited with ${signal ?? `code ${code}`}`;
-        this.output.appendLine(`[assay] server ${exited}`);
+        this.output.appendLine(`[acai] server ${exited}`);
         if (this.child !== child) return;
         this.child = undefined;
         // While starting, waitForReady reports the exit; afterwards it is a crash.
         if (this.stopping.has(child) || this._state !== "running") return;
         this._url = undefined;
         this._port = undefined;
-        this._error = `Assay server ${exited}`;
+        this._error = `Acai server ${exited}`;
         this.setState("error");
       });
 
@@ -140,11 +140,11 @@ export class ServerManager implements vscode.Disposable {
       await waitForReady(url, READY_TIMEOUT_MS, () => exited, () => tail.slice(-5).join("\n"));
       this._url = url;
       this._port = port;
-      this.output.appendLine(`[assay] ready at ${url}`);
+      this.output.appendLine(`[acai] ready at ${url}`);
       this.setState("running");
     } catch (e) {
       this._error = (e as Error).message;
-      this.output.appendLine(`[assay] ${this._error}`);
+      this.output.appendLine(`[acai] ${this._error}`);
       await this.stopNow(false);
       this.setState("error");
       throw e;
@@ -188,7 +188,7 @@ export async function waitForReady(url: string, timeoutMs: number, exited: () =>
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const why = exited();
-    if (why) throw new Error(`Assay server ${why} before it was ready.${tail() ? `\n${tail()}` : ""}`);
+    if (why) throw new Error(`Acai server ${why} before it was ready.${tail() ? `\n${tail()}` : ""}`);
     try {
       const res = await fetch(`${url}/api/meta`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) return;
@@ -197,5 +197,5 @@ export async function waitForReady(url: string, timeoutMs: number, exited: () =>
     }
     await new Promise((r) => setTimeout(r, 250));
   }
-  throw new Error(`Assay server did not become ready within ${timeoutMs / 1000} s.${tail() ? `\n${tail()}` : ""}`);
+  throw new Error(`Acai server did not become ready within ${timeoutMs / 1000} s.${tail() ? `\n${tail()}` : ""}`);
 }

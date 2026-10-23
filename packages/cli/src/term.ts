@@ -19,7 +19,7 @@ export const c = {
 export const sev = (s: string) =>
   s === "critical" ? c.red(c.bold(s)) : s === "high" ? c.red(s) : s === "medium" ? c.yellow(s) : s === "low" ? c.blue(s) : c.dim(s);
 
-export const logo = () => `${c.teal(c.bold("◆ Assay"))} ${c.dim("compliance audit agent")}`;
+export const logo = () => `${c.teal(c.bold("◆ Acai"))} ${c.dim("compliance audit agent")}`;
 
 export class Prompter {
   private rl?: Interface;

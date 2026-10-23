@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { type AuditDetail, type AuditListItem, AssayClient, EventStream, type Finding, type Meta, type ProjectEntry, type ScopeItem } from "./api";
+import { type AuditDetail, type AuditListItem, AcaiClient, EventStream, type Finding, type Meta, type ProjectEntry, type ScopeItem } from "./api";
 import { resolveStateDir, reviewerName, samePath } from "./config";
 import type { ServerManager } from "./server";
 
@@ -8,12 +8,12 @@ const DEBOUNCE_MS = 400;
 const MAX_WAIT_MS = 2000;
 
 /**
- * What the extension knows about the current folder's Assay project: the latest audit and its
+ * What the extension knows about the current folder's Acai project: the latest audit and its
  * findings, the model, the scope. Kept current from the server's event stream and the file system.
  */
-export class AssayState implements vscode.Disposable {
+export class AcaiState implements vscode.Disposable {
   folder?: string;
-  client?: AssayClient;
+  client?: AcaiClient;
   projectId?: string;
   project?: ProjectEntry;
   meta?: Meta;
@@ -50,7 +50,7 @@ export class AssayState implements vscode.Disposable {
       this.changeEmitter.fire();
       return;
     }
-    const client = new AssayClient(url, reviewerName);
+    const client = new AcaiClient(url, reviewerName);
     this.client = client;
     try {
       const projects = await client.get<ProjectEntry[]>("/api/projects");
@@ -61,7 +61,7 @@ export class AssayState implements vscode.Disposable {
       this.project = entry;
     } catch (e) {
       this.loadError = (e as Error).message;
-      this.output.appendLine(`[assay] could not find the project for ${folder}: ${this.loadError}`);
+      this.output.appendLine(`[acai] could not find the project for ${folder}: ${this.loadError}`);
       this.changeEmitter.fire();
       return;
     }
@@ -72,7 +72,7 @@ export class AssayState implements vscode.Disposable {
         if (type === "job") this.jobEmitter.fire(data as never);
         if (type === "change" || type === "job" || type === "hello") this.scheduleRefresh();
       },
-      (line) => this.output.appendLine(`[assay] ${line}`),
+      (line) => this.output.appendLine(`[acai] ${line}`),
     );
     this.watchStateDir(folder);
     await this.refresh();
@@ -100,7 +100,7 @@ export class AssayState implements vscode.Disposable {
     const pattern =
       custom && !custom.startsWith(folder + path.sep)
         ? new vscode.RelativePattern(vscode.Uri.file(custom), "**/*.json")
-        : new vscode.RelativePattern(vscode.Uri.file(folder), `${custom ? path.relative(folder, custom).split(path.sep).join("/") : ".assay"}/**/*.json`);
+        : new vscode.RelativePattern(vscode.Uri.file(folder), `${custom ? path.relative(folder, custom).split(path.sep).join("/") : ".acai"}/**/*.json`);
     this.watcher = vscode.workspace.createFileSystemWatcher(pattern);
     const kick = () => this.scheduleRefresh();
     this.watcher.onDidChange(kick);
@@ -159,7 +159,7 @@ export class AssayState implements vscode.Disposable {
     } catch (e) {
       if (this.client !== client) return;
       this.loadError = (e as Error).message;
-      this.output.appendLine(`[assay] refresh failed: ${this.loadError}`);
+      this.output.appendLine(`[acai] refresh failed: ${this.loadError}`);
     }
     this.changeEmitter.fire();
   }

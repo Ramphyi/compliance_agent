@@ -16,7 +16,7 @@ export function confine(root: string, p: string, stateDir: string): { abs: strin
   const posix = rel.split(sep).join("/");
   if (/^(\.git|\.hg|\.svn)(\/|$)/.test(posix)) throw new Error("Version-control internals are off limits");
   const stateRel = relative(root, stateDir).split(sep).join("/");
-  if (stateRel && !stateRel.startsWith("..") && (posix === stateRel || posix.startsWith(stateRel + "/"))) throw new Error("Assay state is off limits");
+  if (stateRel && !stateRel.startsWith("..") && (posix === stateRel || posix.startsWith(stateRel + "/"))) throw new Error("Acai state is off limits");
   if (existsSync(abs)) {
     if (lstatSync(abs).isSymbolicLink()) throw new Error("Symbolic links are not followed");
     const real = realpathSync(abs);

@@ -1,4 +1,4 @@
-// HTTP client for the Assay server. Every URL is relative so the dashboard works under
+// HTTP client for the Acai server. Every URL is relative so the dashboard works under
 // any path prefix and inside the VS Code webview iframe.
 
 export class ApiError extends Error {
@@ -11,15 +11,15 @@ export class ApiError extends Error {
 export const prefs = {
   get(key: string): string | null {
     try {
-      return localStorage.getItem(`assay.${key}`);
+      return localStorage.getItem(`acai.${key}`);
     } catch {
       return null;
     }
   },
   set(key: string, value: string | null) {
     try {
-      if (value === null) localStorage.removeItem(`assay.${key}`);
-      else localStorage.setItem(`assay.${key}`, value);
+      if (value === null) localStorage.removeItem(`acai.${key}`);
+      else localStorage.setItem(`acai.${key}`, value);
     } catch {
       /* ignore */
     }
@@ -32,7 +32,7 @@ export function headerSafe(name: string) {
 }
 
 let onAuth: (() => void) | null = null;
-/** Called when the server answers 401: the UI switches to the token login screen. */
+/** Called when the server answers 401: the UI switches to the sign-in screen. */
 export function onAuthRequired(fn: (() => void) | null) {
   onAuth = fn;
 }
@@ -40,16 +40,16 @@ export function onAuthRequired(fn: (() => void) | null) {
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   const user = prefs.get("user");
-  if (user) headers["X-Assay-User"] = headerSafe(user);
+  if (user) headers["X-Acai-User"] = headerSafe(user);
   if (method !== "GET") {
-    headers["X-Assay-Request"] = "1";
+    headers["X-Acai-Request"] = "1";
     headers["Content-Type"] = "application/json";
   }
   let res: Response;
   try {
     res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin" });
   } catch {
-    throw new ApiError("Cannot reach the Assay server. Is `assay serve` running?", 0);
+    throw new ApiError("Cannot reach the Acai server. Is `acai serve` running?", 0);
   }
   const text = await res.text();
   let data: unknown = undefined;
@@ -69,6 +69,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T = { ok: true }>(path: string, body: unknown = {}) => request<T>("POST", path, body),
+  patch: <T = { ok: true }>(path: string, body: unknown = {}) => request<T>("PATCH", path, body),
+  del: <T = { ok: true }>(path: string) => request<T>("DELETE", path),
 };
 
 const enc = encodeURIComponent;
@@ -81,6 +83,9 @@ export const paths = {
   jobs: (pid: string) => `api/jobs?project=${enc(pid)}`,
   job: (id: string) => `api/jobs/${enc(id)}`,
   events: (pid: string) => `api/events?project=${enc(pid)}`,
+  adminUser: (id: string, rest = "") => `api/admin/users/${enc(id)}${rest}`,
+  adminToken: (id: string) => `api/admin/tokens/${enc(id)}`,
+  accountToken: (id: string) => `api/account/tokens/${enc(id)}`,
 };
 
 /** Absolute URL of a server path, resolved against the page (for copyable MCP snippets). */

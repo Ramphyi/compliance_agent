@@ -1,4 +1,4 @@
-# Assay compliance questionnaire.
+# Acai compliance questionnaire.
 #
 # Each question's `id` is a profile *fact*. Framework applicability and control
 # conditions in registry/frameworks/*.yaml refer to these ids and option values

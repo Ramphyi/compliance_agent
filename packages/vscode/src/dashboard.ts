@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import * as vscode from "vscode";
 
-/** Hash routes of the Assay dashboard SPA. */
+/** Hash routes of the Acai dashboard SPA. */
 export function dashboardRoute(projectId?: string, findingId?: string) {
   if (!projectId) return "";
   const p = `#/p/${encodeURIComponent(projectId)}`;
@@ -17,9 +17,9 @@ export async function externalBase(port: number) {
 
 const escapeAttr = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-/** One reusable webview panel that frames the dashboard served by the local Assay server. */
+/** One reusable webview panel that frames the dashboard served by the local Acai server. */
 export class DashboardPanel implements vscode.Disposable {
-  static readonly viewType = "assay.dashboard";
+  static readonly viewType = "acai.dashboard";
   private panel?: vscode.WebviewPanel;
   private base?: string;
 
@@ -39,12 +39,12 @@ export class DashboardPanel implements vscode.Disposable {
         return;
       }
     } else {
-      this.panel = vscode.window.createWebviewPanel(DashboardPanel.viewType, "Assay Dashboard", vscode.ViewColumn.Active, {
+      this.panel = vscode.window.createWebviewPanel(DashboardPanel.viewType, "Acai Dashboard", vscode.ViewColumn.Active, {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [],
       });
-      this.panel.iconPath = vscode.Uri.joinPath(this.extensionUri, "media", "assay.svg");
+      this.panel.iconPath = vscode.Uri.joinPath(this.extensionUri, "media", "acai.svg");
       this.panel.onDidDispose(() => {
         this.panel = undefined;
         this.base = undefined;
@@ -59,7 +59,7 @@ export class DashboardPanel implements vscode.Disposable {
     if (!this.panel) return;
     if (!port) {
       this.base = undefined;
-      this.panel.webview.html = this.messageHtml("The Assay server is not running. Run “Assay: Restart Server” or check the Assay output.");
+      this.panel.webview.html = this.messageHtml("The Acai server is not running. Run “Acai: Restart Server” or check the Acai output.");
       return;
     }
     const base = await externalBase(port);
@@ -77,14 +77,14 @@ export class DashboardPanel implements vscode.Disposable {
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src ${origin}; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Assay Dashboard</title>
+<title>Acai Dashboard</title>
 <style>
   html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: var(--vscode-editor-background); }
   iframe { border: 0; width: 100%; height: 100%; display: block; }
 </style>
 </head>
 <body>
-<iframe id="dashboard" src="${escapeAttr(url)}" title="Assay Dashboard" allow="clipboard-read; clipboard-write"></iframe>
+<iframe id="dashboard" src="${escapeAttr(url)}" title="Acai Dashboard" allow="clipboard-read; clipboard-write"></iframe>
 <script nonce="${nonce}">
   const frame = document.getElementById("dashboard");
   const base = ${JSON.stringify(base)};

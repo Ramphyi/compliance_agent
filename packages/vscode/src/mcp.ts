@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
-import { assayEnv, stateDirArgs } from "./config";
+import { acaiEnv, stateDirArgs } from "./config";
 
-export const MCP_PROVIDER_ID = "assay";
+export const MCP_PROVIDER_ID = "acai";
 const VERSION = "0.1.0";
 
 /**
- * Publishes `assay mcp <folder>` as a stdio MCP server, so VS Code agent mode (Copilot Chat)
+ * Publishes `acai mcp <folder>` as a stdio MCP server, so VS Code agent mode (Copilot Chat)
  * can run audits with its own model. The editor starts and stops the process itself.
  */
 export function registerMcpProvider(
@@ -17,10 +17,10 @@ export function registerMcpProvider(
   context.subscriptions.push(emitter);
   // The API is stable from VS Code 1.101; guard anyway so older hosts still get the rest of the extension.
   if (typeof vscode.lm?.registerMcpServerDefinitionProvider !== "function") {
-    log("[assay] this editor has no MCP server API; the Assay MCP server is not registered (needs VS Code 1.101+)");
+    log("[acai] this editor has no MCP server API; the Acai MCP server is not registered (needs VS Code 1.101+)");
     return { changed: () => undefined };
   }
-  const script = vscode.Uri.joinPath(context.extensionUri, "server", "assay.mjs").fsPath;
+  const script = vscode.Uri.joinPath(context.extensionUri, "server", "acai.mjs").fsPath;
   context.subscriptions.push(
     vscode.lm.registerMcpServerDefinitionProvider(MCP_PROVIDER_ID, {
       onDidChangeMcpServerDefinitions: emitter.event,
@@ -29,11 +29,11 @@ export function registerMcpProvider(
         if (!root) return [];
         const env: Record<string, string> = {
           ELECTRON_RUN_AS_NODE: "1",
-          ASSAY_HOME: context.globalStorageUri.fsPath,
+          ACAI_HOME: context.globalStorageUri.fsPath,
           NO_COLOR: "1",
-          ...(await assayEnv(context.secrets)),
+          ...(await acaiEnv(context.secrets)),
         };
-        const def = new vscode.McpStdioServerDefinition("Assay", process.execPath, [script, "mcp", root, ...stateDirArgs(root)], env, VERSION);
+        const def = new vscode.McpStdioServerDefinition("Acai", process.execPath, [script, "mcp", root, ...stateDirArgs(root)], env, VERSION);
         def.cwd = vscode.Uri.file(root);
         return [def];
       },

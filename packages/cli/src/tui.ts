@@ -3,7 +3,7 @@ import { join } from "node:path";
 import {
   type Actor, type AgentEvent, CATEGORY_LABELS, fixFinding, investigate, isGitRepo, type LlmProvider, reinvestigate,
   report, research, summarize, understandProduct, type Workspace,
-} from "@assay/core";
+} from "@acai/core";
 import { c, Prompter, sev, table } from "./term";
 
 export type AuditFlowOptions = {
@@ -64,7 +64,7 @@ function printScope(ws: Workspace) {
 
 async function reviewLoop(ws: Workspace, auditId: string, p: Prompter, opts: AuditFlowOptions) {
   if (opts.assumeYes) {
-    console.log(c.dim("Non-interactive run: findings stay open for a person to review (`assay review` or the dashboard)."));
+    console.log(c.dim("Non-interactive run: findings stay open for a person to review (`acai review` or the dashboard)."));
     return;
   }
   for (;;) {
@@ -122,7 +122,7 @@ async function fixLoop(ws: Workspace, auditId: string, p: Prompter, opts: AuditF
   const confirmed = ws.getAudit(auditId).findings.filter((f) => f.status === "confirmed" && f.fixability !== "process");
   if (!confirmed.length) return;
   if (!opts.provider) {
-    console.log(c.yellow(`\n${confirmed.length} confirmed finding(s) are ready to fix. No model provider is configured: fix them with an MCP host (Claude Code: "fix the confirmed Assay findings") or set ANTHROPIC_API_KEY.`));
+    console.log(c.yellow(`\n${confirmed.length} confirmed finding(s) are ready to fix. No model provider is configured: fix them with an MCP host (Claude Code: "fix the confirmed Acai findings") or set ANTHROPIC_API_KEY.`));
     return;
   }
   if (!isGitRepo(ws.root)) {
@@ -203,7 +203,7 @@ export async function auditFlow(ws: Workspace, opts: AuditFlowOptions) {
       console.log(c.dim("The agent now investigates every in-scope control against the code."));
       const usage = await investigate(ws, audit.id, { provider: opts.provider, onEvent: printEvent });
       console.log(c.dim(`Model usage: ${usage.inputTokens} input / ${usage.outputTokens} output tokens.`));
-    } else if (!opts.provider) console.log(c.yellow("No model provider configured: detector-only audit. For a full investigation set ANTHROPIC_API_KEY, or run Assay as an MCP server inside Claude Code."));
+    } else if (!opts.provider) console.log(c.yellow("No model provider configured: detector-only audit. For a full investigation set ANTHROPIC_API_KEY, or run Acai as an MCP server inside Claude Code."));
 
     const s = summarize(ws.getAudit(audit.id).findings);
     console.log(`\n${c.bold("Findings")}: ${s.total} · ${["critical", "high", "medium", "low", "info"].map((k) => `${sev(k)} ${s.bySeverity[k]}`).join(" · ")}`);
@@ -217,7 +217,7 @@ export async function auditFlow(ws: Workspace, opts: AuditFlowOptions) {
     const final = summarize(ws.getAudit(audit.id).findings);
     console.log(`\n${c.bold("Done.")} ${final.confirmed} confirmed, ${final.fixReady} fixed (awaiting acceptance), ${final.resolved} resolved, ${final.rejected} rejected, ${final.open} still open.`);
     console.log(`Report: ${file}`);
-    console.log(c.dim("Review in the browser with `assay serve`, or re-run `assay audit` after changes; earlier decisions carry over."));
+    console.log(c.dim("Review in the browser with `acai serve`, or re-run `acai audit` after changes; earlier decisions carry over."));
   } finally {
     p.close();
   }

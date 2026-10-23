@@ -1,7 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { api, paths } from "../api";
-import { Badge, Drawer, ErrorBox, Loading, SeverityBadge, Segmented } from "../components/ui";
+import { Drawer, ErrorBox, Loading, SectionHead, SeverityBadge, Segmented } from "../components/ui";
 import { useShell, useToast } from "../context";
 import { useResource } from "../hooks";
 import type { FrameworkDetail, ScopeRow } from "../types";
@@ -27,16 +27,22 @@ export function Scope() {
   };
 
   return (
-    <section className="card">
-      <div className="card-head">
-        <h2>Frameworks</h2>
-        <span className="muted small">
-          {data.filter((r) => r.active).length} in scope · {data.filter((r) => r.status === "unknown" && !r.override).length} undecided · {data.length} in the registry
-        </span>
-        <span className="grow" />
-        <Segmented label="Show" value={filter} onChange={setFilter} options={[{ value: "active", label: "In scope" }, { value: "undecided", label: "Undecided" }, { value: "all", label: "All" }]} />
-      </div>
-      <table className="table">
+    <section aria-labelledby="scope-h">
+      <SectionHead
+        id="scope-h"
+        title="Frameworks"
+        description={`${data.filter((r) => r.active).length} in scope, ${data.filter((r) => r.status === "unknown" && !r.override).length} undecided, ${data.length} in the registry`}
+        actions={
+          <>
+            <Segmented label="Show" value={filter} onChange={setFilter} options={[{ value: "active", label: "In scope" }, { value: "undecided", label: "Undecided" }, { value: "all", label: "All" }]} />
+            <a className="btn btn-sm btn-ghost" href="#/guide/rules">
+              Add rules
+            </a>
+          </>
+        }
+      />
+      <div className="table-wrap">
+      <table className="table scope-table">
         <thead>
           <tr><th>Framework</th><th>Version</th><th>Kind</th><th>Status</th><th>Controls</th><th>Override</th><th /></tr>
         </thead>
@@ -48,16 +54,18 @@ export function Scope() {
                 <div className="muted small clamp-1" title={r.title}>{r.title}</div>
               </td>
               <td className="small">{r.version}</td>
-              <td><Badge>{r.kind}</Badge></td>
+              <td className="small">{r.kind}</td>
               <td>
-                {r.status === "applies" && <Badge tone="teal">applies</Badge>}
-                {r.status === "not-applicable" && <Badge>not applicable</Badge>}
-                {r.status === "unknown" && <Badge tone="warn" title={`Needs: ${r.missingFacts.join(", ")}`}>undecided · {r.missingFacts.join(", ")}</Badge>}
-                {r.unconfirmedFacts.length > 0 && r.status !== "unknown" && <div className="muted small">relies on unconfirmed: {r.unconfirmedFacts.join(", ")}</div>}
+                {r.status === "applies" && <span>Applies</span>}
+                {r.status === "not-applicable" && <span className="muted">Not applicable</span>}
+                {r.status === "unknown" && <span className="badge badge-warn" title={`Needs: ${r.missingFacts.join(", ")}`}>Undecided</span>}
+                {r.status === "unknown" && <div className="muted small">Needs {r.missingFacts.join(", ")}</div>}
+                {r.unconfirmedFacts.length > 0 && r.status !== "unknown" && <div className="muted small">Relies on unconfirmed: {r.unconfirmedFacts.join(", ")}</div>}
               </td>
               <td className="num">{r.controls}</td>
               <td>
                 <Segmented
+                  disabled={shell.meta.account?.role === "viewer"}
                   label={`Override for ${r.shortTitle}`}
                   value={r.override ?? "auto"}
                   onChange={(v) => override(r.frameworkId, v === "auto" ? null : v)}
@@ -76,6 +84,7 @@ export function Scope() {
           )}
         </tbody>
       </table>
+      </div>
       {open && <FrameworkDrawer id={open} row={data.find((r) => r.frameworkId === open)} onClose={() => setOpen(null)} />}
     </section>
   );
@@ -90,8 +99,8 @@ function FrameworkDrawer({ id, row, onClose }: { id: string; row?: ScopeRow; onC
         !error && <Loading what="framework" />
       ) : (
         <div className="stack">
-          <p className="lead">{data.title}</p>
-          <p className="muted small">{data.authority} · {data.version} · {data.jurisdictions.join(", ")} · <a href={data.url} target="_blank" rel="noreferrer">official source</a></p>
+          <p className="strong">{data.title}</p>
+          <p className="muted small">{data.authority} · {data.version} · {data.jurisdictions.join(", ")} · <a href={data.url} target="_blank" rel="noreferrer">Official source</a></p>
           <p>{data.summary}</p>
           <h3>When it applies</h3>
           <p>{data.applicabilityNote}</p>

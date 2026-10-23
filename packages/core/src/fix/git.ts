@@ -40,8 +40,8 @@ export function currentBranch(root: string) {
   return git(root, ["rev-parse", "--abbrev-ref", "HEAD"]).trim();
 }
 
-/** Paths with uncommitted changes, ignoring Assay's own state directory. */
-export function changedPaths(root: string, stateDirRel = ".assay"): string[] {
+/** Paths with uncommitted changes, ignoring Acai's own state directory. */
+export function changedPaths(root: string, stateDirRel = ".acai"): string[] {
   const out = git(root, ["status", "--porcelain", "--untracked-files=all", "-z"]);
   const paths: string[] = [];
   const parts = out.split("\0").filter(Boolean);
@@ -76,7 +76,7 @@ export function diffSince(root: string, base: string, paths: string[]): string {
 
 export function commitPaths(root: string, paths: string[], message: string) {
   git(root, ["add", "--", ...paths]);
-  git(root, ["-c", "user.name=Assay", "-c", "user.email=assay@localhost", "commit", "--no-verify", "-q", "-F", "-", "--", ...paths], { input: message });
+  git(root, ["-c", "user.name=Acai", "-c", "user.email=acai@localhost", "commit", "--no-verify", "-q", "-F", "-", "--", ...paths], { input: message });
   return head(root);
 }
 
@@ -92,6 +92,6 @@ export function restorePaths(root: string, base: string, paths: string[]) {
 }
 
 export function revertCommit(root: string, commit: string) {
-  git(root, ["-c", "user.name=Assay", "-c", "user.email=assay@localhost", "revert", "--no-edit", commit]);
+  git(root, ["-c", "user.name=Acai", "-c", "user.email=acai@localhost", "revert", "--no-edit", commit]);
   return head(root);
 }

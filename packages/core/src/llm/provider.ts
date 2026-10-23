@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type Engine, presetById } from "./catalog";
 
 export type AgentTool<T = unknown> = {
   name: string;
@@ -79,7 +80,10 @@ export async function executeTool(tools: AgentTool<any>[], name: string, input: 
 }
 
 export type ProviderConfig = {
-  provider?: "anthropic" | "openai" | "openai-compatible" | "none";
+  /** The engine. */
+  provider?: Engine | "none";
+  /** Catalog entry (gemini, openrouter, ollama…); defaults to the engine's own entry. */
+  preset?: string;
   model?: string;
   effort?: "low" | "medium" | "high" | "xhigh" | "max";
   baseURL?: string;
@@ -87,22 +91,32 @@ export type ProviderConfig = {
 };
 
 export function providerConfigFromEnv(env = process.env): ProviderConfig {
-  const explicit = env.ASSAY_PROVIDER as ProviderConfig["provider"] | undefined;
+  // ACAI_PROVIDER may name any catalog entry, for example gemini, openrouter or ollama.
+  const preset = presetById(env.ACAI_PROVIDER);
+  if (preset && preset.engine === "openai-compatible" && preset.id !== "openai-compatible")
+    return {
+      provider: "openai-compatible",
+      preset: preset.id,
+      model: env.ACAI_MODEL,
+      baseURL: env.ACAI_OPENAI_BASE_URL || preset.baseURL,
+      apiKey: (preset.keyEnv && env[preset.keyEnv]) || env.ACAI_OPENAI_API_KEY || undefined,
+    };
+  const explicit = env.ACAI_PROVIDER as ProviderConfig["provider"] | undefined;
   // Auto: Anthropic key, else an explicit OpenAI-compatible endpoint (on-premise), else OpenAI's own API.
   const provider =
     explicit ??
     (env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN
       ? "anthropic"
-      : env.ASSAY_OPENAI_BASE_URL
+      : env.ACAI_OPENAI_BASE_URL
         ? "openai-compatible"
         : env.OPENAI_API_KEY
           ? "openai"
           : "none");
   return {
     provider,
-    model: env.ASSAY_MODEL,
-    effort: env.ASSAY_EFFORT as ProviderConfig["effort"],
-    baseURL: provider === "openai-compatible" ? env.ASSAY_OPENAI_BASE_URL : provider === "openai" ? env.OPENAI_BASE_URL : env.ANTHROPIC_BASE_URL,
-    apiKey: provider === "openai-compatible" ? env.ASSAY_OPENAI_API_KEY || env.OPENAI_API_KEY : provider === "openai" ? env.OPENAI_API_KEY : undefined,
+    model: env.ACAI_MODEL,
+    effort: env.ACAI_EFFORT as ProviderConfig["effort"],
+    baseURL: provider === "openai-compatible" ? env.ACAI_OPENAI_BASE_URL : provider === "openai" ? env.OPENAI_BASE_URL : env.ANTHROPIC_BASE_URL,
+    apiKey: provider === "openai-compatible" ? env.ACAI_OPENAI_API_KEY || env.OPENAI_API_KEY : provider === "openai" ? env.OPENAI_API_KEY : undefined,
   };
 }

@@ -6,13 +6,13 @@ import { href, useResource } from "../hooks";
 import { type ControlAssessment, type ControlStatus, type FrameworkDetail, type ScopeRow } from "../types";
 
 const LABEL: Record<ControlStatus, string> = {
-  gap: "gap",
-  "needs-evidence": "needs evidence",
-  "evidence-present": "evidence present",
-  verified: "verified",
-  attested: "attested",
+  gap: "Gap",
+  "needs-evidence": "Needs evidence",
+  "evidence-present": "Evidence present",
+  verified: "Verified",
+  attested: "Attested",
 };
-const TONE: Record<ControlStatus, string> = { gap: "danger", "needs-evidence": "warn", "evidence-present": "neutral", verified: "teal", attested: "teal" };
+const TONE: Record<ControlStatus, string> = { gap: "danger", "needs-evidence": "warn", "evidence-present": "neutral", verified: "ok", attested: "ok" };
 
 export function Controls() {
   const shell = useShell();
@@ -22,9 +22,9 @@ export function Controls() {
   if (!audit) return <Empty title="No audit yet">Coverage appears after the first audit.</Empty>;
   const active = scope.data.filter((s) => s.active);
   return (
-    <div className="stack">
-      <p className="muted small">
-        Coverage of the in-scope frameworks in audit {audit.id}. <em>Needs evidence</em> means nothing in the repository proved the control either way: attest it if it is covered outside the code.
+    <div>
+      <p className="muted" style={{ marginBottom: 12 }}>
+        Audit <span className="mono">{audit.id}</span>. <em>Needs evidence</em>: nothing in the repository proves the control either way. Attest it if it is covered outside the code.
       </p>
       {active.map((s) => (
         <FrameworkCoverage key={s.frameworkId} row={s} controls={audit.controls.filter((c) => c.controlId.startsWith(`${s.frameworkId}:`))} />
@@ -42,17 +42,17 @@ function FrameworkCoverage({ row, controls }: { row: ScopeRow; controls: Control
   }, [controls]);
   const ok = counts.verified + counts.attested + counts["evidence-present"];
   return (
-    <details className="card coverage" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+    <details className="coverage" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
       <summary>
         <strong>{row.shortTitle}</strong>
         <span className="muted small">{row.version}</span>
         <span className="grow" />
         <span className="cov-counts small">
           {(Object.keys(counts) as ControlStatus[]).filter((k) => counts[k]).map((k) => (
-            <Badge key={k} tone={TONE[k]}>{counts[k]} {LABEL[k]}</Badge>
+            <span key={k} className={k === "gap" ? "gap" : undefined}>{counts[k]} {LABEL[k].toLowerCase()}</span>
           ))}
         </span>
-        <span className="cov-meter"><Meter value={ok} max={controls.length} label={`${row.shortTitle} coverage`} tone="teal" /></span>
+        <span className="cov-meter"><Meter value={ok} max={controls.length} label={`${row.shortTitle} coverage`} /></span>
       </summary>
       {open && <ControlTable frameworkId={row.frameworkId} controls={controls} />}
     </details>
@@ -81,8 +81,9 @@ function ControlTable({ frameworkId, controls }: { frameworkId: string; controls
   };
   return (
     <>
+      <div className="table-wrap">
       <table className="table">
-        <thead><tr><th>Control</th><th>Severity</th><th>Status</th><th>Findings</th><th /></tr></thead>
+        <thead><tr><th>Control</th><th>Severity</th><th>Status</th><th>Findings</th><th><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>
           {data.controls.filter((c) => byId.has(c.id)).map((c) => {
             const a = byId.get(c.id)!;
@@ -92,12 +93,13 @@ function ControlTable({ frameworkId, controls }: { frameworkId: string; controls
                 <td><SeverityBadge severity={c.severity} /></td>
                 <td><Badge tone={TONE[a.status]}>{LABEL[a.status]}</Badge></td>
                 <td className="small">{a.findingIds.map((id) => <a key={id} className="mono" href={href(shell.pid, "findings", id)}>{id} </a>)}</td>
-                <td>{a.status !== "gap" && a.status !== "attested" && <button className="btn btn-sm" onClick={() => setAttest(c.id)}>Attest</button>}</td>
+                <td className="actions-cell">{a.status !== "gap" && a.status !== "attested" && shell.meta.account?.role !== "viewer" && <button className="btn btn-sm" onClick={() => setAttest(c.id)}>Attest</button>}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      </div>
       {attest && (
         <Modal
           title={`Attest ${attest}`}
@@ -105,10 +107,10 @@ function ControlTable({ frameworkId, controls }: { frameworkId: string; controls
           onSubmit={save}
           footer={<><button type="button" className="btn" onClick={() => setAttest(null)}>Cancel</button><button className="btn btn-primary" type="submit" disabled={!note.trim()}>Attest</button></>}
         >
-          <p className="muted">Record that this control is covered, for example by a document or process outside the repository. Your name and note go into the audit trail.</p>
+          <p className="muted">Covered outside the repository, e.g. by a document or process. Your name and note go into the audit trail.</p>
           <label className="field">
             <span>Evidence *</span>
-            <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} required data-autofocus placeholder="Where is the evidence? For example: TARA v2 in the safety repository, approved 2026-09-01." />
+            <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} required data-autofocus placeholder="e.g. TARA v2 in the safety repository, approved 2026-09-01" />
           </label>
         </Modal>
       )}

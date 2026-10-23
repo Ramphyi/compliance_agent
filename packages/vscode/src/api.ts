@@ -1,4 +1,4 @@
-// HTTP client for the Assay server (packages/cli/src/server.ts) and the shapes it returns.
+// HTTP client for the Acai server (packages/cli/src/server.ts) and the shapes it returns.
 // The types mirror packages/core/src/types.ts; they are copied, not imported, so the
 // extension bundle stays self-contained.
 
@@ -127,16 +127,16 @@ export function headerSafe(name: string) {
     .slice(0, 80);
 }
 
-export class AssayClient {
+export class AcaiClient {
   constructor(
     readonly baseUrl: string,
     private readonly user: () => string,
   ) {}
 
   private headers(json: boolean): Record<string, string> {
-    const h: Record<string, string> = { Accept: json ? "application/json" : "*/*", "X-Assay-Request": "1" };
+    const h: Record<string, string> = { Accept: json ? "application/json" : "*/*", "X-Acai-Request": "1" };
     const user = headerSafe(this.user());
-    if (user) h["X-Assay-User"] = user;
+    if (user) h["X-Acai-User"] = user;
     if (json) h["Content-Type"] = "application/json";
     return h;
   }
@@ -152,7 +152,7 @@ export class AssayClient {
       });
     } catch (e) {
       const err = e as Error;
-      throw new ApiError(err.name === "TimeoutError" ? `Assay server did not answer within ${Math.round(timeoutMs / 1000)} s` : `Assay server unreachable: ${err.message}`, 0);
+      throw new ApiError(err.name === "TimeoutError" ? `Acai server did not answer within ${Math.round(timeoutMs / 1000)} s` : `Acai server unreachable: ${err.message}`, 0);
     }
     if (!res.ok) {
       let message = `${res.status} ${res.statusText}`;

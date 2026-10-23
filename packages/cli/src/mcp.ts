@@ -2,14 +2,17 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  type Actor, ARTIFACT_BY_ID, BATCHES, CATEGORIES, type Finding, report, SEVERITIES, summarize, type Workspace,
-} from "@assay/core";
+  type Actor, ARTIFACT_BY_ID, BATCHES, CATEGORIES, type Finding, fixTasks, readTools, report, SEVERITIES, summarize, tasksMarkdown, type ToolContext, type Workspace,
+  writeTools,
+} from "@acai/core";
 import { z } from "zod";
 import { PLAYBOOK } from "./playbook";
 import type { Projects } from "./projects";
 
 export type McpContext = {
   projects: Projects;
+  /** Resolves a project id or path; a shared server restricts which paths may be opened. */
+  open?: (idOrPath: string) => Workspace;
   /** Project used when a tool call does not name one (the directory the server was started in). */
   defaultProject?: string;
   dashboardUrl?: () => string | undefined;
@@ -23,7 +26,7 @@ const text = (value: unknown) => ({
 });
 const fail = (e: unknown) => ({ content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true });
 
-const projectArg = { project: z.string().optional().describe("Project path or id. Defaults to the project the server was started for.") };
+const projectArg = { project: z.string().optional().describe("Project id (from acai_projects) or path. Defaults to the project the server was started for.") };
 const confirmedArg = z
   .literal(true)
   .describe("Set to true only after the user explicitly made this decision in the conversation. Never decide on the user's behalf.");
@@ -44,17 +47,17 @@ function briefFinding(f: Finding) {
 
 export function createMcpServer(ctx: McpContext) {
   const server = new McpServer(
-    { name: "assay", version: "0.1.0" },
+    { name: "acai", version: "0.1.0" },
     {
       instructions:
-        "Assay runs compliance audits: it classifies the product, asks the compliance questions, maps the code to regulations and standards, keeps a human review queue, verifies fixes with the project's build and tests, and keeps an audit trail. Read the assay://playbook resource or use the 'audit' prompt before starting. Humans make every review decision.",
+        "Acai runs compliance audits: it classifies the product, asks the compliance questions, maps the code to regulations and standards, keeps a human review queue, verifies fixes with the project's build and tests, and keeps an audit trail. Read the acai://playbook resource or use the 'audit' prompt before starting. Humans make every review decision.",
     },
   );
   const host: Actor = { type: "mcp-host", name: ctx.clientName ? `${ctx.clientName} (relaying the user)` : "MCP host (relaying the user)" };
   const ws = (project?: string): Workspace => {
     const id = project ?? ctx.defaultProject;
-    if (!id) throw new Error("No project given and the server has no default project. Pass `project` (a path).");
-    return ctx.projects.get(id).ws;
+    if (!id) throw new Error("No project given and the server has no default project. Call acai_projects and pass `project`.");
+    return ctx.open ? ctx.open(id) : ctx.projects.get(id).ws;
   };
   const audit = (w: Workspace, id?: string) => w.getAudit(id);
   const wrap =
@@ -67,29 +70,53 @@ export function createMcpServer(ctx: McpContext) {
       }
     };
 
-  server.registerResource("playbook", "assay://playbook", { title: "Assay audit playbook", mimeType: "text/markdown" }, async (uri) => ({
+  server.registerResource("playbook", "acai://playbook", { title: "Acai audit playbook", mimeType: "text/markdown" }, async (uri) => ({
     contents: [{ uri: uri.href, text: PLAYBOOK }],
   }));
   server.registerResource(
     "framework",
-    new ResourceTemplate("assay://registry/{id}", {
+    new ResourceTemplate("acai://registry/{id}", {
       list: async () => ({
-        resources: ws().registry.frameworks.map((f) => ({ uri: `assay://registry/${f.id}`, name: f.shortTitle, description: f.title })),
+        resources: ws(ctx.defaultProject ?? ctx.projects.list()[0]?.id).registry.frameworks.map((f) => ({ uri: `acai://registry/${f.id}`, name: f.shortTitle, description: f.title })),
       }),
     }),
     { title: "Registry framework", mimeType: "application/json" },
     async (uri, { id }) => {
-      const f = ws().registry.frameworks.find((x) => x.id === id);
+      const f = ws(ctx.defaultProject ?? ctx.projects.list()[0]?.id).registry.frameworks.find((x) => x.id === id);
       if (!f) throw new Error(`Unknown framework ${id}`);
       return { contents: [{ uri: uri.href, text: JSON.stringify(f, null, 1) }] };
     },
   );
-  server.registerPrompt("audit", { title: "Run a compliance audit", description: "Audit this project with Assay, with you reviewing every finding." }, () => ({
-    messages: [{ role: "user", content: { type: "text", text: `${PLAYBOOK}\n\nStart now with assay_start for this project.` } }],
+  server.registerPrompt("audit", { title: "Run a compliance audit", description: "Audit this project with Acai, with you reviewing every finding." }, () => ({
+    messages: [{ role: "user", content: { type: "text", text: `${PLAYBOOK}\n\nStart now with acai_start for this project.` } }],
   }));
 
   server.registerTool(
-    "assay_start",
+    "acai_projects",
+    {
+      title: "Projects",
+      description: "Projects this Acai server can audit, with the product summary and latest audit. Pass a project's id as `project` to the other tools.",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    wrap(() =>
+      ctx.projects.list().map((p) => {
+        const w = ctx.projects.get(p.id).ws;
+        const latest = w.store.latestAudit();
+        return {
+          id: p.id,
+          name: p.name,
+          root: p.root,
+          default: p.id === ctx.defaultProject || undefined,
+          product: w.store.readProject()?.classification?.summary,
+          latest_audit: latest && { id: latest.id, created: latest.createdAt, phase: latest.phase, summary: summarize(latest.findings) },
+        };
+      }),
+    ),
+  );
+
+  server.registerTool(
+    "acai_start",
     {
       title: "Start an audit session",
       description: "Scan the project, classify it (web, embedded, automotive, medical, AI...), draft profile answers and list presets. Call first.",
@@ -119,13 +146,13 @@ export function createMcpServer(ctx: McpContext) {
         verify: view.verify,
         registryErrors: w.registryErrors.length || undefined,
         dashboard: ctx.dashboardUrl?.(),
-        next: "Describe the product to the user, then ask the questions for unanswered and unconfirmed facts (assay_questions shows options), or offer a preset.",
+        next: "Describe the product to the user, then ask the questions for unanswered and unconfirmed facts (acai_questions shows options), or offer a preset.",
       };
     }),
   );
 
   server.registerTool(
-    "assay_questions",
+    "acai_questions",
     { title: "Compliance questions", description: "The questionnaire with options, current answers and why each question matters.", inputSchema: projectArg, annotations: { readOnlyHint: true } },
     wrap(({ project }) =>
       ws(project).profileView().questions.map((q) => ({
@@ -140,7 +167,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_answer",
+    "acai_answer",
     {
       title: "Save answers",
       description: "Save questionnaire answers (exact option values) and optionally the product purpose. Use user_confirmed only for answers the user gave or explicitly confirmed.",
@@ -166,7 +193,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_apply_preset",
+    "acai_apply_preset",
     { title: "Apply a preset", description: "Apply a ready-made answer set for a product type. The user should confirm it.", inputSchema: { ...projectArg, preset: z.string() } },
     wrap(({ project, preset }) => {
       const v = ws(project).applyPreset(preset, host);
@@ -175,7 +202,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_scope",
+    "acai_scope",
     {
       title: "Frameworks in scope",
       description: "Which regulations and standards apply and why. Optionally include or exclude frameworks when the user asks.",
@@ -204,10 +231,10 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_run_audit",
+    "acai_run_audit",
     {
       title: "Run the audit",
-      description: "Run detectors against the in-scope controls, carry over earlier decisions, and return investigation batches for you to work through with assay_controls.",
+      description: "Run detectors against the in-scope controls, carry over earlier decisions, and return investigation batches for you to work through with acai_controls.",
       inputSchema: projectArg,
     },
     wrap(({ project }) => {
@@ -219,13 +246,13 @@ export function createMcpServer(ctx: McpContext) {
         summary: summarize(a.findings),
         detector_findings: a.findings.slice(0, 60).map(briefFinding),
         batches: BATCHES.map((b) => ({ id: b.id, title: b.title, controls: controls.filter((c) => b.categories.includes(c.category)).length })).filter((b) => b.controls),
-        next: "For each batch: assay_controls, investigate, assay_record_findings / assay_annotate / assay_assess_control. Then present findings to the user.",
+        next: "For each batch: acai_controls, investigate, acai_record_findings / acai_annotate / acai_assess_control. Then present findings to the user.",
       };
     }),
   );
 
   server.registerTool(
-    "assay_controls",
+    "acai_controls",
     {
       title: "Controls to investigate",
       description: "Controls of one investigation batch (or framework), with requirement, what to check, detectors and related findings.",
@@ -268,7 +295,7 @@ export function createMcpServer(ctx: McpContext) {
   });
 
   server.registerTool(
-    "assay_record_findings",
+    "acai_record_findings",
     { title: "Record findings", description: "Record findings from your investigation for human review.", inputSchema: { ...projectArg, audit_id: z.string().optional(), findings: z.array(findingSchema).min(1) } },
     wrap(({ project, audit_id, findings }) => {
       const w = ws(project);
@@ -286,7 +313,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_annotate",
+    "acai_annotate",
     { title: "Annotate a finding", description: "Add your assessment to a finding (for example: likely false positive because...). Does not change its status.", inputSchema: { ...projectArg, audit_id: z.string().optional(), finding_id: z.string(), note: z.string() } },
     wrap(({ project, audit_id, finding_id, note }) => {
       const w = ws(project);
@@ -296,7 +323,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_assess_control",
+    "acai_assess_control",
     {
       title: "Assess a control",
       description: "Mark a control verified (you saw a compliant implementation; give evidence) or needs-evidence.",
@@ -310,7 +337,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_findings",
+    "acai_findings",
     {
       title: "List findings",
       description: "Findings of the latest (or given) audit with status and allowed review actions. Filter by status or severity. Pass finding_id for full detail.",
@@ -337,7 +364,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_review",
+    "acai_review",
     {
       title: "Record the user's review decision",
       description: "Relay a decision the USER made: confirm, reject (needs reason), modify (changes, optionally confirm), reinvestigate (needs note), reopen, resolve, accept-fix, revert-fix.",
@@ -365,12 +392,12 @@ export function createMcpServer(ctx: McpContext) {
     wrap(async ({ project, audit_id, finding_id, action, note, reason, changes, confirm }) => {
       const w = ws(project);
       const f = await w.review(audit(w, audit_id).id, finding_id, { action, note, reason, changes, confirm }, host);
-      return { ...briefFinding(f), next: action === "reinvestigate" ? "Re-investigate now with the user's note, then call assay_complete_reinvestigation." : undefined };
+      return { ...briefFinding(f), next: action === "reinvestigate" ? "Re-investigate now with the user's note, then call acai_complete_reinvestigation." : undefined };
     }),
   );
 
   server.registerTool(
-    "assay_wait_for_review",
+    "acai_wait_for_review",
     {
       title: "Wait for dashboard decisions",
       description: "Wait until the user changes a finding in the dashboard (or timeout), then return the work queue: re-investigations, confirmed findings to fix, fixes awaiting acceptance.",
@@ -397,7 +424,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_complete_reinvestigation",
+    "acai_complete_reinvestigation",
     {
       title: "Complete a re-investigation",
       description: "Report the outcome of re-investigating a finding the user sent back.",
@@ -425,7 +452,33 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_verify_config",
+    "acai_tasks",
+    {
+      title: "Fix tasks for you",
+      description:
+        "The findings to fix, as tasks with exact instructions: where, why (which rule), what to change and when it is done. Defaults to the findings the user confirmed. Work through them with your own editing tools, using acai_begin_fix and acai_complete_fix around each one.",
+      inputSchema: {
+        ...projectArg,
+        audit_id: z.string().optional(),
+        status: z.array(z.string()).optional().describe('Finding statuses to include. Default ["confirmed"]; add "open" to see unreviewed findings too.'),
+        finding_ids: z.array(z.string()).optional(),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    wrap(({ project, audit_id, status, finding_ids }) => {
+      const w = ws(project);
+      const a = audit(w, audit_id);
+      const tasks = fixTasks(w, a.id, { statuses: status as never, ids: finding_ids });
+      if (!tasks.length && !finding_ids) {
+        const open = a.findings.filter((f) => f.status === "open").length;
+        return `No ${(status ?? ["confirmed"]).join("/")} findings to fix.${open ? ` ${open} finding(s) still wait for the user's review: present them (acai_findings) and record the user's decisions with acai_review first.` : ""}`;
+      }
+      return tasksMarkdown(w, tasks, { auditId: a.id, mcp: true });
+    }),
+  );
+
+  server.registerTool(
+    "acai_verify_config",
     {
       title: "Verification commands",
       description: "Show or set the build and test commands used to verify fixes. Approving runs project code, so approve only with the user's explicit consent.",
@@ -441,7 +494,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_begin_fix",
+    "acai_begin_fix",
     {
       title: "Begin fixing a confirmed finding",
       description: "Checks the working tree is clean, switches to the fix branch and returns everything needed to fix the finding with your own editing tools.",
@@ -450,7 +503,7 @@ export function createMcpServer(ctx: McpContext) {
     wrap(({ project, audit_id, finding_id }) => {
       const w = ws(project);
       const v = w.verifyConfig();
-      if (v.commands.length && !v.approved) throw new Error("Verification commands are not approved yet. Ask the user, then call assay_verify_config with approve=true.");
+      if (v.commands.length && !v.approved) throw new Error("Verification commands are not approved yet. Ask the user, then call acai_verify_config with approve=true.");
       const { finding, base } = w.beginFix(audit(w, audit_id).id, finding_id, host);
       const art = finding.artifactId ? ARTIFACT_BY_ID.get(finding.artifactId) : undefined;
       return {
@@ -460,13 +513,13 @@ export function createMcpServer(ctx: McpContext) {
         draft_document: art && { path: art.draftPath, must_cover: art.draftHint },
         verify_commands: v.commands,
         rules:
-          "Smallest correct change, existing style, add a test when behaviour changes, never weaken security or delete tests, for documents write a DRAFT with [OWNER TO CONFIRM] placeholders. Then call assay_complete_fix.",
+          "Smallest correct change, existing style, add a test when behaviour changes, never weaken security or delete tests, for documents write a DRAFT with [OWNER TO CONFIRM] placeholders. Then call acai_complete_fix.",
       };
     }),
   );
 
   server.registerTool(
-    "assay_complete_fix",
+    "acai_complete_fix",
     {
       title: "Verify and commit a fix",
       description: "Runs the approved build and test commands and the detector, then commits the change (fix_ready) or returns the failure so you can try again.",
@@ -482,13 +535,13 @@ export function createMcpServer(ctx: McpContext) {
         can_retry: r.retry,
         commit: r.finding.fix?.commit,
         verification: r.verification.map((v) => ({ command: v.command, passed: v.passed, exit: v.exitCode, output: v.passed ? undefined : v.output.slice(-4000) })),
-        next: r.ok ? "Ask the user to accept or revert the fix." : r.retry ? "Fix the failure and call assay_complete_fix again." : "The change was rolled back; tell the user.",
+        next: r.ok ? "Ask the user to accept or revert the fix." : r.retry ? "Fix the failure and call acai_complete_fix again." : "The change was rolled back; tell the user.",
       };
     }),
   );
 
   server.registerTool(
-    "assay_abort_fix",
+    "acai_abort_fix",
     { title: "Abandon a fix", description: "Roll back the working-tree changes for a finding and mark the fix failed.", inputSchema: { ...projectArg, audit_id: z.string().optional(), finding_id: z.string(), reason: z.string() } },
     wrap(({ project, audit_id, finding_id, reason }) => {
       const w = ws(project);
@@ -498,7 +551,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_propose_rules",
+    "acai_propose_rules",
     {
       title: "Propose researched rules",
       description: "Submit requirements you found by web research (official sources) for the user to accept into this project's rule set.",
@@ -522,7 +575,7 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_decide_rule",
+    "acai_decide_rule",
     {
       title: "Accept or reject a researched rule",
       description: "Relay the user's decision on a proposed rule.",
@@ -535,10 +588,10 @@ export function createMcpServer(ctx: McpContext) {
   );
 
   server.registerTool(
-    "assay_report",
+    "acai_report",
     {
       title: "Audit report",
-      description: "Markdown, JSON or SARIF report of the latest (or given) audit. Also saved under .assay/reports.",
+      description: "Markdown, JSON or SARIF report of the latest (or given) audit. Also saved under .acai/reports.",
       inputSchema: { ...projectArg, audit_id: z.string().optional(), format: z.enum(["md", "json", "sarif"]).optional() },
       annotations: { readOnlyHint: true },
     },
@@ -555,10 +608,56 @@ export function createMcpServer(ctx: McpContext) {
     }),
   );
 
+  // Hosts that cannot see the repository (ChatGPT, Claude.ai, API agents, clients of a shared server)
+  // read it, and edit it during a fix, through Acai, confined like Acai's own agent: no paths
+  // outside the project, no VCS internals or Acai state, no symlinks, credentials files hidden.
+  const filesOf = (w: Workspace): ToolContext => ({ root: w.root, stateDir: w.store.dir, paths: [...w.scan().snapshot.paths], changed: new Set() });
+  const fileTool = (w: Workspace, name: string) => [...readTools(filesOf(w)), ...writeTools(filesOf(w))].find((t) => t.name === name)!;
+  const unbound: ToolContext = { root: "", stateDir: "", paths: [], changed: new Set() };
+  const fileDefs = new Map([...readTools(unbound), ...writeTools(unbound)].map((t) => [t.name, t]));
+  const shape = (name: string) => (fileDefs.get(name)!.schema as unknown as z.ZodObject<z.ZodRawShape>).shape;
+  const OWN_TOOLS = " Use your own file tools instead when you have access to the repository.";
+
+  for (const [name, mcpName, title] of [
+    ["list_files", "acai_list_files", "List project files"],
+    ["read_file", "acai_read_file", "Read a project file"],
+    ["search", "acai_search_code", "Search the project code"],
+  ] as const) {
+    server.registerTool(
+      mcpName,
+      { title, description: fileDefs.get(name)!.description + OWN_TOOLS, inputSchema: { ...projectArg, ...shape(name) }, annotations: { readOnlyHint: true } },
+      wrap(({ project, ...input }: { project?: string } & Record<string, unknown>) => {
+        const w = ws(project);
+        return fileTool(w, name).run(input);
+      }),
+    );
+  }
+
+  for (const [name, mcpName, title] of [
+    ["edit_file", "acai_edit_file", "Edit a file during a fix"],
+    ["write_file", "acai_write_file", "Write a file during a fix"],
+  ] as const) {
+    server.registerTool(
+      mcpName,
+      {
+        title,
+        description: `${fileDefs.get(name)!.description} Only allowed between acai_begin_fix and acai_complete_fix for that finding; Acai verifies and commits the change.${OWN_TOOLS}`,
+        inputSchema: { ...projectArg, audit_id: z.string().optional(), finding_id: z.string().describe("The finding being fixed."), ...shape(name) },
+        annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      },
+      wrap(({ project, audit_id, finding_id, ...input }: { project?: string; audit_id?: string; finding_id: string } & Record<string, unknown>) => {
+        const w = ws(project);
+        const f = audit(w, audit_id).findings.find((x) => x.id === finding_id);
+        if (f?.status !== "fixing") throw new Error(`${finding_id} is not being fixed. Call acai_begin_fix first; edits are only allowed during a fix.`);
+        return fileTool(w, name).run(input);
+      }),
+    );
+  }
+
   server.registerTool(
-    "assay_dashboard",
-    { title: "Dashboard link", description: "URL of the Assay dashboard where the user can review findings and diffs.", inputSchema: {}, annotations: { readOnlyHint: true } },
-    wrap(() => ctx.dashboardUrl?.() ?? "No dashboard is running. Start one with `assay serve` or run the MCP server with --dashboard."),
+    "acai_dashboard",
+    { title: "Dashboard link", description: "URL of the Acai dashboard where the user can review findings and diffs.", inputSchema: {}, annotations: { readOnlyHint: true } },
+    wrap(() => ctx.dashboardUrl?.() ?? "No dashboard is running. Start one with `acai serve` or run the MCP server with --dashboard."),
   );
 
   return server;

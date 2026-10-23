@@ -1,4 +1,4 @@
-import { Info, MessageSquareText, Search, Square, Wrench } from "lucide-react";
+import { Info, MessageSquareText, Search, Wrench } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { api, paths } from "../api";
 import { useToast } from "../context";
@@ -138,7 +138,7 @@ export function JobPanel({ jobId, version }: { jobId: string; version: number })
         </span>
         {job.status === "running" && (
           <button className="btn btn-sm" onClick={() => api.post(`${paths.job(job.id)}/cancel`).catch(toast.error)}>
-            <Square size={12} aria-hidden /> Cancel
+            Cancel
           </button>
         )}
       </div>

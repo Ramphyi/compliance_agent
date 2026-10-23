@@ -100,7 +100,7 @@ export function markdownReport(ws: Workspace, audit: Audit): string {
   out.push(
     "---",
     "",
-    "_Assay maps code and repository evidence to requirements. It does not provide legal advice or certification. Findings marked unconfirmed or needs-evidence require review by qualified people._",
+    "_Acai maps code and repository evidence to requirements. It does not provide legal advice or certification. Findings marked unconfirmed or needs-evidence require review by qualified people._",
   );
   return out.filter((l) => l !== undefined).join("\n");
 }
@@ -116,7 +116,7 @@ export function sarifReport(ws: Workspace, audit: Audit) {
       {
         tool: {
           driver: {
-            name: "Assay",
+            name: "Acai",
             informationUri: "https://github.com/Ramphyi/compliance_agent",
             rules: ruleIds.map((id) => {
               const f = open.find((x) => (x.checkId ?? x.artifactId ?? `finding/${x.category}`) === id)!;
@@ -135,8 +135,8 @@ export function sarifReport(ws: Workspace, audit: Audit) {
               ...(l.line ? { region: { startLine: l.line, ...(l.endLine ? { endLine: l.endLine } : {}) } } : {}),
             },
           })),
-          partialFingerprints: { assayFingerprint: f.fingerprint },
-          properties: { assayId: f.id, status: f.status, severity: f.severity, controls: f.controlIds },
+          partialFingerprints: { acaiFingerprint: f.fingerprint },
+          properties: { acaiId: f.id, status: f.status, severity: f.severity, controls: f.controlIds },
         })),
       },
     ],

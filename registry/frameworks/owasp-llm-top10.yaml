@@ -23,7 +23,7 @@ applicabilityNote: >
   2026 with re-ordered identifiers (for example Excessive Agency moves to LLM03 and System
   Prompt Leakage becomes Hidden Context Exposure); map refs carefully if a customer
   questionnaire uses the 2026 numbering. Controls with a suffix (for example
-  LLM01-indirect) are Assay sub-controls that split one OWASP entry into separately
+  LLM01-indirect) are Acai sub-controls that split one OWASP entry into separately
   testable parts.
 controls:
   - ref: LLM01

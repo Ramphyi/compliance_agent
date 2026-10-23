@@ -1,13 +1,13 @@
-// Bundles the extension and copies the self-contained Assay server (dist/assay) next to it.
+// Bundles the extension and copies the self-contained Acai server (dist/acai) next to it.
 import { build } from "esbuild";
 import { cpSync, existsSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const dist = join(here, "../../dist/assay");
-if (!existsSync(join(dist, "assay.mjs"))) {
-  console.error("dist/assay/assay.mjs is missing: run `npm run build` (or `node scripts/build.mjs`) at the repository root first.");
+const dist = join(here, "../../dist/acai");
+if (!existsSync(join(dist, "acai.mjs"))) {
+  console.error("dist/acai/acai.mjs is missing: run `npm run build` (or `node scripts/build.mjs`) at the repository root first.");
   process.exit(1);
 }
 

@@ -9,7 +9,7 @@ export const repoRoot = join(import.meta.dirname, "..");
 
 /** Copy an example app into a fresh git repository in a temp directory. */
 export function exampleRepo(app: string) {
-  const dir = mkdtempSync(join(tmpdir(), `assay-${app}-`));
+  const dir = mkdtempSync(join(tmpdir(), `acai-${app}-`));
   cpSync(join(repoRoot, "examples/apps", app), dir, { recursive: true, filter: (p) => !p.includes("/build/") && !p.endsWith("/build") });
   const git = (...args: string[]) => execFileSync("git", ["-C", dir, ...args], { stdio: "pipe" });
   git("init", "-q", "-b", "main");

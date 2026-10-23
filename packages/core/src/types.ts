@@ -78,7 +78,7 @@ export type FindingStatus =
   | "fixing" // a fix is being produced and verified
   | "fix_ready" // fix applied and verified; waiting for human acceptance
   | "fix_failed" // fix could not be verified; changes rolled back
-  | "resolved"; // human accepted the fix (or marked resolved outside Assay)
+  | "resolved"; // human accepted the fix (or marked resolved outside Acai)
 
 export type RejectReason =
   | "false-positive"
@@ -196,6 +196,7 @@ export type Audit = {
   model?: string;
   usage?: { inputTokens: number; outputTokens: number };
   error?: string;
+  trigger?: AuditTrigger;
 };
 
 export type ProjectConfig = {
@@ -210,7 +211,23 @@ export type ProjectConfig = {
   verify: { commands: string[]; approved: boolean; approvedBy?: Actor; timeoutSec: number };
   fix: { useBranch: boolean; branchPrefix: string; maxAttempts: number };
   research: { enabled: boolean };
+  /** What a repository webhook does. */
+  automation?: Automation;
 };
+
+export type Automation = {
+  /** On a push to the audited branch: nothing, a detector scan, or a full agent audit that explains each finding. */
+  push: "off" | "scan" | "agent";
+  /** On a pull request: nothing, or a detector scan of its code that reports what it adds or fixes. */
+  pullRequest: "off" | "scan";
+  /** Results that go back to GitHub (needs GITHUB_TOKEN on the server). */
+  report: { commitStatus: boolean; prComment: boolean };
+  /** A commit status fails when a finding at or above this severity is open. */
+  failOn: Severity;
+};
+
+/** What started an audit other than a person. */
+export type AuditTrigger = { source: "webhook"; provider: string; event: string; ref?: string; sha?: string; url?: string };
 
 export type JournalEntry = {
   seq: number;

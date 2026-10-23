@@ -14,7 +14,7 @@ export type StoreEvent =
   | { type: "job"; jobId: string };
 
 /**
- * File-based state in <project>/.assay (or a custom directory). Plain JSON so it can be
+ * File-based state in <project>/.acai (or a custom directory). Plain JSON so it can be
  * reviewed, backed up or committed. Writes are atomic (temp file + rename) and
  * read-modify-write cycles hold a lock file, so the dashboard, MCP server and CLI can
  * work on the same project at the same time.
@@ -24,7 +24,7 @@ export class Store {
   readonly events = new EventEmitter();
 
   constructor(readonly root: string, stateDir?: string) {
-    this.dir = resolve(stateDir ?? join(root, ".assay"));
+    this.dir = resolve(stateDir ?? join(root, ".acai"));
     this.events.setMaxListeners(100);
   }
 
@@ -98,7 +98,7 @@ export class Store {
   updateProject<T>(fn: (p: ProjectConfig) => T): T {
     return this.withLock(() => {
       const p = this.readProject();
-      if (!p) throw new Error("Project is not initialised. Run `assay init` or start an audit first.");
+      if (!p) throw new Error("Project is not initialised. Run `acai init` or start an audit first.");
       const out = fn(p);
       this.writeProject(p);
       return out;

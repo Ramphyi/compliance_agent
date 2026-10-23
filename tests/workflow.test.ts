@@ -5,7 +5,7 @@ import { type Actor, fixFinding, gate, investigate, reinvestigate, report, Revie
 import { exampleRepo, ScriptedProvider } from "./helpers";
 
 const alice: Actor = { type: "human", name: "alice" };
-const agent: Actor = { type: "agent", name: "assay-agent/test" };
+const agent: Actor = { type: "agent", name: "acai-agent/test" };
 
 describe("audit → human review → fix → verify, on the brake ECU example", () => {
   const repo = exampleRepo("brake-ecu");
@@ -103,8 +103,8 @@ describe("audit → human review → fix → verify, on the brake ECU example", 
     expect(done.fix?.verification.every((v) => v.passed)).toBe(true);
     expect(done.fix?.recheck?.[0].stillPresent).toBe(false);
     expect(done.fix?.diff).toContain("-        goto fail;");
-    expect(repo.git("log", "--oneline", "-1")).toContain(`assay: fix ${f.id}`);
-    expect(repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toMatch(/^assay\/fixes-/);
+    expect(repo.git("log", "--oneline", "-1")).toContain(`acai: fix ${f.id}`);
+    expect(repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toMatch(/^acai\/fixes-/);
     expect(readFileSync(join(repo.dir, path), "utf8")).not.toContain("goto");
   });
 

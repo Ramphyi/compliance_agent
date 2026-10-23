@@ -1,5 +1,5 @@
-import { Bot, Check, Copy, Loader2, Plug, Settings2, User, X } from "lucide-react";
-import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { Loader2, X } from "lucide-react";
+import { type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { type Actor, type FindingStatus, type Severity, STATUS_LABELS } from "../types";
 
 export function SeverityBadge({ severity }: { severity: Severity }) {
@@ -28,15 +28,40 @@ export function Badge({ tone = "neutral", children, title }: { tone?: string; ch
   );
 }
 
-const ACTOR_ICON = { human: User, agent: Bot, "mcp-host": Plug, system: Settings2 };
+const ACTOR_KIND = { human: "", agent: "agent", "mcp-host": "MCP", system: "system" } as const;
 export function ActorTag({ actor }: { actor: Actor }) {
-  const I = ACTOR_ICON[actor.type] ?? User;
+  const kind = ACTOR_KIND[actor.type] ?? "";
   return (
-    <span className={`actor actor-${actor.type}`} title={actor.type}>
-      <I size={12} aria-hidden />
+    <span className={`actor actor-${actor.type}`}>
       {actor.name}
-      <span className="sr-only"> ({actor.type})</span>
+      {kind ? <span className="muted"> ({kind})</span> : <span className="sr-only"> (person)</span>}
     </span>
+  );
+}
+
+/** Page title, an optional one-line description and right-aligned actions. */
+export function PageHeader({ title, description, actions }: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
+  return (
+    <div className="page-head">
+      <div>
+        <h1>{title}</h1>
+        {description && <div className="desc">{description}</div>}
+      </div>
+      {actions && <div className="actions-end">{actions}</div>}
+    </div>
+  );
+}
+
+/** A section heading with an optional description and actions on the right. */
+export function SectionHead({ title, description, actions, id }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; id?: string }) {
+  return (
+    <div className="section-head">
+      <div className="grow">
+        <h2 id={id}>{title}</h2>
+        {description && <div className="desc">{description}</div>}
+      </div>
+      {actions}
+    </div>
   );
 }
 
@@ -70,10 +95,9 @@ export function ErrorBox({ error, retry }: { error: string; retry?: () => void }
   );
 }
 
-export function Empty({ icon, title, children }: { icon?: ReactNode; title: string; children?: ReactNode }) {
+export function Empty({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="empty">
-      {icon && <div className="empty-icon">{icon}</div>}
       <h3>{title}</h3>
       {children && <div className="empty-body">{children}</div>}
     </div>
@@ -123,8 +147,7 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
     setTimeout(() => setDone(false), 1500);
   };
   return (
-    <button className="btn btn-sm" onClick={copy} type="button">
-      {done ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
+    <button className="btn btn-sm" onClick={copy} type="button" aria-live="polite">
       {done ? "Copied" : label}
     </button>
   );
@@ -241,6 +264,125 @@ export function Meter({ value, max, label, tone }: { value: number; max: number;
   return (
     <div className="meter" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={value}>
       <div className={`meter-fill${tone ? ` meter-${tone}` : ""}`} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+/** Asks before a destructive or irreversible action. */
+export function ConfirmDialog(props: {
+  title: ReactNode;
+  children: ReactNode;
+  confirmLabel: string;
+  danger?: boolean;
+  busy?: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      title={props.title}
+      onClose={props.onClose}
+      onSubmit={props.onConfirm}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={props.onClose}>
+            Cancel
+          </button>
+          <button type="submit" className={props.danger ? "btn btn-danger btn-solid" : "btn btn-primary"} disabled={props.busy}>
+            {props.confirmLabel}
+          </button>
+        </>
+      }
+    >
+      {props.children}
+    </Modal>
+  );
+}
+
+/** A newly created secret, shown once: read-only, selectable, copyable. */
+export function TokenReveal({ token, label = "Access token" }: { token: string; label?: string }) {
+  const note = useId();
+  return (
+    <div className="token-reveal">
+      <label className="field">
+        <span>{label}</span>
+        <div className="row">
+          <input readOnly value={token} onFocus={(e) => e.currentTarget.select()} aria-describedby={note} spellCheck={false} autoFocus data-autofocus />
+          <CopyButton text={token} />
+        </div>
+      </label>
+      <p id={note} className="muted">
+        Copy it now. You won't be able to see it again.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * A button that opens a small menu. Items are elements with role="menuitem"; choosing one
+ * closes the menu. Arrow keys move, Escape closes and returns focus to the button.
+ */
+export function Menu({ label, button, buttonClass = "icon-btn", children, header }: { label: string; button: ReactNode; buttonClass?: string; children: ReactNode; header?: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const wrap = useRef<HTMLDivElement>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  const items = () => [...(wrap.current?.querySelectorAll<HTMLElement>("[role='menuitem']:not(:disabled)") ?? [])];
+  const toggle = () => {
+    // Fixed position, so the menu is never clipped by a scrolling table.
+    const r = btn.current?.getBoundingClientRect();
+    if (r) setPos({ top: r.bottom + 4, right: Math.max(8, window.innerWidth - r.right) });
+    setOpen((o) => !o);
+  };
+  useEffect(() => {
+    if (!open) return;
+    items()[0]?.focus();
+    const away = (e: MouseEvent) => !wrap.current?.contains(e.target as Node) && setOpen(false);
+    const close = () => setOpen(false);
+    document.addEventListener("mousedown", away);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [open]);
+  const onKey = (e: ReactKeyboardEvent) => {
+    if (!open) return;
+    const list = items();
+    const i = list.indexOf(document.activeElement as HTMLElement);
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      setOpen(false);
+      btn.current?.focus();
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const n = list.length;
+      list[(i + (e.key === "ArrowDown" ? 1 : n - 1) + n) % n]?.focus();
+    } else if (e.key === "Tab") setOpen(false);
+  };
+  return (
+    <div className="menu-wrap" ref={wrap} onKeyDown={onKey}>
+      <button ref={btn} type="button" className={buttonClass} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} aria-label={label} onClick={toggle}>
+        {button}
+      </button>
+      {open && (
+        <div
+          className="menu"
+          role="menu"
+          id={id}
+          style={{ top: pos.top, right: pos.right }}
+          aria-label={label}
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest("[role='menuitem']")) setOpen(false);
+          }}
+        >
+          {header && <div className="menu-head">{header}</div>}
+          {children}
+        </div>
+      )}
     </div>
   );
 }

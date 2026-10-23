@@ -1,11 +1,11 @@
 {
-  "name": "@assay/cli",
+  "name": "@acai/cli",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": { "assay": "./dist/assay.mjs" },
+  "bin": { "acai": "./dist/acai.mjs" },
   "dependencies": {
-    "@assay/core": "0.1.0",
+    "@acai/core": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.32.0",
     "express": "^5.1.0",
     "zod": "^4.1.0"
